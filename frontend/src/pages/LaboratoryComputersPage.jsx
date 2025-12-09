@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Button, Collapse, Alert } from 'react-bootstrap';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { Cpu, Mouse, Keyboard, Display, Webcam, Hdd, Tools, ThreeDots, PencilSquare, Trash, Plus, Info, Exclamation, ExclamationTriangleFill, ChevronLeft, ArrowReturnLeft, BoxArrowUpRight } from 'react-bootstrap-icons';
+import { Cpu, Mouse, Keyboard, Display, Webcam, Hdd, Tools, ThreeDots, PencilSquare, Trash, Plus, Info, Exclamation, ExclamationTriangleFill, ChevronLeft, ArrowReturnLeft, BoxArrowUpRight, Printer } from 'react-bootstrap-icons';
 import toast from 'react-hot-toast';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 const CORE_COMPONENTS = [
     { label: 'System Unit', value: 'system_unit' },
@@ -21,6 +22,7 @@ const COMPONENT_TYPES = [
     { label: 'Mouse', value: 'mouse' },
     { label: 'AVR', value: 'avr' },
     { label: 'Camera', value: 'web_camera' },
+    { label: 'Printer', value: 'printer' },
     { label: 'Other', value: 'other' }
 ];
 
@@ -31,6 +33,7 @@ const getComponentIcon = (type) => {
         case 'keyboard': return <Keyboard />;
         case 'mouse': return <Mouse />;
         case 'web_camera': return <Webcam />;
+        case 'printer': return <Printer />;
         case 'avr': return <Tools />;
         default: return <Tools />;
     }
@@ -801,7 +804,7 @@ const LaboratoryComputersPage = () => {
         );
     };
 
-    if (loading) return <div className="container py-3">Loading...</div>;
+    if (loading) return <LoadingSpinner centered />;
     if (!laboratory) return <div className="container py-3">Laboratory not found</div>;
 
     return (

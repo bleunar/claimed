@@ -1,5 +1,6 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import api from '../api/axios';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 const AuthContext = createContext();
 
@@ -76,9 +77,17 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    if (loading) {
+        return (
+            <div className="vh-100 d-flex justify-content-center align-items-center">
+                <LoadingSpinner />
+            </div>
+        );
+    }
+
     return (
         <AuthContext.Provider value={{ user, login, logout, loading, refreshUser }}>
-            {!loading && children}
+            {children}
         </AuthContext.Provider>
     );
 };

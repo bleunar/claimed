@@ -43,6 +43,10 @@ def list_components():
 
     if unassigned == 'true':
         query += " AND c.computer_set_id IS NULL"
+
+    if request.args.get('component_type'):
+        query += " AND c.component_type = %s"
+        params.append(request.args.get('component_type'))
         
     if search:
         query += " AND (c.brand_name LIKE %s OR c.serial_number LIKE %s)"

@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import Pagination from '../components/Pagination';
-import { Funnel, Search, Tools, Hdd, Cpu, Display, Keyboard, Mouse, Webcam, Backspace, EnvelopePaper, PencilSquare, Trash, Plus } from 'react-bootstrap-icons';
+import { Funnel, Search, Tools, Hdd, Cpu, Display, Keyboard, Mouse, Webcam, Backspace, EnvelopePaper, PencilSquare, Trash, Plus, Printer, ArrowClockwise } from 'react-bootstrap-icons';
 
 const COMPONENT_TYPES = [
     { label: 'System Unit', value: 'system_unit' },
@@ -14,6 +14,7 @@ const COMPONENT_TYPES = [
     { label: 'Mouse', value: 'mouse' },
     { label: 'AVR', value: 'avr' },
     { label: 'Web Camera', value: 'web_camera' },
+    { label: 'Printer', value: 'printer' },
     { label: 'Other', value: 'other' }
 ];
 
@@ -105,13 +106,17 @@ const ComponentsPage = () => {
     }, [labFilter]);
 
     useEffect(() => {
-        setCurrentPage(1); // Reset to first page on filter change
-        fetchComponents();
-    }, [statusFilter, unassignedFilter, labFilter, setFilter, typeFilter]); // Re-fetch when filters change
+        const timer = setTimeout(() => {
+            setCurrentPage(1);
+            fetchComponents();
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [search, statusFilter, unassignedFilter, labFilter, setFilter, typeFilter]);
 
     const handleSearch = (e) => {
         e.preventDefault();
-        fetchComponents();
+        // Auto-fetch handles this via useEffect
     };
 
     const getComponentIcon = (type) => {
@@ -121,6 +126,7 @@ const ComponentsPage = () => {
             case 'keyboard': return <Keyboard />;
             case 'mouse': return <Mouse />;
             case 'web_camera': return <Webcam />;
+            case 'printer': return <Printer />;
             case 'avr': return <Hdd />;
             default: return <Tools />;
         }
@@ -292,7 +298,7 @@ const ComponentsPage = () => {
                             </div>
                         </div>
 
-                        <div className="col-md-2">
+                        <div className="col-sm-6 col-md-2">
                             <label className="form-label">Laboratory</label>
                             <select
                                 className="form-select"
@@ -310,7 +316,7 @@ const ComponentsPage = () => {
                             </select>
                         </div>
 
-                        <div className="col-md-2">
+                        <div className="col-sm-6 col-md-2">
                             <label className="form-label">Computer Set</label>
                             <select
                                 className="form-select"
@@ -325,7 +331,7 @@ const ComponentsPage = () => {
                             </select>
                         </div>
 
-                        <div className="col-md-2">
+                        <div className="col-sm-6 col-md-2">
                             <label className="form-label">Status</label>
                             <select
                                 className="form-select"
@@ -340,7 +346,7 @@ const ComponentsPage = () => {
                             </select>
                         </div>
 
-                        <div className="col-md-2">
+                        <div className="col-sm-6 col-md-2">
                             <label className="form-label">Type</label>
                             <select
                                 className="form-select"
@@ -354,7 +360,7 @@ const ComponentsPage = () => {
                             </select>
                         </div>
 
-                        <div className="col-md-12">
+                        <div className="col-12">
                             <div className="form-check mb-2">
                                 <input
                                     className="form-check-input"
@@ -378,6 +384,7 @@ const ComponentsPage = () => {
                         <div className="col-12">
                             <div className="d-flex justify-content-between justify-content-md-end gap-2">
                                 <button type="button" className="btn btn-secondary" onClick={handleClearFilters}><Backspace /> Clear Filters</button>
+                                <button type="button" className="btn btn-secondary" onClick={() => fetchComponents()} title="Refresh"><ArrowClockwise /></button>
                                 <button type="submit" className="btn btn-primary"><Search /> Search</button>
                             </div>
                         </div>
@@ -408,8 +415,9 @@ const ComponentsPage = () => {
                                 currentComponents.map(comp => (
                                     <tr key={comp.id}>
                                         <td>
-                                            <span className="me-2">{getComponentIcon(comp.component_type)}</span>
-                                            {COMPONENT_TYPES.find(t => t.value === comp.component_type)?.label || comp.component_type}
+                                            <span className="me-2 fs-5" title={COMPONENT_TYPES.find(t => t.value === comp.component_type)?.label || comp.component_type}>
+                                                {getComponentIcon(comp.component_type)}
+                                            </span>
                                         </td>
                                         <td>{comp.brand_name}</td>
                                         <td>{comp.serial_number || '-'}</td>

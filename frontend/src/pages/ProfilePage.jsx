@@ -150,8 +150,8 @@ const ProfilePage = () => {
                             <div className="text-muted mb-3 text-uppercase" style={{ fontSize: '0.75rem' }}>{user?.role.replace('_', ' ').toLowerCase()}</div>
                         </Card.Body>
                         <Card.Footer className='d-flex justify-content-evenly p-0 m-0 border-0'>
-                            <Form.Label htmlFor="upload-photo" className="btn btn-primary flex-fill rounded-0 border-0 mb-0">
-                                Change Photo
+                            <Form.Label htmlFor="upload-photo" className="btn btn-outline-primary flex-fill rounded-0 border-0 mb-0">
+                                Change Phoyo
                             </Form.Label>
                             <Form.Control
                                 type="file"
@@ -162,7 +162,7 @@ const ProfilePage = () => {
                             />
                             {user?.profile_picture && (
                                 <Button
-                                    variant="danger"
+                                    variant="outline-primary"
                                     className="w-50 rounded-0 border-0 mb-0"
                                     onClick={handleRemovePhoto}
                                 >
@@ -175,7 +175,7 @@ const ProfilePage = () => {
 
                 <Col md={8}>
                     <Card className='h-100 shadow-sm overflow-hidden'>
-                        <Card.Header>Profile Information</Card.Header>
+                        <Card.Header className='text-bg-primary fw-bold'>Profile Information</Card.Header>
                         <Card.Body className='bg-body-tertiary'>
                             <Form onSubmit={handleUpdateName}>
                                 <Form.Group className="mb-3">
@@ -289,10 +289,10 @@ const ProfilePage = () => {
                 onHide={() => setShowEmailModal(false)}
             />
 
-            {/* Profile Picture Preview Modal */}
+            {/* Profile Picture, upload preview modal */}
             <Modal centered show={showPreviewModal} onHide={handleClosePreview}>
                 <Modal.Header closeButton>
-                    <Modal.Title>Preview Profile Picture</Modal.Title>
+                    <Modal.Title>Upload Preview</Modal.Title>
                 </Modal.Header>
                 <Modal.Body className="text-center">
                     {previewImage && (
@@ -303,8 +303,10 @@ const ProfilePage = () => {
                             style={{ maxHeight: '300px', objectFit: 'contain' }}
                         />
                     )}
+
+                    <div className="text-muted small my-4">NOTE: Using images with an aspect ratio of 1:1 (Square) is recommnded</div>
                 </Modal.Body>
-                <Modal.Footer>
+                <Modal.Footer className='border-0'>
                     <Button variant="secondary" onClick={handleClosePreview} disabled={uploading}>
                         Cancel
                     </Button>

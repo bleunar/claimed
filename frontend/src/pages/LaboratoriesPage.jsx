@@ -5,6 +5,7 @@ import { ThreeDots, PencilSquare, Trash, Plus } from 'react-bootstrap-icons';
 import toast from 'react-hot-toast';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 const CollapsibleActions = ({ onEdit, onDelete }) => {
     const [isExpanded, setIsExpanded] = useState(false);
@@ -50,9 +51,9 @@ const CollapsibleActions = ({ onEdit, onDelete }) => {
 
 const LaboratoryCard = ({ lab, canManage, onEdit, onDelete, onNavigate }) => {
     return (
-        <div className="col p-1">
+        <div className="col p-2">
             <div
-                className="card bg-body-tertiary h-100 shadow hover-shadow"
+                className="card bg-body-tertiary h-100 shadow-sm hover-shadow"
                 style={{ cursor: 'pointer', transition: 'transform 0.2s' }}
                 onClick={() => onNavigate(lab.id)}
             >
@@ -221,7 +222,7 @@ const LaboratoriesPage = () => {
             </div>
 
             {loading ? (
-                <div>Loading...</div>
+                <LoadingSpinner centered />
             ) : (
                 <div className="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xxl-4">
                     {laboratories.map(lab => (
