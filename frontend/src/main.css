@@ -1,0 +1,13 @@
+.remove-arrow-select-input {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: none;
+    padding-right: 0.75rem !important;
+
+}
+
+
+.bordered *{
+    border: 1px solid red;
+}

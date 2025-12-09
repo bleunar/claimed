@@ -1,0 +1,47 @@
+import React from 'react';
+import { List, PersonCircle } from 'react-bootstrap-icons';
+import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
+
+const Navbar = ({ onToggleSidebar }) => {
+    const { user, logout } = useAuth();
+    const { theme, toggleTheme } = useTheme();
+
+    return (
+        <nav className={`navbar navbar-expand-lg p-0 navbar-${theme} text-white ${theme}`} style={{ backgroundColor: "#006633", height: '7vh' }}>
+            <div className="container-fluid pe-0  ">
+                <button className="btn btn-outline-light border-0 d-md-none" onClick={onToggleSidebar}>
+                    <List />
+                </button>
+
+                <div className="ms-auto d-flex align-items-center">
+                    <div className="dropdown">
+                        <a href="#" className="d-flex align-items-center text-decoration-none rounded-circle" id="dropdownUser1" data-bs-toggle="dropdown" aria-expanded="false">
+                            <div className="text-end me-1">
+                                <div className={`me-2 fw-bold mb-0 text-light ${theme === 'light' ? 'dark' : 'light'}`} style={{ fontSize: '0.95rem' }}>{user?.name}</div>
+                                <div className={`me-2 text-light ${theme === 'light' ? 'dark' : 'light'}`} style={{ fontSize: '0.75rem' }}>{user?.email}</div>
+                            </div>
+
+                            {user?.profile_picture ? (
+                                <img src={`/api/accounts/${user.id}/picture?t=${user._picTimestamp || ''}`} alt="profile" style={{ objectFit: 'cover', height: '7vh', width: "7vh" }} />
+                            ) : (
+                                <div className='p-2 bg-secondary' style={{ height: '7vh', width: '7vh' }}>
+
+                                    <PersonCircle className="text-light h-100 w-100" />
+                                </div>
+                            )}
+                        </a>
+                        <ul className={`dropdown-menu dropdown-menu-end dropdown-menu-${theme}`} aria-labelledby="dropdownUser1">
+                            <li><Link className="dropdown-item" to="/dashboard/profile">Profile</Link></li>
+                            <li><hr className="dropdown-divider" /></li>
+                            <li><button className="dropdown-item" onClick={logout}>Sign out</button></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    );
+};
+
+export default Navbar;

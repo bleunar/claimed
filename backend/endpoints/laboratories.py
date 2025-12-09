@@ -1,0 +1,124 @@
+from flask import Blueprint, jsonify, request
+from flask_jwt_extended import jwt_required, get_jwt_identity
+from core.database import get_db
+from utilities.decorators import role_required
+from utilities.activity_logger import log_activity
+import uuid
+
+laboratories_bp = Blueprint('laboratories', __name__, url_prefix='/laboratories')
+
+@laboratories_bp.route('/', methods=['GET'])
+@jwt_required()
+def list_laboratories():
+    db = get_db()
+    cursor = db.cursor(dictionary=True)
+    cursor.execute("SELECT id, name, description, location, created_at, updated_at FROM laboratories")
+    laboratories = cursor.fetchall()
+    cursor.close()
+    return jsonify(laboratories), 200
+
+@laboratories_bp.route('/<id>', methods=['GET'])
+@jwt_required()
+def get_laboratory(id):
+    db = get_db()
+    cursor = db.cursor(dictionary=True)
+    cursor.execute("SELECT id, name, description, location, created_at, updated_at FROM laboratories WHERE id = %s", (id,))
+    laboratory = cursor.fetchone()
+    cursor.close()
+    
+    if not laboratory:
+        return jsonify({"msg": "Laboratory not found"}), 404
+        
+    return jsonify(laboratory), 200
+
+@laboratories_bp.route('/', methods=['POST'])
+@jwt_required()
+@role_required(['admin', 'it_head', 'lab_head'])
+def create_laboratory():
+    data = request.json
+    name = data.get('name')
+    description = data.get('description')
+    location = data.get('location')
+
+    if not name:
+        return jsonify({"msg": "Name is required"}), 400
+
+    db = get_db()
+    cursor = db.cursor(dictionary=True)
+
+    # Check for duplicate name
+    cursor.execute("SELECT id FROM laboratories WHERE name = %s", (name,))
+    if cursor.fetchone():
+        cursor.close()
+        return jsonify({"msg": "Laboratory name already exists"}), 409
+    
+    try:
+        lab_id = uuid.uuid4().hex[:16]
+        cursor.execute(
+            "INSERT INTO laboratories (id, name, description, location) VALUES (%s, %s, %s, %s)",
+            (lab_id, name, description, location)
+        )
+        log_activity(db, get_jwt_identity(), lab_id, 'laboratory', lab_id, 'create', f"Created laboratory {name}", changes=data)
+        db.commit()
+        cursor.close()
+        return jsonify({"msg": "Laboratory created successfully", "id": lab_id}), 201
+    except Exception as e:
+        cursor.close()
+        return jsonify({"msg": f"Failed to create laboratory: {str(e)}"}), 500
+
+@laboratories_bp.route('/<id>', methods=['PUT'])
+@jwt_required()
+@role_required(['admin', 'it_head', 'lab_head'])
+def update_laboratory(id: str):
+    data = request.json
+    name = data.get('name', '')
+    description = data.get('description', '')
+    location = data.get('location', '')
+
+    if not name:
+        return jsonify({"msg": "Name is required"}), 400
+
+    db = get_db()
+    cursor = db.cursor(dictionary=True)
+    
+    # Check if exists
+    cursor.execute("SELECT id FROM laboratories WHERE id = %s", (id,))
+    if not cursor.fetchone():
+        cursor.close()
+        return jsonify({"msg": "Laboratory not found"}), 404
+
+    try:
+        cursor.execute(
+            "UPDATE laboratories SET name = %s, description = %s, location = %s WHERE id = %s",
+            (name, description, location, id)
+        )
+        log_activity(db, get_jwt_identity(), id, 'laboratory', id, 'update', f"Updated laboratory {name}", changes=data)
+        db.commit()
+        cursor.close()
+        return jsonify({"msg": "Laboratory updated successfully"}), 200
+    except Exception as e:
+        cursor.close()
+        return jsonify({"msg": f"Failed to update laboratory: {str(e)}"}), 500
+
+@laboratories_bp.route('/<id>', methods=['DELETE'])
+@jwt_required()
+@role_required(['admin', 'it_head', 'lab_head'])
+def delete_laboratory(id):
+    db = get_db()
+    cursor = db.cursor(dictionary=True)
+    
+    # Check if exists
+    cursor.execute("SELECT id FROM laboratories WHERE id = %s", (id,))
+    if not cursor.fetchone():
+        cursor.close()
+        return jsonify({"msg": "Laboratory not found"}), 404
+
+    try:
+        cursor.execute("DELETE FROM laboratories WHERE id = %s", (id,))
+        log_activity(db, get_jwt_identity(), id, 'laboratory', id, 'delete', f"Deleted laboratory {id}")
+        db.commit()
+        cursor.close()
+        return jsonify({"msg": "Laboratory deleted successfully"}), 200
+    except Exception as e:
+        cursor.close()
+        return jsonify({"msg": f"Failed to delete laboratory: {str(e)}"}), 500
