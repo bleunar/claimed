@@ -397,12 +397,12 @@ const ComponentsPage = () => {
                 <div className="table-responsive border-0">
                     <table className="table table-hover table-striped align-middle mb-0">
                         <thead>
-                            <tr>
+                            <tr className='text-center'>
                                 <th>Type</th>
-                                <th>Brand</th>
-                                <th>Serial</th>
+                                <th className='text-start'>Brand</th>
+                                <th className='text-start'>Serial</th>
+                                <th className='text-start'>Assigned at</th>
                                 <th>Status</th>
-                                <th>Assigned To</th>
                                 {canManage && <th>Actions</th>}
                             </tr>
                         </thead>
@@ -414,41 +414,48 @@ const ComponentsPage = () => {
                             ) : (
                                 currentComponents.map(comp => (
                                     <tr key={comp.id}>
-                                        <td>
-                                            <span className="me-2 fs-5" title={COMPONENT_TYPES.find(t => t.value === comp.component_type)?.label || comp.component_type}>
+                                        <td className='text-center'>
+                                            <span className="fs-5" title={COMPONENT_TYPES.find(t => t.value === comp.component_type)?.label || comp.component_type}>
                                                 {getComponentIcon(comp.component_type)}
                                             </span>
                                         </td>
                                         <td>{comp.brand_name}</td>
                                         <td>{comp.serial_number || '-'}</td>
                                         <td>
-                                            <span className={`badge ${comp.status === 'good' ? 'bg-success' :
-                                                comp.status === 'bad' ? 'bg-warning' :
-                                                    comp.status === 'maintenance' ? 'bg-info' : 'bg-danger'
-                                                }`}>
-                                                {comp.status}
-                                            </span>
+                                            <div className="d-flex justify-content-start">
+                                                {
+                                                    comp.computer_set_name ? (
+                                                        <>
+                                                            <Link to={`/dashboard/laboratories/${comp.laboratory_id}`} className="badge fw-normal bg-dark text-decoration-none" title="Go to Laboratory">
+                                                                {comp?.laboratory_name}
+                                                            </Link>
+                                                            <span className='mx-1'> -</span>
+                                                            <Link to={`/dashboard/laboratories/${comp.laboratory_id}?set=${comp.computer_set_id}&components=true`} className="badge fw-normal bg-dark text-decoration-none" title="View in Computer Set">
+                                                                {comp?.computer_set_name}
+                                                            </Link>
+                                                        </>
+                                                    ) : (
+                                                        <span className="text-muted fst-italic">Unassigned</span>
+                                                    )
+                                                }
+                                            </div>
                                         </td>
                                         <td>
-                                            {
-                                                comp.computer_set_name ? (
-                                                    <div className="d-flex gap-1">
-                                                        <Link to={`/dashboard/laboratories/${comp.laboratory_id}`} className="badge fw-normal bg-secondary text-decoration-none" title="Go to Laboratory">
-                                                            {comp?.laboratory_name}
-                                                        </Link>
-                                                        <Link to={`/dashboard/laboratories/${comp.laboratory_id}?set=${comp.computer_set_id}&components=true`} className="badge fw-normal bg-primary text-decoration-none" title="View in Computer Set">
-                                                            {comp?.computer_set_name}
-                                                        </Link>
-                                                    </div>
-                                                ) : (
-                                                    <span className="text-muted fst-italic">Unassigned</span>
-                                                )
-                                            }
+                                            <div className="d-flex justify-content-center">
+                                                <span className={`badge text-capitalize ${comp.status === 'good' ? 'bg-success' :
+                                                    comp.status === 'bad' ? 'bg-warning' :
+                                                        comp.status === 'maintenance' ? 'bg-info' : 'bg-danger'
+                                                    }`}>
+                                                    {comp.status}
+                                                </span>
+                                            </div>
                                         </td>
                                         {canManage && (
-                                            <td className='d-flex flex-wrap gap-1'>
-                                                <button className="btn btn-sm border-0 btn-outline-primary me-2" onClick={() => handleEdit(comp)}><PencilSquare /></button>
-                                                <button className="btn btn-sm border-0 btn-outline-danger" onClick={() => handleDelete(comp.id)}><Trash /></button>
+                                            <td>
+                                                <div className='d-flex flex-wrap gap-1 justify-content-center'>
+                                                    <button className="btn btn-sm border-0 btn-outline-primary me-2" onClick={() => handleEdit(comp)}><PencilSquare /></button>
+                                                    <button className="btn btn-sm border-0 btn-outline-danger" onClick={() => handleDelete(comp.id)}><Trash /></button>
+                                                </div>
                                             </td>
                                         )}
                                     </tr>

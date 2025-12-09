@@ -83,7 +83,16 @@ const CollapsibleActions = ({ onEdit, onDelete }) => {
     );
 };
 
-const ComputerSetForm = ({ mode, editingId, initialData, laboratoryId, onSubmit, onCancel, existingTopLevelComponents }) => {
+// RBAC Helpers
+const canViewSensitive = (user) => ['admin', 'it_head', 'lab_head', 'it_technician'].includes(user?.role);
+const canEditSetDetails = (user) => ['admin', 'it_head', 'lab_head'].includes(user?.role);
+const canEditSetStatus = (user) => ['admin', 'it_head', 'lab_head', 'it_technician'].includes(user?.role);
+const canEditComponentDetails = (user) => ['admin', 'it_head', 'lab_head', 'it_technician'].includes(user?.role);
+const canDeleteComponent = (user) => ['admin', 'it_head', 'lab_head', 'it_technician'].includes(user?.role);
+const canAddComponent = (user) => ['admin', 'it_head', 'lab_head', 'it_technician'].includes(user?.role);
+const canEditComponentStatus = (user) => true;
+
+const ComputerSetForm = ({ mode, editingId, initialData, laboratoryId, onSubmit, onCancel, existingTopLevelComponents, user }) => {
     const [creationMode, setCreationMode] = useState('single');
     const [formData, setFormData] = useState({
         set_name: initialData?.set_name || '',
@@ -163,6 +172,9 @@ const ComputerSetForm = ({ mode, editingId, initialData, laboratoryId, onSubmit,
         }
     };
 
+    const isNameDisabled = editingId && !canEditSetDetails(user);
+    const isStatusDisabled = editingId && !canEditSetStatus(user);
+
     return (
         <form onSubmit={handleSubmit}>
             <div className="p-3">
@@ -177,11 +189,11 @@ const ComputerSetForm = ({ mode, editingId, initialData, laboratoryId, onSubmit,
                     <div className="row mb-3">
                         <div className="col-md-6">
                             <label className="form-label">Set Name</label>
-                            <input type="text" className="form-control" name="set_name" value={formData.set_name} onChange={handleInputChange} required placeholder="Example: PC 01" />
+                            <input type="text" className="form-control" name="set_name" value={formData.set_name} onChange={handleInputChange} required placeholder="Example: PC 01" disabled={isNameDisabled} />
                         </div>
                         <div className="col-md-6">
                             <label className="form-label">Status</label>
-                            <select className="form-select" name="status" value={formData.status} onChange={handleInputChange}>
+                            <select className="form-select" name="status" value={formData.status} onChange={handleInputChange} disabled={isStatusDisabled}>
                                 <option value="active">Active</option>
                                 <option value="maintenance">Maintenance</option>
                             </select>
@@ -231,7 +243,7 @@ const ComputerSetForm = ({ mode, editingId, initialData, laboratoryId, onSubmit,
 
             <div className="modal-footer mt-3">
                 <Button variant="secondary" onClick={onCancel}>Close</Button>
-                <Button variant="primary" type="submit">{editingId ? 'Update' : 'Create'}</Button>
+                {(!editingId || !isNameDisabled || !isStatusDisabled) && <Button variant="primary" type="submit">{editingId ? 'Update' : 'Create'}</Button>}
             </div>
         </form>
     );
@@ -241,8 +253,9 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
     const [components, setComponents] = useState(JSON.parse(JSON.stringify(initialComponents)));
     const [originalComponents, setOriginalComponents] = useState(JSON.parse(JSON.stringify(initialComponents)));
     const [isEditMode, setIsEditMode] = useState(false);
+    const { theme } = useTheme();
+
     const canManage = ['admin', 'it_head', 'lab_head'].includes(user?.role);
-    const { theme } = useTheme()
 
     const getStatusColor = (status) => {
         switch (status) {
@@ -252,6 +265,11 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
             case 'missing': return 'text-danger';
             default: return 'text-secondary';
         }
+    };
+
+    const copyToClipboard = (text) => {
+        navigator.clipboard.writeText(text);
+        toast.success("Copied to clipboard!");
     };
 
     const addNewRow = () => {
@@ -265,7 +283,7 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
             is_core: false
         };
         setComponents([...components, newComp]);
-        setIsEditMode(true); // Auto-switch to edit mode for new components
+        setIsEditMode(true);
     };
 
     const handleLocalChange = (id, field, value) => {
@@ -295,10 +313,8 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
 
         try {
             for (const comp of components) {
-                // Skip if cancelled
                 if (conflictFoundAndCancelled) break;
 
-                // 1. New Component Interaction
                 if (comp.id.toString().startsWith('new-')) {
                     if (!comp.brand_name) {
                         toast.error(`Brand name is required for new ${comp.component_type} component`);
@@ -306,7 +322,7 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                     }
 
                     // CHECK SERIAL CONFLICT
-                    let targetId = null; // If null, create new. If set, update existing.
+                    let targetId = null;
 
                     if (comp.serial_number) {
                         const check = await api.get(`/components/check-serial?serial_number=${encodeURIComponent(comp.serial_number)}`);
@@ -342,7 +358,7 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                                 component_type: comp.component_type,
                                 brand_name: comp.brand_name,
                                 serial_number: comp.serial_number,
-                                is_core: isCore, // Update core status too? Probably safe.
+                                is_core: isCore,
                                 status: comp.status
                             })
                         );
@@ -488,13 +504,14 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                     </span>
                 </div>
                 {
-                    components.map((comp) => (
-                        <div className="d-flex align-items-center mb-3">
-                            <div className="container-fluid flex-fill">
-                                <div key={comp.id} className="row align-items-cente">
+                    components.length > 0 && components.map((comp) => (
+                        <div key={comp.id} className="d-flex align-items-center mb-3">
+                            <div className={`container-fluid flex-fill rounded p-2 ${!isEditMode ? (comp.status === 'good' ? 'bg-success-subtle' : comp.status === 'bad' ? 'bg-warning-subtle' : comp.status === 'maintenance' ? 'bg-info-subtle' : 'bg-danger-subtle') : ''}`}>
+                                <div className="row align-items-center">
+                                    {/* Icon/Type */}
                                     {
-                                        isEditMode && canManage ? (
-                                            <div className="col-4 col-md-4 p-1">
+                                        isEditMode && canEditComponentDetails(user) ? (
+                                            <div className="col-12 col-md-3 p-1">
                                                 <select
                                                     className={`form-select ${comp.is_core ? "remove-arrow-select-input " : ""} border form-select-sm p-1 bg-transparent`}
                                                     value={comp.component_type}
@@ -507,7 +524,7 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                                                 </select>
                                             </div>
                                         ) : (
-                                            <div className="col-1 d-flex justify-content-center align-items-center">
+                                            <div className="col-1 d-flex justify-content-center align-items-center" title={comp.component_type}>
                                                 <div className="p-1 px-2 rounded text-center bg-body-secondary">
                                                     <span>{getComponentIcon(comp.component_type)}</span>
                                                 </div>
@@ -515,30 +532,52 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                                         )
                                     }
 
-                                    <div className="col-6 col-md-3 p-1">
-                                        {
-                                            isEditMode && canManage ? (
-                                                <input type="text" className="form-control form-control-sm p-1 bg-transparent p-0" value={comp.brand_name} onChange={(e) => handleLocalChange(comp.id, 'brand_name', e.target.value)} />
-                                            ) : <span className="fw-bold p-1">{comp.brand_name}</span>
-                                        }
-                                    </div>
+                                    {/* Brand Name */}
+                                    {
+                                        isEditMode && canEditComponentDetails(user) ? (
+                                            <div className="col-12 col-md-3 p-1">
+                                                <input type="text" className="form-control form-control-sm p-1 bg-transparent p-0" value={comp.brand_name} onChange={(e) => handleLocalChange(comp.id, 'brand_name', e.target.value)} placeholder="Brand Name" />
+                                            </div>
+                                        ) : (
+                                            <div className="col p-1 d-flex align-items-center">
+                                                <span className="fw-bold me-1">{comp.brand_name}</span>
+                                                <button className="btn btn-link p-0 text-muted" onClick={() => copyToClipboard(comp.brand_name)} title="Copy Brand">
+                                                    <i className="bi bi-clipboard" style={{ fontSize: '0.8rem' }}></i>
+                                                    <ArrowReturnLeft size={10} className="d-none" />
+                                                </button>
+                                            </div>
+                                        )
+                                    }
 
-                                    <div className="col-6 col-md-3 p-1">
-                                        {
-                                            isEditMode && canManage ? (
-                                                <input type="text" className="form-control form-control-sm p-1 bg-transparent p-0" value={comp.serial_number} placeholder="-" onChange={(e) => handleLocalChange(comp.id, 'serial_number', e.target.value)} />
-                                            ) : (<span className="p-1 bg-body-secondary rounded"> {comp.serial_number || (<span className="text-muted">S/N Missing</span>)} </span>)
-                                        }
-                                    </div>
+                                    {/* Serial Number */}
+                                    {
+                                        isEditMode && canEditComponentDetails(user) ? (
+                                            <div className="col-12 col-md-3 p-1">
+                                                <input type="text" className="form-control form-control-sm p-1 bg-transparent p-0" value={comp.serial_number} placeholder="Serial Number" onChange={(e) => handleLocalChange(comp.id, 'serial_number', e.target.value)} />
+                                            </div>
+                                        ) : (
+                                            <div className="col p-1 d-flex align-items-center">
+                                                <span className="p-1 px-2 bg-body-secondary rounded me-1 text-truncate" style={{ maxWidth: '150px' }}>
+                                                    {comp.serial_number || <span className="text-muted fst-italic">No S/N</span>}
+                                                </span>
+                                                {comp.serial_number && (
+                                                    <button className="btn btn-link p-0 text-muted" onClick={() => copyToClipboard(comp.serial_number)} title="Copy Serial">
+                                                        <i className="bi bi-clipboard" style={{ fontSize: '0.8rem' }}></i>
+                                                    </button>
+                                                )}
+                                            </div>
+                                        )
+                                    }
 
+                                    {/* Status */}
                                     <div className="col p-1">
                                         {
-                                            canManage ? (
+                                            isEditMode && canEditComponentStatus(user) ? (
                                                 <select className={`form-select form-select-sm border bg-transparent p-1 ${getStatusColor(comp.status)}`} value={comp.status} onChange={(e) => handleLocalChange(comp.id, 'status', e.target.value)}>
                                                     <option value="good">Good</option><option value="bad">Bad</option><option value="maintenance">Maintenance</option><option value="missing">Missing</option>
                                                 </select>
                                             ) : (
-                                                <span className={`badge ${comp.status === 'good' ? 'bg-success' : 'bg-secondary'}`}>{comp.status}</span>
+                                                <span className={`badge ${comp.status === 'good' ? 'bg-success' : comp.status === 'bad' ? 'bg-warning' : comp.status === 'maintenance' ? 'bg-info' : 'bg-danger'}`}>{comp.status}</span>
                                             )
                                         }
                                     </div>
@@ -546,12 +585,14 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                             </div>
 
                             <div className="w-fit h-full gap-1 d-flex ps-2">
-                                {isEditMode && canManage ? (
+                                {isEditMode ? (
                                     <>
-                                        <button className="btn btn-sm btn-outline-warning border-0" title='Unlink (Move to Unassigned)' onClick={() => handleUnlink(comp)}>
-                                            <BoxArrowUpRight />
-                                        </button>
-                                        {!comp.is_core && (
+                                        {canEditComponentDetails(user) && (
+                                            <button className="btn btn-sm btn-outline-warning border-0" title='Unlink (Move to Unassigned)' onClick={() => handleUnlink(comp)}>
+                                                <BoxArrowUpRight />
+                                            </button>
+                                        )}
+                                        {!comp.is_core && canDeleteComponent(user) && (
                                             <button className="btn btn-sm btn-outline-danger border-0" title='Permanent Delete' onClick={() => handleRemove(comp)}>
                                                 <Trash />
                                             </button>
@@ -574,30 +615,43 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                 )}
             </div>
 
+            {/* Modal Confirmation */}
+            <Modal show={confirmModal.show} onHide={() => handleConfirmResult(false)} centered size="sm">
+                <Modal.Header closeButton>
+                    <Modal.Title>{confirmModal.title}</Modal.Title>
+                </Modal.Header>
+                <Modal.Body style={{ whiteSpace: 'pre-line' }}>{confirmModal.message}</Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={() => handleConfirmResult(false)}>Cancel</Button>
+                    <Button variant="primary" onClick={() => handleConfirmResult(true)}>Confirm</Button>
+                </Modal.Footer>
+            </Modal>
+
             <div className="modal-footer border-0 d-flex justify-content-between">
                 <div className="d-flex gap-2">
-                    {canManage && (
-                        <>
-                            {isEditMode ? (
-                                <>
-                                    <button className="btn btn-primary btn-sm" onClick={() => setIsEditMode(false)} title="Edit Components">
-                                        <PencilSquare className="me-1" /> Edit Mode
-                                    </button>
+                    {/* Edit Mode Toggle */}
+                    {(canEditComponentDetails(user) || canEditComponentStatus(user)) && (
+                        isEditMode ? (
+                            <>
+                                <button className="btn btn-primary btn-sm" onClick={() => setIsEditMode(false)} title="Exit Edit Mode">
+                                    <PencilSquare className="me-1" /> View Mode
+                                </button>
+                                {canAddComponent(user) && (
                                     <button className="btn btn-outline-secondary btn-sm" onClick={addNewRow} title="Add New Component">
                                         <Plus className="me-1" /> Add Component
                                     </button>
-                                </>
-                            ) : (
-                                <button className="btn btn-outline-primary btn-sm" onClick={() => setIsEditMode(true)} title="Edit Components">
-                                    <PencilSquare className="me-1" /> Edit Mode
-                                </button>
-                            )}
-                        </>
+                                )}
+                            </>
+                        ) : (
+                            <button className="btn btn-outline-primary btn-sm" onClick={() => setIsEditMode(true)} title="Enter Edit Mode">
+                                <PencilSquare className="me-1" /> Edit Mode
+                            </button>
+                        )
                     )}
                 </div>
                 <div className="d-flex gap-2">
                     <Button variant="secondary" onClick={onClose}>Close</Button>
-                    {canManage && (
+                    {(canEditComponentDetails(user) || canEditComponentStatus(user)) && (
                         isEditMode ? (
                             <Button variant="success" onClick={handleSave}>Save Changes</Button>
                         ) : (
@@ -607,6 +661,93 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                 </div>
             </div>
         </>
+    );
+};
+
+const ComputerSetCard = ({ set, components, user, onView, onEdit, onDelete }) => {
+    const [isHovered, setIsHovered] = useState(false);
+    const [showMobilePreview, setShowMobilePreview] = useState(false);
+
+    // Helper explicitly inside or global? Using global `getComponentIcon`
+    const getStatusColor = (status) => {
+        switch (status) {
+            case 'good': return 'text-success';
+            case 'bad': return 'text-warning';
+            case 'maintenance': return 'text-info';
+            case 'missing': return 'text-danger';
+            default: return 'text-secondary';
+        }
+    }
+
+    const canEdit = canEditSetDetails(user) || canEditSetStatus(user);
+    const canDelete = ['admin', 'it_head', 'lab_head'].includes(user?.role);
+
+    return (
+        <div className="col p-1">
+            <div
+                className={`card h-100 position-relative overflow-hidden shadow-sm hover-shadow ${set.status === 'active' ? 'bg-success-subtle' : 'bg-warning-subtle'}`}
+                style={{ cursor: 'pointer', transition: 'transform 0.2s' }}
+                onClick={() => onView(set)}
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => { setIsHovered(false); setShowMobilePreview(false); }}
+            >
+                <div className="card-body text-center d-flex flex-column justify-content-center align-items-center" style={{ minHeight: '150px' }}>
+                    <h5 className="card-title fw-bold mb-0">{set.set_name}</h5>
+                    <div className="d-flex gap-1">
+                        <span className={`badge text-capitalize ${set.status === 'active' ? 'bg-success' : 'bg-warning'} mt-2`}>
+                            {set.status}
+                        </span>
+                    </div>
+
+                    {/* Hover/Preview Overlay */}
+                    <div
+                        className="position-absolute top-0 start-0 w-100 h-100 p-3 d-flex flex-wrap align-items-center justify-content-center"
+                        style={{
+                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                            opacity: (isHovered || showMobilePreview) ? 1 : 0,
+                            transition: 'opacity 0.3s',
+                            zIndex: 10,
+                            pointerEvents: 'none'
+                        }}
+                    >
+                        <div className='d-flex flex-wrap justify-content-center'>
+                            {components.map(comp => (
+                                <div key={comp.id} className={`m-1 fs-6 ${getStatusColor(comp.status)}`} title={`${comp.brand_name} (${comp.status})`}>
+                                    {getComponentIcon(comp.component_type)}
+                                </div>
+                            ))}
+                        </div>
+                        {components.length === 0 && <span className="text-muted small">No components</span>}
+                    </div>
+                </div>
+
+                {/* Collapsible Action Bar */}
+                {(canEdit || canDelete) && (
+                    <div className="position-absolute top-0 end-0 p-2 z-20 computer-set-actions" style={{ zIndex: 20 }} onClick={(e) => e.stopPropagation()}>
+                        <style>
+                            {`
+                                    .action-btn { background: none; border: none; padding: 4px; cursor: pointer; transition: color 0.2s; display: flex; align-items: center; justify-content: center; }
+                                    .action-btn:hover { opacity: 0.7; }
+                                    @media (max-width: 767.98px) {
+                                        .comp-mobile-actions { display: flex; gap: 4px; border-radius: 4px; padding: 2px; }
+                                        .comp-desktop-actions { display: none; }
+                                    }
+                                    @media (min-width: 768px) {
+                                        .comp-mobile-actions { display: none; }
+                                        .comp-desktop-actions { display: block; }
+                                        .card:not(:hover) .desktop-trigger-btn { opacity: 1; }
+                                        .desktop-trigger-btn { transition: opacity 0.2s; }
+                                    }
+                                `}
+                        </style>
+                        <CollapsibleActions
+                            onEdit={canEdit ? () => onEdit(set) : undefined}
+                            onDelete={canDelete ? () => onDelete(set.id) : undefined}
+                        />
+                    </div>
+                )}
+            </div>
+        </div>
     );
 };
 
@@ -686,19 +827,6 @@ const LaboratoryComputersPage = () => {
         });
     };
 
-    // Card Helper functions (kept as is)
-    // Card Helper functions (kept as is)
-
-    const getStatusColor = (status) => {
-        switch (status) {
-            case 'good': return 'text-success';
-            case 'bad': return 'text-warning';
-            case 'maintenance': return 'text-info';
-            case 'missing': return 'text-danger';
-            default: return 'text-secondary';
-        }
-    };
-
     const handleCreate = () => {
         setMode('create');
         setSelectedSet(null);
@@ -734,76 +862,6 @@ const LaboratoryComputersPage = () => {
     };
 
 
-    const ComputerSetCard = ({ set, components, canManage, onView, onEdit, onDelete }) => {
-        const [isHovered, setIsHovered] = useState(false);
-        const [showMobilePreview, setShowMobilePreview] = useState(false);
-
-        return (
-            <div className="col p-1">
-                <div
-                    className={`card h-100 position-relative overflow-hidden shadow-sm hover-shadow ${set.status === 'active' ? 'bg-success-subtle' : 'bg-warning-subtle'}`}
-                    style={{ cursor: 'pointer', transition: 'transform 0.2s' }}
-                    onClick={() => onView(set)}
-                    onMouseEnter={() => setIsHovered(true)}
-                    onMouseLeave={() => { setIsHovered(false); setShowMobilePreview(false); }}
-                >
-                    <div className="card-body text-center d-flex flex-column justify-content-center align-items-center" style={{ minHeight: '150px' }}>
-                        <h5 className="card-title fw-bold mb-0">{set.set_name}</h5>
-                        <div className="d-flex gap-1">
-                            <span className={`badge text-capitalize ${set.status === 'active' ? 'bg-success' : 'bg-warning'} mt-2`}>
-                                {set.status}
-                            </span>
-                        </div>
-
-                        {/* Hover/Preview Overlay */}
-                        <div
-                            className="position-absolute top-0 start-0 w-100 h-100 p-3 d-flex flex-wrap align-items-center justify-content-center"
-                            style={{
-                                backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                                opacity: (isHovered || showMobilePreview) ? 1 : 0,
-                                transition: 'opacity 0.3s',
-                                zIndex: 10,
-                                pointerEvents: 'none'
-                            }}
-                        >
-                            <div className='d-flex flex-wrap justify-content-center'>
-                                {components.map(comp => (
-                                    <div key={comp.id} className={`m-1 fs-6 ${getStatusColor(comp.status)}`} title={`${comp.brand_name} (${comp.status})`}>
-                                        {getComponentIcon(comp.component_type)}
-                                    </div>
-                                ))}
-                            </div>
-                            {components.length === 0 && <span className="text-muted small">No components</span>}
-                        </div>
-                    </div>
-
-                    {/* Collapsible Action Bar */}
-                    {canManage && (
-                        <div className="position-absolute top-0 end-0 p-2 z-20 computer-set-actions" style={{ zIndex: 20 }} onClick={(e) => e.stopPropagation()}>
-                            <style>
-                                {`
-                                    .action-btn { background: none; border: none; padding: 4px; cursor: pointer; transition: color 0.2s; display: flex; align-items: center; justify-content: center; }
-                                    .action-btn:hover { opacity: 0.7; }
-                                    @media (max-width: 767.98px) {
-                                        .comp-mobile-actions { display: flex; gap: 4px; border-radius: 4px; padding: 2px; }
-                                        .comp-desktop-actions { display: none; }
-                                    }
-                                    @media (min-width: 768px) {
-                                        .comp-mobile-actions { display: none; }
-                                        .comp-desktop-actions { display: block; }
-                                        .card:not(:hover) .desktop-trigger-btn { opacity: 1; }
-                                        .desktop-trigger-btn { transition: opacity 0.2s; }
-                                    }
-                                `}
-                            </style>
-                            <CollapsibleActions onEdit={() => onEdit(set)} onDelete={() => onDelete(set.id)} />
-                        </div>
-                    )}
-                </div>
-            </div>
-        );
-    };
-
     if (loading) return <LoadingSpinner centered />;
     if (!laboratory) return <div className="container py-3">Laboratory not found</div>;
 
@@ -826,7 +884,7 @@ const LaboratoryComputersPage = () => {
                         key={set.id}
                         set={set}
                         components={getSetComponents(set.id)}
-                        canManage={canManage}
+                        user={user}
                         onView={handleViewComponents}
                         onEdit={handleEdit}
                         onDelete={handleDelete}
@@ -859,6 +917,7 @@ const LaboratoryComputersPage = () => {
                             laboratoryId={laboratoryId}
                             onSubmit={handleFormSubmit}
                             onCancel={() => setShowModal(false)}
+                            user={user}
                         />
                     )}
                 </Modal.Body>

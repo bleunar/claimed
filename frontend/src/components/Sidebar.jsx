@@ -12,14 +12,14 @@ const Sidebar = ({ isOpen, isMobile, options, onClose, onToggle }) => {
     const location = useLocation();
 
     const linkStyle = ({ isActive }) => ({
-        color: isActive ? '#000000ff' : '#ffffffff',
         textDecoration: 'none',
         display: 'flex',
         alignItems: 'center',
         padding: '10px 20px',
-        backgroundColor: isActive ? '#ffffffff' : 'transparent',
         justifyContent: !isOpen && !isMobile ? 'center' : 'flex-start',
-        height: '50px'
+        height: '50px',
+        fontWeight: isActive ? "600" : "400",
+        transition: "all ease-in-out 1s"
     });
 
     const isOptionActive = (option) => {
@@ -41,6 +41,7 @@ const Sidebar = ({ isOpen, isMobile, options, onClose, onToggle }) => {
                             <Link
                                 to={option.path}
                                 style={linkStyle({ isActive })}
+                                className={isActive ? "bg-secondary text-dark" : "bg-primary text-light"}
                                 onClick={isMobile ? onClose : undefined}
                                 title={!isOpen && !isMobile ? option.name : ''}
                             >

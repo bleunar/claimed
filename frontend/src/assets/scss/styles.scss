@@ -1,0 +1,93 @@
+// 1. GLOBAL TOGGLES & OPTIONS
+// ------------------------------------------------------------------------
+// $enable-rounded:              true;   // Set false to remove all border-radius
+// $enable-shadows:              false;  // Set true to enable shadow utilities
+// $enable-gradients:            false;  // Set true to enable background gradients
+// $enable-transitions:          true;
+// $enable-grid-classes:         true;
+// $enable-caret:                true;   // Dropdown arrow carets
+// $enable-button-pointers:      true;   // 'cursor: pointer' on buttons
+
+// 2. COLOR SYSTEM
+// ------------------------------------------------------------------------
+// Define your brand colors here first so you can use them below.
+$brand-primary:       #006633; // Example: Indigo
+$brand-secondary:     #e6d115; // Example: Pink
+
+// Override Bootstrap's Semantic Colors
+$primary:             $brand-primary;
+$secondary:           $brand-secondary;
+// $success:             #198754;
+// $info:                #0dcaf0;
+// $warning:             #ffc107;
+// $danger:              #dc3545;
+// $light:               #f8f9fa;
+// $dark:                #212529;
+
+// 3. BODY & LINKS
+// ------------------------------------------------------------------------
+// $body-bg:             #ffffff;
+// $body-color:          #212529; // Main text color
+// $link-color:          $primary;
+// $link-decoration:     underline;
+// $link-hover-color:    darken($link-color, 15%);
+
+// 4. TYPOGRAPHY
+// ------------------------------------------------------------------------
+// $font-family-sans-serif:      system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+// $font-family-monospace:       SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+// $font-family-base:            $font-family-sans-serif;
+
+// $font-size-base:              1rem; // usually 16px. Set to 0.875rem for 14px.
+// $line-height-base:            1.5;
+
+// Headings
+// $headings-font-family:        null; // Inherits from base if null
+// $headings-font-weight:        500;
+// $headings-line-height:        1.2;
+// $headings-color:              null; // Inherits from body-color if null
+
+// 5. SPACING (Margins & Paddings)
+// ------------------------------------------------------------------------
+// The $spacer variable controls the multiplier for m-1, p-2, etc.
+// $spacer:                      1rem; // Default is 16px
+
+// 6. BORDERS & RADIUS
+// ------------------------------------------------------------------------
+// $border-width:                1px;
+// $border-color:                #dee2e6;
+// $border-radius:               0.375rem; // Default rounded corners
+// $border-radius-sm:            0.25rem;
+// $border-radius-lg:            0.5rem;
+// $border-radius-pill:          50rem;
+
+// 7. BUTTONS
+// ------------------------------------------------------------------------
+// $btn-padding-y:               0.375rem;
+// $btn-padding-x:               0.75rem;
+// $btn-font-size:               $font-size-base;
+// $btn-border-width:            1px;
+// $btn-border-radius:           $border-radius;
+// $btn-box-shadow:              inset 0 1px 0 rgba(255, 255, 255, 0.15), 0 1px 1px rgba(0, 0, 0, 0.075);
+
+// 8. FORMS & INPUTS
+// ------------------------------------------------------------------------
+// $input-bg:                    #ffffff;
+// $input-disabled-bg:           #e9ecef;
+// $input-color:                 $body-color;
+// $input-border-color:          #ced4da;
+// $input-border-width:          1px;
+// $input-box-shadow:            inset 0 1px 2px rgba(0, 0, 0, 0.075);
+// $input-border-radius:         $border-radius;
+// $input-focus-border-color:    lighten($primary, 25%);
+// $input-focus-box-shadow:      0 0 0 0.25rem rgba($primary, 0.25);
+
+// 9. NAVBAR
+// ------------------------------------------------------------------------
+// $navbar-padding-y:            0.5rem;
+// $navbar-padding-x:            null;
+// $navbar-nav-link-padding-x:   0.5rem;
+// $navbar-brand-font-size:      1.25rem;
+
+// Import all of Bootstrap’s CSS
+@import "bootstrap/scss/bootstrap";

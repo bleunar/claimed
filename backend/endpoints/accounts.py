@@ -31,7 +31,7 @@ def profile():
     cursor = db.cursor(dictionary=True)
     db = get_db()
     cursor = db.cursor(dictionary=True)
-    cursor.execute("SELECT id, name, email, role, status, profile_picture FROM accounts WHERE id = %s", (current_user_id,))
+    cursor.execute("SELECT id, name, email, role, status, profile_picture, birth_date, gender, department_name FROM accounts WHERE id = %s", (current_user_id,))
     user = cursor.fetchone()
     cursor.close()
     

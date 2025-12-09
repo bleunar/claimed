@@ -3,7 +3,7 @@ import { useTheme } from '../context/ThemeContext';
 import { Form, Button, Card, Row, Col, Image, Modal } from 'react-bootstrap';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
-import { PersonCircle } from 'react-bootstrap-icons';
+import { Person, PersonCircle } from 'react-bootstrap-icons';
 import ChangeEmailModal from '../components/modals/ChangeEmailModal';
 import toast from 'react-hot-toast';
 
@@ -130,10 +130,11 @@ const ProfilePage = () => {
 
     return (
         <div className="container py-3">
-            <h2 className="h4 mb-3">My Profile</h2>
+            <h2 className="h4 mb-3">My Account</h2>
             <Row className="g-4 mb-4">
                 <Col md={4}>
                     <Card className='h-100 overflow-hidden shadow-sm'>
+                        <Card.Header className='text-bg-primary fw-bold'>Profile Picture</Card.Header>
                         <Card.Body className="text-center bg-body-tertiary">
                             <div className="mb-3 position-relative d-inline-block">
                                 {getProfileImageUrl() ? (
@@ -143,7 +144,7 @@ const ProfilePage = () => {
                                         style={{ width: '150px', height: '150px', objectFit: 'cover' }}
                                     />
                                 ) : (
-                                    <PersonCircle size={150} className="text-secondary" />
+                                    <Person size={150} className="text-body" />
                                 )}
                             </div>
                             <h4 className="mb-0">{user?.name}</h4>
@@ -183,10 +184,11 @@ const ProfilePage = () => {
                                     <div className="d-flex gap-2">
                                         <Form.Control type="email" value={user?.email || ''} disabled />
                                         <Button
-                                            variant="outline-secondary"
+                                            variant="link"
+                                            className='text-body-primary'
                                             onClick={() => setShowEmailModal(true)}
                                         >
-                                            Change
+                                            Update
                                         </Button>
                                     </div>
                                 </Form.Group>
@@ -214,7 +216,7 @@ const ProfilePage = () => {
             <Row className='g-4'>
                 <Col md={4}>
                     <Card className='mb-4 mb-md-0 h-100 shadow-sm overflow-hidden'>
-                        <Card.Header>Settings</Card.Header>
+                        <Card.Header className='text-bg-primary fw-bold'>Settings</Card.Header>
                         <Card.Body className='bg-body-tertiary'>
                             <Form.Group className="mb-3 d-flex justify-content-between align-items-center">
                                 <Form.Label className="mb-0">Dark Mode</Form.Label>
@@ -249,7 +251,7 @@ const ProfilePage = () => {
 
                 <Col md={8}>
                     <Card className='h-100 shadow-sm overflow-hidden'>
-                        <Card.Header>Update Password</Card.Header>
+                        <Card.Header className='text-bg-primary fw-bold'>Update Password</Card.Header>
                         <Card.Body className='bg-body-tertiary'>
                             <Form onSubmit={handleUpdatePassword}>
                                 <Form.Group className="mb-3">

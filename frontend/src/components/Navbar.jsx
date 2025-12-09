@@ -1,5 +1,5 @@
 import React from 'react';
-import { List, PersonCircle } from 'react-bootstrap-icons';
+import { List, Person, PersonCircle } from 'react-bootstrap-icons';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -9,7 +9,7 @@ const Navbar = ({ onToggleSidebar }) => {
     const { theme, toggleTheme } = useTheme();
 
     return (
-        <nav className={`navbar navbar-expand-lg p-0 navbar-${theme} text-white ${theme}`} style={{ backgroundColor: "#006633", height: '7vh' }}>
+        <nav className={`navbar navbar-expand-lg p-0 bg-primary navbar-${theme} ${theme}`} style={{ height: '7vh' }}>
             <div className="container-fluid pe-0  ">
                 <button className="btn btn-outline-light border-0 d-md-none" onClick={onToggleSidebar}>
                     <List />
@@ -26,9 +26,9 @@ const Navbar = ({ onToggleSidebar }) => {
                             {user?.profile_picture ? (
                                 <img src={`/api/accounts/${user.id}/picture?t=${user._picTimestamp || ''}`} alt="profile" style={{ objectFit: 'cover', height: '7vh', width: "7vh" }} />
                             ) : (
-                                <div className='p-2 bg-secondary' style={{ height: '7vh', width: '7vh' }}>
+                                <div className='p-2 bg-dark-subtle' style={{ height: '7vh', width: '7vh' }}>
 
-                                    <PersonCircle className="text-light h-100 w-100" />
+                                    <Person className="text-primary h-100 w-100" />
                                 </div>
                             )}
                         </a>
