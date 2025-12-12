@@ -17,6 +17,7 @@ server {
     location /api {
         resolver 127.0.0.11 valid=30s;
         set $upstream_backend ${PROXY_TARGET};
+        rewrite ^/api/(.*) /$1 break;
         proxy_pass $upstream_backend;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
