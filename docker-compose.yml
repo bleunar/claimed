@@ -5,8 +5,6 @@ services:
     build: ./backend
     container_name: claims_backend
     restart: unless-stopped
-    ports:
-      - "5000:5000"
     secrets:
       - mysql_password
       - secret_key
