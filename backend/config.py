@@ -26,7 +26,7 @@ class Config:
     MYSQL_DB = get_config('MYSQL_DB', 'mysql_db', 'app_db')
     
     # JWT Config
-    JWT_SECRET_KEY = get_config('JWT_SECRET_KEY', 'jwt_secret_key', 'dev_jwt_secret')
+    JWT_SECRET_KEY = get_config('JWT_SECRET_KEY', 'secret_key', 'dev_jwt_secret')
     JWT_ACCESS_TOKEN_EXPIRES = 600 # 10 minutes
     JWT_REFRESH_TOKEN_EXPIRES = 72000 # 20 hours
     
