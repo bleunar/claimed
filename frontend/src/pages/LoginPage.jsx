@@ -5,6 +5,8 @@ import { useNavigate } from 'react-router-dom';
 import ForgotPasswordModal from '../components/modals/ForgotPasswordModal';
 import { Eye, EyeSlash } from 'react-bootstrap-icons';
 
+import loginBg from '../assets/img/login_bg.png';
+
 const LoginPage = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -24,54 +26,74 @@ const LoginPage = () => {
     };
 
     return (
-        <div className="container vh-100">
-            <div className="row justify-content-center align-items-center h-100">
-                <div className="col-md-6">
-                    <div className="card">
-                        <div className="card-header">Login</div>
-                        <div className="card-body">
-                            <form onSubmit={handleSubmit}>
-                                <div className="mb-3">
-                                    <label className="form-label">Email</label>
+        <div
+            className="container-fluid vh-100 d-flex align-items-center justify-content-center"
+            style={{
+                backgroundImage: `url(${loginBg})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat'
+            }}
+        >
+            <div className="col-md-4 col-sm-8 col-10">
+                <div
+                    className="card border-0 shadow-lg"
+                    style={{
+                        background: 'rgba(255, 255, 255, 0.75)', // Light frosted glass
+                        backdropFilter: 'blur(12px)',
+                        WebkitBackdropFilter: 'blur(12px)',
+                        border: '1px solid rgba(255, 255, 255, 0.3)'
+                    }}
+                >
+                    <div className="card-header bg-transparent border-bottom-0 text-center pt-4 pb-2">
+                        <h3 className="mb-0 fw-bold text-primary">Login</h3>
+                    </div>
+                    <div className="card-body p-4">
+                        <form onSubmit={handleSubmit}>
+                            <div className="mb-3">
+                                <label className="form-label fw-semibold">Email</label>
+                                <input
+                                    type="email"
+                                    className="form-control bg-light border-0"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    placeholder="Enter your email"
+                                    required
+                                />
+                            </div>
+                            <div className="mb-4">
+                                <label className="form-label fw-semibold">Password</label>
+                                <div className="input-group">
                                     <input
-                                        type="email"
-                                        className="form-control"
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
+                                        type={showPassword ? "text" : "password"}
+                                        className="form-control bg-light border-0"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        placeholder="Enter your password"
                                         required
                                     />
-                                </div>
-                                <div className="mb-3">
-                                    <label className="form-label">Password</label>
-                                    <div className="input-group">
-                                        <input
-                                            type={showPassword ? "text" : "password"}
-                                            className="form-control"
-                                            value={password}
-                                            onChange={(e) => setPassword(e.target.value)}
-                                            required
-                                        />
-                                        <button
-                                            className="btn btn-primary"
-                                            type="button"
-                                            onClick={() => setShowPassword(!showPassword)}
-                                        >
-                                            {showPassword ? <EyeSlash /> : <Eye />}
-                                        </button>
-                                    </div>
-                                </div>
-                                <div className="d-flex justify-content-between align-items-center">
-                                    <button type="submit" className="btn btn-primary">Login</button>
                                     <button
+                                        className="btn btn-light border-0"
                                         type="button"
-                                        className="btn btn-link text-decoration-none"
-                                        onClick={() => setShowForgotModal(true)}
+                                        onClick={() => setShowPassword(!showPassword)}
                                     >
-                                        Forgot Password?
+                                        {showPassword ? <EyeSlash /> : <Eye />}
                                     </button>
                                 </div>
-                            </form>
-                        </div>
+                            </div>
+                            <div className="d-flex justify-content-between align-items-center mb-3">
+                                <button
+                                    type="button"
+                                    className="btn btn-link text-decoration-none p-0"
+                                    onClick={() => setShowForgotModal(true)}
+                                >
+                                    Forgot Password?
+                                </button>
+                            </div>
+                            <div className="d-grid">
+                                <button type="submit" className="btn btn-primary py-2 fw-bold">Sign In</button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             </div>
