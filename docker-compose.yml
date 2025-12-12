@@ -28,7 +28,7 @@ services:
     container_name: claimed_frontend
     restart: unless-stopped
     env_file:
-      - ./fronted/.env
+      - ./frontend/.env
     depends_on:
       - claimed_backend
     networks:
