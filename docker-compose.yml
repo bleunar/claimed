@@ -29,7 +29,7 @@ services:
     ports:
       - "80:80"
     depends_on:
-      - backend
+      - claims_backend
     networks:
       - claims
 
