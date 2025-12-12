@@ -1,9 +1,9 @@
-name: claims
+name: claimed
 
 services:
-  claims_backend:
+  claimed_backend:
     build: ./backend
-    container_name: claims_backend
+    container_name: claimed_backend
     restart: unless-stopped
     secrets:
       - mysql_password
@@ -18,20 +18,20 @@ services:
       - MYSQL_DB_FILE=/run/secrets/mysql_db
       - SECRET_KEY_FILE=/run/secrets/secret_key
     networks:
-      - claims
+      - claimed
 
-  claims_frontend:
+  claimed_frontend:
     build: ./frontend
-    container_name: claims_frontend
+    container_name: claimed_frontend
     restart: unless-stopped
     depends_on:
-      - claims_backend
+      - claimed_backend
     networks:
-      - claims
+      - claimed
 
 networks:
-  claims:
-    name: claims
+  claimed:
+    name: claimed
     driver: bridge
 
 secrets:
