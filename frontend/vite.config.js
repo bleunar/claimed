@@ -9,7 +9,7 @@ const __dirname = dirname(__filename)
 // https://vite.dev/config/
 export default defineConfig({
   build: {
-    outDir: '../dist'
+    outDir: 'dist'
   },
   plugins: [react()],
   server: {
