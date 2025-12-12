@@ -5,6 +5,8 @@ services:
     build: ./backend
     container_name: claimed_backend
     restart: unless-stopped
+    env_file:
+      - ./backend/.env
     secrets:
       - mysql_password
       - secret_key
@@ -19,20 +21,26 @@ services:
       - SECRET_KEY_FILE=/run/secrets/secret_key
     networks:
       - claimed
+      - production
 
   claimed_frontend:
     build: ./frontend
     container_name: claimed_frontend
     restart: unless-stopped
+    env_file:
+      - ./fronted/.env
     depends_on:
       - claimed_backend
     networks:
       - claimed
+      - production
 
 networks:
   claimed:
     name: claimed
     driver: bridge
+  production:
+    external: true
 
 secrets:
   mysql_password:
