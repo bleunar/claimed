@@ -29,6 +29,8 @@ services:
     restart: unless-stopped
     env_file:
       - ./frontend/.env
+    environment:
+      - PROXY_TARGET=http://claimed_backend:5000
     depends_on:
       - claimed_backend
     networks:
