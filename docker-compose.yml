@@ -1,8 +1,9 @@
-version: '3.8'
+name: claims
 
 services:
-  backend:
+  claims_backend:
     build: ./backend
+    container_name: claims_backend
     restart: unless-stopped
     ports:
       - "5000:5000"
@@ -19,20 +20,22 @@ services:
       - MYSQL_DB_FILE=/run/secrets/mysql_db
       - SECRET_KEY_FILE=/run/secrets/secret_key
     networks:
-      - app_network
+      - claims
 
-  frontend:
+  claims_frontend:
     build: ./frontend
+    container_name: claims_frontend
     restart: unless-stopped
     ports:
       - "80:80"
     depends_on:
       - backend
     networks:
-      - app_network
+      - claims
 
 networks:
-  app_network:
+  claims:
+    name: claims
     driver: bridge
 
 secrets:
