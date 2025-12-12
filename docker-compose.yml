@@ -24,8 +24,6 @@ services:
     build: ./frontend
     container_name: claims_frontend
     restart: unless-stopped
-    ports:
-      - "80:80"
     depends_on:
       - claims_backend
     networks:
