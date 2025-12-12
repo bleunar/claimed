@@ -4,9 +4,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 def get_config(key, secret_file=None, default=None):
-    env = os.getenv('APP_ENV', 'development')
-    
-    if env == 'production':
+    if secret_file:
         try:
             with open(f'/run/secrets/{secret_file}', 'r') as f:
                 return f.read().strip()
@@ -26,7 +24,7 @@ class Config:
     MYSQL_DB = get_config('MYSQL_DB', 'mysql_db', 'app_db')
     
     # JWT Config
-    JWT_SECRET_KEY = get_config('JWT_SECRET_KEY', 'secret_key', 'dev_jwt_secret')
+    JWT_SECRET_KEY = get_config('JWT_SECRET_KEY', 'jwt_secret_key', 'dev_jwt_secret')
     JWT_ACCESS_TOKEN_EXPIRES = 600 # 10 minutes
     JWT_REFRESH_TOKEN_EXPIRES = 72000 # 20 hours
     
@@ -44,8 +42,8 @@ class Config:
     MAIL_PASSWORD = get_config('MAIL_PASSWORD', 'mail_password')
 
     # Default Admin Credentials (if wala pa admin account)
-    DEFAULT_ADMIN_EMAIL = get_config('DEFAULT_ADMIN_EMAIL', default='admin@example.com')
-    DEFAULT_ADMIN_PASSWORD = get_config('DEFAULT_ADMIN_PASSWORD', default='admin123')
+    DEFAULT_ADMIN_EMAIL = get_config('DEFAULT_ADMIN_EMAIL', 'default_admin_email', 'admin@example.com')
+    DEFAULT_ADMIN_PASSWORD = get_config('DEFAULT_ADMIN_PASSWORD', 'default_admin_password', 'admin123')
 
     # Logs
     LOG_MODE = get_config('LOG_MODE', default='HIGH').upper()
