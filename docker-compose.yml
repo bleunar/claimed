@@ -3,6 +3,7 @@ version: '3.8'
 services:
   backend:
     build: ./backend
+    restart: unless-stopped
     ports:
       - "5000:5000"
     secrets:
@@ -17,13 +18,22 @@ services:
       - MYSQL_PASSWORD_FILE=/run/secrets/mysql_password
       - MYSQL_DB_FILE=/run/secrets/mysql_db
       - SECRET_KEY_FILE=/run/secrets/secret_key
+    networks:
+      - app_network
 
   frontend:
     build: ./frontend
+    restart: unless-stopped
     ports:
       - "80:80"
     depends_on:
       - backend
+    networks:
+      - app_network
+
+networks:
+  app_network:
+    driver: bridge
 
 secrets:
   mysql_password:

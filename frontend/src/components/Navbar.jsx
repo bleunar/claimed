@@ -1,26 +1,34 @@
 import React from 'react';
-import { List, Person, PersonCircle } from 'react-bootstrap-icons';
+import { List, Person, PersonCircle, X } from 'react-bootstrap-icons';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 
-const Navbar = ({ onToggleSidebar }) => {
+const Navbar = ({ onToggleSidebar, sideBarToggled }) => {
     const { user, logout } = useAuth();
     const { theme, toggleTheme } = useTheme();
 
     return (
-        <nav className={`navbar navbar-expand-lg p-0 bg-primary navbar-${theme} ${theme}`} style={{ height: '7vh' }}>
-            <div className="container-fluid pe-0  ">
-                <button className="btn btn-outline-light border-0 d-md-none" onClick={onToggleSidebar}>
-                    <List />
-                </button>
+        <nav className={`navbar navbar-expand-lg p-0 sticky-top navbar-frosted navbar-${theme} ${theme}`} style={{ height: '7vh' }}>
+            <div className="container-fluid pe-0">
+                <div className="d-flex align-items-center d-md-none">
+                    <div className="btn p-0">
+                        {
+                            sideBarToggled ? (
+                                <X className='display-5' onClick={onToggleSidebar} />
+                            ) : (
+                                <List className='display-5' onClick={onToggleSidebar} />
+                            )
+                        }
+                    </div>
+                </div>
 
                 <div className="ms-auto d-flex align-items-center">
                     <div className="dropdown">
                         <a href="#" className="d-flex align-items-center text-decoration-none rounded-circle" id="dropdownUser1" data-bs-toggle="dropdown" aria-expanded="false">
                             <div className="text-end me-1">
-                                <div className={`me-2 fw-bold mb-0 text-light ${theme === 'light' ? 'dark' : 'light'}`} style={{ fontSize: '0.95rem' }}>{user?.name}</div>
-                                <div className={`me-2 text-light ${theme === 'light' ? 'dark' : 'light'}`} style={{ fontSize: '0.75rem' }}>{user?.email}</div>
+                                <div className={`me-2 fw-bold mb-0 text-body`} style={{ fontSize: '0.95rem' }}>{user?.name}</div>
+                                <div className={`me-2 text-body`} style={{ fontSize: '0.75rem' }}>{user?.email}</div>
                             </div>
 
                             {user?.profile_picture ? (

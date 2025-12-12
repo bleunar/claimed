@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Button, Collapse, Alert } from 'react-bootstrap';
+import { Modal, Button, Collapse, Alert, ToggleButton, ToggleButtonGroup } from 'react-bootstrap';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { Cpu, Mouse, Keyboard, Display, Webcam, Hdd, Tools, ThreeDots, PencilSquare, Trash, Plus, Info, Exclamation, ExclamationTriangleFill, ChevronLeft, ArrowReturnLeft, BoxArrowUpRight, Printer } from 'react-bootstrap-icons';
+import { Pc, Mouse, Keyboard, Display, Webcam, Hdd, Tools, ThreeDots, PencilSquare, Trash, Plus, Info, Exclamation, ExclamationTriangleFill, ChevronLeft, ArrowReturnLeft, BoxArrowUpRight, Printer, Headphones, CircleFill, Copy, CheckCircle, XCircle, XCircleFill, CheckCircleFill, QuestionCircle, Check, Check2, Question, QuestionLg, XLg, Flag, ArrowDownUp, ArrowUp, ArrowDown } from 'react-bootstrap-icons';
 import toast from 'react-hot-toast';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
@@ -23,65 +23,239 @@ const COMPONENT_TYPES = [
     { label: 'AVR', value: 'avr' },
     { label: 'Camera', value: 'web_camera' },
     { label: 'Printer', value: 'printer' },
-    { label: 'Other', value: 'other' }
+    { label: 'Headset', value: 'headset' },
+    { label: 'Others', value: 'other' }
 ];
+
+const getLabelByValue = (value) => {
+    const component = COMPONENT_TYPES.find(type => type.value === value);
+    return component ? component.label : 'Unknown Component';
+};
 
 const getComponentIcon = (type) => {
     switch (type) {
-        case 'system_unit': return <Cpu />;
+        case 'system_unit': return <Pc />;
         case 'monitor': return <Display />;
         case 'keyboard': return <Keyboard />;
         case 'mouse': return <Mouse />;
         case 'web_camera': return <Webcam />;
         case 'printer': return <Printer />;
+        case 'headset': return <Headphones />;
         case 'avr': return <Tools />;
         default: return <Tools />;
     }
-};
+}
 
-const CollapsibleActions = ({ onEdit, onDelete }) => {
-    const [isExpanded, setIsExpanded] = useState(false);
+
+const ReportIssueModal = ({ show, onHide, target, type, user, onSubmit }) => {
+    const isAdvancedUser = ['admin', 'it_head', 'lab_head'].includes(user?.role);
+    const [formData, setFormData] = useState({ title: '', description: '', priority: 'low' });
+
+    useEffect(() => {
+        if (show) setFormData({ title: '', description: '', priority: 'low' });
+    }, [show]);
+
+    const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        onSubmit(formData);
+    };
+
+    const TITLES = ["Broken/Damaged", "Missing", "Not Working", "Software Issue", "Other"];
 
     return (
-        <div className="d-flex align-items-center justify-content-end">
-            {/* Mobile: Always visible icons */}
-            <div className="comp-mobile-actions">
-                <button className="action-btn text-primary rounded-circle p-1 me-1" style={{ width: '28px', height: '28px' }} onClick={onEdit} title="Edit">
-                    <PencilSquare size={14} />
-                </button>
-                <button className="action-btn text-danger rounded-circle p-1" style={{ width: '28px', height: '28px' }} onClick={onDelete} title="Delete">
-                    <Trash size={14} />
-                </button>
-            </div>
-
-            {/* Desktop: Animated Collapse */}
-            <div className="comp-desktop-actions">
-                <div className="d-flex align-items-center rounded bg-body">
-                    <Collapse in={isExpanded} dimension="width">
-                        <div>
-                            <div className="d-flex align-items-center text-nowrap">
-                                <button className="action-btn text-primary px-2" onClick={(e) => { e.stopPropagation(); onEdit(); setIsExpanded(false); }} title="Edit">
-                                    <PencilSquare size={16} />
-                                </button>
-                                <button className="action-btn text-danger px-2" onClick={(e) => { e.stopPropagation(); onDelete(); setIsExpanded(false); }} title="Delete">
-                                    <Trash size={16} />
-                                </button>
-                            </div>
+        <Modal show={show} onHide={onHide}>
+            <Modal.Header closeButton>
+                <Modal.Title>Report Issue: {type === 'set' ? target?.set_name : target?.brand_name}</Modal.Title>
+            </Modal.Header>
+            <form onSubmit={handleSubmit}>
+                <Modal.Body>
+                    <div className="mb-3">
+                        <label className="form-label">Issue</label>
+                        {isAdvancedUser ? (
+                            <input type="text" className="form-control" name="title" value={formData.title} onChange={handleChange} required placeholder="Brief title of the issue" />
+                        ) : (
+                            <select className="form-select" name="title" value={formData.title} onChange={handleChange} required>
+                                <option value="">Select Issue...</option>
+                                {TITLES.map(t => <option key={t} value={t}>{t}</option>)}
+                            </select>
+                        )}
+                    </div>
+                    <div className="mb-3">
+                        <label className="form-label">Description {isAdvancedUser ? '(Required)' : '(Optional)'}</label>
+                        <textarea className="form-control" name="description" value={formData.description} onChange={handleChange} rows="3" required={isAdvancedUser} placeholder="Provide more details..."></textarea>
+                    </div>
+                    {isAdvancedUser && (
+                        <div className="mb-3">
+                            <label className="form-label">Priority</label>
+                            <select className="form-select" name="priority" value={formData.priority} onChange={handleChange}>
+                                <option value="low">Low</option>
+                                <option value="medium">Medium</option>
+                                <option value="high">High</option>
+                                <option value="critical">Critical</option>
+                            </select>
                         </div>
-                    </Collapse>
-
-                    <button
-                        className="action-btn desktop-trigger-btn"
-                        onClick={() => setIsExpanded(!isExpanded)}
-                        title={isExpanded ? "Collapse" : "Show Actions"}
-                    >
-                        <ThreeDots size={20} />
-                    </button>
-                </div>
-            </div>
-        </div>
+                    )}
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={onHide}>Cancel</Button>
+                    <Button variant="danger" type="submit">Report Issue</Button>
+                </Modal.Footer>
+            </form>
+        </Modal>
     );
 };
+
+
+
+const BatchEditSetsModal = ({ show, onHide, computerSets, user, onBatchUpdate, onBatchDelete }) => {
+    const [selectedIds, setSelectedIds] = useState([]);
+    const [targetStatus, setTargetStatus] = useState('active');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Filter out available sets (those not selected)
+    const availableSets = computerSets.filter(set => !selectedIds.includes(set.id));
+    const selectedSets = computerSets.filter(set => selectedIds.includes(set.id));
+
+    const handleSelect = (id) => setSelectedIds([...selectedIds, id]);
+    const handleUnselect = (id) => setSelectedIds(selectedIds.filter(sid => sid !== id));
+
+    const handleSelectAll = () => setSelectedIds(computerSets.map(s => s.id));
+    const handleUnselectAll = () => setSelectedIds([]);
+
+    const canDelete = ['admin', 'it_head', 'lab_head'].includes(user?.role);
+    const canUpdateStatus = ['admin', 'it_head', 'lab_head', 'it_technician'].includes(user?.role);
+
+    const executeUpdate = async () => {
+        if (selectedIds.length === 0) return;
+        if (!confirm(`Are you sure you want to update status for ${selectedIds.length} sets?`)) return;
+
+        setIsSubmitting(true);
+        await onBatchUpdate(selectedIds, targetStatus);
+        setIsSubmitting(false);
+        onHide();
+        setSelectedIds([]);
+    };
+
+    const executeDelete = async () => {
+        if (selectedIds.length === 0) return;
+        if (!confirm(`Are you sure you want to PERMANENTLY DELETE ${selectedIds.length} sets? This cannot be undone.`)) return;
+
+        setIsSubmitting(true);
+        await onBatchDelete(selectedIds);
+        setIsSubmitting(false);
+        onHide();
+        setSelectedIds([]);
+    };
+
+    return (
+        <Modal show={show} onHide={onHide} size="lg" backdrop="static">
+            <Modal.Header closeButton>
+                <Modal.Title>Batch Edit Computer Sets</Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+                <div className="row mb-5">
+                    {/* Selected Area */}
+                    <div className="col-12 mb-4">
+                        <div className="d-flex justify-content-between align-items-center mb-2">
+                            <h6 className="mb-0">Selected Sets ({selectedSets.length})</h6>
+                            <button className="btn btn-sm btn-link" onClick={handleUnselectAll}>Unselect All</button>
+                        </div>
+                        <div className="border rounded p-2 bg-body-tertiary" style={{ minHeight: '100px', overflowY: 'auto' }}>
+                            {
+                                selectedSets.length === 0 ?
+                                    (
+                                        <p className="text-muted text-center">Nothing selected</p>
+                                    ) : (
+                                        <div className="d-flex flex-wrap gap-2">
+                                            {selectedSets.map(set => (
+                                                <span
+                                                    key={set.id}
+                                                    className={`badge cursor-pointer ${set.status === 'active' ? 'bg-success' : 'bg-info'} border border-primary`}
+                                                    onClick={() => handleUnselect(set.id)}
+                                                    title="Click to remove"
+                                                >
+                                                    {set.set_name} <XLg className="ms-1" size={10} />
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+                        </div>
+                    </div>
+
+                    <div className="col-12 d-flex justify-content-center align-items-center gap-1">
+                        <ArrowUp title='Hello, world' />
+                        <ArrowDown title='Hello, baby' />
+                    </div>
+
+                    {/* Available Area */}
+                    <div className="col-12">
+                        <div className="d-flex justify-content-between align-items-center mb-2">
+                            <h6 className="mb-0">Available Sets ({availableSets.length})</h6>
+                            <button className="btn btn-sm btn-link" onClick={handleSelectAll}>Select All Remaining</button>
+                        </div>
+                        <div className="border rounded p-2 bg-body-tertiary" style={{ minHeight: '150px', overflowY: 'auto' }}>
+                            {availableSets.length === 0 ? (
+                                <p className="text-muted text-center">No computer available</p>
+                            ) : (
+                                <div className="d-flex flex-wrap gap-2">
+                                    {availableSets.map(set => (
+                                        <span
+                                            key={set.id}
+                                            className={`badge cursor-pointer ${set.status === 'active' ? 'bg-success opacity-75' : 'bg-info opacity-75'}`}
+                                            onClick={() => handleSelect(set.id)}
+                                            title="Click to select"
+                                        >
+                                            {set.set_name} <Plus className="ms-1" size={10} />
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Operations */}
+                <div className="h4">Batch Operations</div>
+
+                <div className="container-fluid px-2 mb-4">
+                    <div className="row">
+                        <div className="col p-1">
+                            <div className="input-group">
+                                <select className="form-select" value={targetStatus} onChange={(e) => setTargetStatus(e.target.value)} disabled={!canUpdateStatus || selectedIds.length === 0}>
+                                    <option value="active">Active</option>
+                                    <option value="maintenance">Maintenance</option>
+                                </select>
+                                <button className="btn btn-primary" onClick={executeUpdate} disabled={!canUpdateStatus || selectedIds.length === 0 || isSubmitting}>
+                                    Apply
+                                </button>
+                            </div>
+                            {!canUpdateStatus && <small className="text-muted">You do not have permission to update status.</small>}
+                        </div>
+
+                        {canDelete && (
+                            <>
+                                <div className='col-12 col-md-1 d-flex justify-content-center align-items-center'>
+                                    <span>or</span>
+                                </div>
+
+                                <div className='col-12 col-md-3 p-1 d-flex justify-content-center'>
+                                    <button className="btn btn-danger text-nowrap flex-fill" onClick={executeDelete} disabled={selectedIds.length === 0 || isSubmitting}>
+                                        <Trash className="me-1" /> Delete Items
+                                    </button>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </div>
+
+            </Modal.Body>
+        </Modal>
+    );
+};
+
+
 
 // RBAC Helpers
 const canViewSensitive = (user) => ['admin', 'it_head', 'lab_head', 'it_technician'].includes(user?.role);
@@ -101,9 +275,11 @@ const ComputerSetForm = ({ mode, editingId, initialData, laboratoryId, onSubmit,
     const [batchConfig, setBatchConfig] = useState({
         prefix: 'PC ',
         start_number: 1,
-        count: 1
+        count: 10
     });
     const [components, setComponents] = useState([]);
+
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Initialize with Core components if creating new
     useEffect(() => {
@@ -146,6 +322,7 @@ const ComputerSetForm = ({ mode, editingId, initialData, laboratoryId, onSubmit,
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setIsSubmitting(true);
         try {
             let payload = { laboratory_id: laboratoryId };
 
@@ -155,11 +332,19 @@ const ComputerSetForm = ({ mode, editingId, initialData, laboratoryId, onSubmit,
             } else {
                 if (creationMode === 'batch') {
                     const start = parseInt(batchConfig.start_number);
-                    const end = parseInt(batchConfig.count);
-                    if (start >= end) { toast.error("Start Number must be lower than End Number"); return; }
-                    if (end > 67) { toast.error("End Number cannot be greater than 67"); return; }
+                    const endNumber = parseInt(batchConfig.count); // UI field is 'End Number' but state key is 'count'
 
-                    payload.batch_config = { ...batchConfig, components: components };
+                    if (start > endNumber) { toast.error("Start Number must be lower than or equal to End Number"); setIsSubmitting(false); return; }
+                    if (endNumber > 67) { toast.error("End Number cannot be greater than 67"); setIsSubmitting(false); return; }
+
+                    const quantity = endNumber - start + 1;
+                    if (quantity <= 0) { toast.error("Invalid range"); setIsSubmitting(false); return; }
+
+                    payload.batch_config = {
+                        ...batchConfig,
+                        count: quantity, // Send calculated quantity, not the end number
+                        components: components
+                    };
                 } else {
                     payload = { ...payload, ...formData, components: components };
                 }
@@ -169,6 +354,8 @@ const ComputerSetForm = ({ mode, editingId, initialData, laboratoryId, onSubmit,
             onSubmit();
         } catch (err) {
             toast.error(err.response?.data?.msg || `Failed to ${editingId ? 'update' : 'create'} computer set`);
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -189,87 +376,175 @@ const ComputerSetForm = ({ mode, editingId, initialData, laboratoryId, onSubmit,
                     <div className="row mb-3">
                         <div className="col-md-6">
                             <label className="form-label">Set Name</label>
-                            <input type="text" className="form-control" name="set_name" value={formData.set_name} onChange={handleInputChange} required placeholder="Example: PC 01" disabled={isNameDisabled} />
+                            <input type="text" className="form-control" name="set_name" value={formData.set_name} onChange={handleInputChange} required placeholder="PC X" disabled={isNameDisabled} maxLength={32} />
                         </div>
                         <div className="col-md-6">
                             <label className="form-label">Status</label>
                             <select className="form-select" name="status" value={formData.status} onChange={handleInputChange} disabled={isStatusDisabled}>
-                                <option value="active">Active</option>
+                                <option value="active">Operational</option>
                                 <option value="maintenance">Maintenance</option>
                             </select>
                         </div>
                     </div>
                 ) : (
                     <div className="row mb-3">
-                        <div className="col-md-4"><label className="form-label">Prefix</label><input type="text" className="form-control" name="prefix" value={batchConfig.prefix} onChange={handleBatchChange} required placeholder="Example PC " /></div>
-                        <div className="col-md-4"><label className="form-label">Start Number</label><input type="number" className="form-control" name="start_number" value={batchConfig.start_number} onChange={handleBatchChange} required min="1" /></div>
-                        <div className="col-md-4"><label className="form-label">End Number</label><input type="number" className="form-control" name="count" value={batchConfig.count} onChange={handleBatchChange} required min="1" max="67" /></div>
+                        <div className="col-12 col-md-4 mb-3"><label className="form-label">Prefix Name</label><input type="text" className="form-control" name="prefix" value={batchConfig.prefix} onChange={handleBatchChange} required placeholder="PC " /></div>
+                        <div className="col-6 col-md-4 mb-3"><label className="form-label">Start Number</label><input type="number" className="form-control" name="start_number" value={batchConfig.start_number} onChange={handleBatchChange} required min="1" /></div>
+                        <div className="col-6 col-md-4 mb-3"><label className="form-label">End Number</label><input type="number" className="form-control" name="count" value={batchConfig.count} onChange={handleBatchChange} required min="1" max="67" /></div>
                     </div>
                 )}
 
-                {!editingId && (
-                    <>
-                        <hr />
-                        <h6 className="mb-3">Components</h6>
-                        <div className="px-3">
+                {
+                    !editingId && (
+                        <>
+                            <hr />
+                            <div className="h4 mb-3">Components</div>
                             {components.map((comp, index) => (
-                                <div key={index} className="card mb-3 border-0">
-                                    <div className="card-body p-0">
+                                <div key={index} className="card mb-3 border-0 bg-body-tertiary p-2">
+                                    <div className="card-body p-2">
                                         <div className="row g-2 align-items-center">
-                                            <div className="col-md-3">
+                                            <div className="col-md-4">
                                                 <select className="form-select form-select-sm" value={comp.component_type} onChange={(e) => handleComponentChange(index, 'component_type', e.target.value)} disabled={comp.is_core}>
                                                     <option value="" selected hidden>Select Type</option>
                                                     {COMPONENT_TYPES.map(type => <option key={type.value} value={type.value}>{type.label}</option>)}
                                                 </select>
                                             </div>
-                                            <div className="col"><input type="text" className="form-control" placeholder="Brand" value={comp.brand_name} onChange={(e) => handleComponentChange(index, 'brand_name', e.target.value)} required /></div>
-                                            {creationMode === 'single' && (
-                                                <div className="col-md-4"><input type="text" className="form-control border" placeholder="Serial No." value={comp.serial_number} onChange={(e) => handleComponentChange(index, 'serial_number', e.target.value)} /></div>
-                                            )}
-                                            <div className="col-md-1 text-center">
-                                                {!comp.is_core && (
-                                                    <button type="button" className="btn btn-outline-danger border-0 w-100" title='Remove Component' onClick={() => removeComponent(index)}><Trash /></button>
-                                                )}
+                                            <div className="col">
+                                                <div className="d-flex">
+                                                    <input type="text" className="form-control flex-fill" placeholder="Brand" value={comp.brand_name} onChange={(e) => handleComponentChange(index, 'brand_name', e.target.value)} required maxLength={36} />
+
+                                                    {!comp.is_core && creationMode != 'single' && (
+                                                        <div className="bg-body rounded ms-1 border">
+                                                            <button type="button" className="btn btn-outline-danger border-0 " title='Remove Component' onClick={() => removeComponent(index)}><Trash /></button>
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
+                                            {creationMode === 'single' && (
+                                                <div className="col-md-4">
+                                                    <div className="d-flex">
+                                                        <input type="text" className="form-control border" placeholder="Serial No." value={comp.serial_number} onChange={(e) => handleComponentChange(index, 'serial_number', e.target.value)} maxLength={36} />
+                                                        {!comp.is_core && (
+                                                            <div className="bg-body rounded ms-1 border">
+                                                                <button type="button" className="btn btn-outline-danger border-0 " title='Remove Component' onClick={() => removeComponent(index)}><Trash /></button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
                             ))}
-                        </div>
-                        <button type="button" className="btn btn-outline-secondary btn-sm w-100" onClick={() => addComponent()}>Add New Component</button>
-                    </>
-                )}
+                            <button type="button" className="btn btn-link btn-sm w-100 text-end" onClick={() => addComponent()}>Add New Component</button>
+                        </>
+                    )
+                }
             </div>
 
             <div className="modal-footer mt-3">
-                <Button variant="secondary" onClick={onCancel}>Close</Button>
-                {(!editingId || !isNameDisabled || !isStatusDisabled) && <Button variant="primary" type="submit">{editingId ? 'Update' : 'Create'}</Button>}
+                <Button variant="secondary" onClick={onCancel} disabled={isSubmitting}>Close</Button>
+                {(!editingId || !isNameDisabled || !isStatusDisabled) && (
+                    <Button variant="primary" type="submit" disabled={isSubmitting}>
+                        {isSubmitting ? <><span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>{editingId ? 'Updating...' : 'Creating...'}</> : (editingId ? 'Update' : 'Create')}
+                    </Button>
+                )}
             </div>
         </form>
     );
 };
 
-const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUpdate, user }) => {
+const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUpdate, user, onReport, onDelete }) => {
     const [components, setComponents] = useState(JSON.parse(JSON.stringify(initialComponents)));
     const [originalComponents, setOriginalComponents] = useState(JSON.parse(JSON.stringify(initialComponents)));
+    const [setName, setSetName] = useState(set.set_name);
+    const [setStatus, setSetStatus] = useState(set.status);
+    const [isSaving, setIsSaving] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
+    const [showSerialModal, setShowSerialModal] = useState(false);
+    const [serialInput, setSerialInput] = useState('');
+
+    // Batched Actions State
+    const [pendingDeletes, setPendingDeletes] = useState([]);
+    const [pendingUnlinks, setPendingUnlinks] = useState([]);
+
     const { theme } = useTheme();
 
     const canManage = ['admin', 'it_head', 'lab_head'].includes(user?.role);
 
+    // Helper to sort components: Core first, then Alphabetical Type, then Brand
+    const sortComponents = (comps) => {
+        return [...comps].sort((a, b) => {
+            // 1. Core components first
+            if (a.is_core && !b.is_core) return -1;
+            if (!a.is_core && b.is_core) return 1;
+
+            // 2. Sort by Component Type (Alphabetical)
+            const typeA = a.component_type || '';
+            const typeB = b.component_type || '';
+            if (typeA.localeCompare(typeB) !== 0) return typeA.localeCompare(typeB);
+
+            // 3. Sort by Brand Name (Alphabetical)
+            const brandA = a.brand_name || '';
+            const brandB = b.brand_name || '';
+            return brandA.localeCompare(brandB);
+        });
+    };
+
+    // Reset state when initialComponents changes (e.g. after a fetch refresh)
+    useEffect(() => {
+        const sorted = sortComponents(initialComponents);
+        setComponents(JSON.parse(JSON.stringify(sorted)));
+        setOriginalComponents(JSON.parse(JSON.stringify(sorted)));
+        setPendingDeletes([]);
+        setPendingUnlinks([]);
+    }, [initialComponents]);
+
+    useEffect(() => {
+        setSetName(set.set_name);
+        setSetStatus(set.status);
+    }, [set]);
+
     const getStatusColor = (status) => {
         switch (status) {
             case 'good': return 'text-success';
-            case 'bad': return 'text-warning';
+            case 'bad': return 'text-secondary';
             case 'maintenance': return 'text-info';
             case 'missing': return 'text-danger';
             default: return 'text-secondary';
         }
     };
 
-    const copyToClipboard = (text) => {
-        navigator.clipboard.writeText(text);
-        toast.success("Copied to clipboard!");
+    const copyToClipboard = async (text) => {
+        try {
+            if (navigator.clipboard) {
+                await navigator.clipboard.writeText(text);
+                toast.success("Copied to clipboard!");
+            } else {
+                throw new Error("Clipboard API unavailable");
+            }
+        } catch (err) {
+            // Fallback for insecure contexts or mobile browsers without clipboard API access
+            try {
+                const textArea = document.createElement("textarea");
+                textArea.value = text;
+                textArea.style.position = "fixed"; // Avoid scrolling
+                textArea.style.left = "-9999px";
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                const successful = document.execCommand('copy');
+                document.body.removeChild(textArea);
+                if (successful) {
+                    toast.success("Copied to clipboard!");
+                } else {
+                    toast.error("Failed to copy");
+                }
+            } catch (fallbackErr) {
+                console.error("Copy failed", fallbackErr);
+                toast.error("Failed to copy");
+            }
+        }
     };
 
     const addNewRow = () => {
@@ -306,14 +581,95 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
         setConfirmModal({ ...confirmModal, show: false, resolve: null });
     };
 
+    const handleAddBySerial = async (e) => {
+        e.preventDefault();
+        if (!serialInput.trim()) return;
+
+        try {
+            const checkRes = await api.get(`/components/check-serial?serial_number=${serialInput.trim()}`);
+            if (!checkRes.data.exists) {
+                toast.error("Component with this serial number does not exist.");
+                return;
+            }
+
+            const existing = checkRes.data.component;
+
+            // If already in THIS set
+            if (existing.computer_set_id === set.id) {
+                toast.success("Component is already in this set.");
+                setShowSerialModal(false);
+                setSerialInput('');
+                return;
+            }
+
+            let confirmMsg = '';
+            let isMove = false;
+
+            if (existing.computer_set_name) {
+                // Assigned to another set
+                confirmMsg = `Component "${existing.brand_name}" (${existing.component_type}) is currently assigned to set "${existing.computer_set_name}" in "${existing.laboratory_name}".\n\nDo you want to MOVE it to this set?`;
+                isMove = true;
+            } else {
+                // Rogue
+                confirmMsg = `Component "${existing.brand_name}" (${existing.component_type}) is currently UNASSIGNED.\n\nDo you want to LINK it to this set?`;
+            }
+
+            const confirmed = await showConfirm(
+                isMove ? "Move Component" : "Link Component",
+                confirmMsg
+            );
+
+            if (confirmed) {
+                // Perform the move/link immediately via API
+                // Note: We are bypassing the "save" button here because this is a specific action on an existing component
+                // But typically ComponentsManager uses local state 'components'. 
+                // However, moving an existing component involves changing its ID in the DB.
+                // If we want consistency, we should probably call the API here.
+
+                await api.put(`/components/${existing.id}`, { ...existing, computer_set_id: set.id });
+                toast.success(isMove ? "Component moved successfully" : "Component linked successfully");
+
+                setShowSerialModal(false);
+                setSerialInput('');
+
+                // Refresh components
+                onUpdate(); // Triggers parent refresh -> triggers useEffect here
+            }
+
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to check serial number");
+        }
+    };
+
     const handleSave = async () => {
         const promises = [];
         let changesCount = 0;
         let conflictFoundAndCancelled = false;
 
+        setIsSaving(true);
         try {
+            // 1. Process Pending Deletes
+            for (const id of pendingDeletes) {
+                promises.push(api.delete(`/components/${id}`));
+                changesCount++;
+            }
+
+            // 2. Process Pending Unlinks
+            for (const id of pendingUnlinks) {
+                const original = originalComponents.find(c => c.id === id);
+                if (original) {
+                    promises.push(api.put(`/components/${id}`, { ...original, computer_set_id: null }));
+                    changesCount++;
+                }
+            }
+
+            // 3. Process Updates and Creates
             for (const comp of components) {
                 if (conflictFoundAndCancelled) break;
+
+                // Skip if this component is marked for deletion/unlinking (shouldn't be in 'components' array if logic is correct, but safe check)
+                if (pendingDeletes.includes(comp.id) || pendingUnlinks.includes(comp.id)) continue;
 
                 if (comp.id.toString().startsWith('new-')) {
                     if (!comp.brand_name) {
@@ -378,7 +734,7 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                     }
 
                 } else {
-                    // 2. Existing Component Update
+                    // Update Existing Component
                     const original = originalComponents.find(o => o.id === comp.id);
                     if (original) {
                         let isDirty = false;
@@ -427,6 +783,16 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                 return;
             }
 
+            // 4. Update Set Info
+            if (setName !== set.set_name || setStatus !== set.status) {
+                changesCount++;
+                promises.push(api.put(`/computer-sets/${set.id}`, {
+                    laboratory_id: laboratoryId,
+                    set_name: setName,
+                    status: setStatus
+                }));
+            }
+
             if (changesCount === 0) {
                 toast("No changes to save");
                 setIsEditMode(false);
@@ -434,86 +800,111 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
             }
 
             await Promise.all(promises);
-            toast.success(`Updated components successfully`);
-            setOriginalComponents(JSON.parse(JSON.stringify(components)));
+            toast.success(`Changes saved successfully`);
             onUpdate(); // Refresh parent data
-            setIsEditMode(false);
+            if (isEditMode) {
+                setIsEditMode(false);
+            } else {
+                onClose();
+            }
 
         } catch (err) {
             if (err.message !== "Validation Error") {
                 console.error(err);
                 toast.error("Failed to save changes. " + (err.response?.data?.msg || ""));
             }
+        } finally {
+            setIsSaving(false);
         }
     };
 
     const handleRemove = async (comp) => {
+        // Just remove from UI list and add to pendingDeletes if it exists remotely
         if (comp.id.toString().startsWith('new-')) {
             const updated = components.filter(c => c.id !== comp.id);
             setComponents(updated);
             return;
         }
 
-        if (await showConfirm("Confirm Delete", "Permanently DELETE this component?\n\nThis cannot be undone.")) {
-            try {
-                await api.delete(`/components/${comp.id}`);
-                const updated = components.filter(c => c.id !== comp.id);
-                setComponents(updated);
-                setOriginalComponents(originalComponents.filter(c => c.id !== comp.id));
-                toast.success("Component deleted");
-                onUpdate();
-            } catch (err) {
-                toast.error("Failed to delete component");
-            }
+        if (await showConfirm("Delete Component", "This component will be permanently DELETED when you likely 'Save Changes'.\n\nIs this okay?")) {
+            setPendingDeletes([...pendingDeletes, comp.id]);
+            setComponents(components.filter(c => c.id !== comp.id));
         }
     };
 
-    const handleUnlink = async (comp) => {
-        if (comp.id.toString().startsWith('new-')) {
-            const updated = components.filter(c => c.id !== comp.id);
-            setComponents(updated);
-            return;
-        }
-
-        if (await showConfirm("Confirm Unlink", "Unlink this component?\n\nIt will be moved to the 'Unassigned' list.")) {
-            try {
-                // We update the component to have NULL computer_set_id
-                await api.put(`/components/${comp.id}`, {
-                    ...comp,
-                    computer_set_id: null
-                });
-
-                const updated = components.filter(c => c.id !== comp.id);
-                setComponents(updated);
-                setOriginalComponents(originalComponents.filter(c => c.id !== comp.id));
-                toast.success("Component unlinked");
-                onUpdate();
-            } catch (err) {
-                toast.error("Failed to unlink component");
-            }
-        }
-    }
 
     return (
         <>
             <div className="p-3">
-                <div className="mb-3 d-flex flex-column align-items-center">
-                    <h5 className="mb-1 text-center">{set.set_name}</h5>
-                    <span className={`badge text-center text-${theme == "light" ? "light" : "dark"} text-capitalize ${set.status === 'active' ? 'bg-success' : 'bg-warning'}`}>
-                        {set.status}
-                    </span>
+                <div className="mb-5 d-flex flex-column align-items-center gap-2 p-3 bg-body-s rounded">
+                    {isEditMode && canManage ? (
+                        <div className="row g-2 w-100 justify-content-center">
+                            <div className="col-8 col-md-6">
+                                <input
+                                    type="text"
+                                    className="form-control text-center fw-bold"
+                                    value={setName}
+                                    onChange={(e) => setSetName(e.target.value)}
+                                    placeholder="Set Name"
+                                />
+                            </div>
+                            <div className="col-4 col-md-3">
+                                <select
+                                    className="form-select"
+                                    value={setStatus}
+                                    onChange={(e) => setSetStatus(e.target.value)}
+                                >
+                                    <option value="active">Active</option>
+                                    <option value="maintenance">Maintenance</option>
+                                    <option value="retired">Retired</option>
+                                </select>
+                            </div>
+                        </div>
+                    ) : (
+                        <>
+                            <h5 className="mb-0 text-center fw-bold">{set.set_name}</h5>
+                            <div className="d-flex align-items-center gap-2">
+                                {canManage ? (
+                                    <ToggleButtonGroup type="radio" name="set-status-toggle" value={setStatus} onChange={setSetStatus} size="sm" className='bg-body-tertiary'>
+                                        <ToggleButton id="tbg-set-active" value="active" variant={setStatus === 'active' ? 'success' : 'outline-success'} title="Active" className='border-0'>
+                                            <span className='ms-1'>Active</span>
+                                        </ToggleButton>
+                                        <ToggleButton id="tbg-set-maint" value="maintenance" variant={setStatus === 'maintenance' ? 'info' : 'outline-info'} title="Maintenance" className='border-0'>
+                                            <span className='ms-1'>Maintenance</span>
+                                        </ToggleButton>
+                                    </ToggleButtonGroup>
+                                ) : (
+                                    <span className={`badge text-capitalize ${getStatusColor(set.status)} border`}>
+                                        {set.status}
+                                    </span>
+                                )}
+                                <button className="btn btn-sm btn-outline-warning border-0 bg-body-tertiary" title="Report Issue" onClick={() => onReport(set)}>
+                                    <Flag />
+                                </button>
+                                {canManage && (
+                                    <button className="btn btn-sm btn-outline-danger border-0 bg-body-tertiary" title="Delete Set" onClick={() => onDelete(set.id)}>
+                                        <Trash />
+                                    </button>
+                                )}
+                            </div>
+                        </>
+                    )}
                 </div>
+
+                {/* <div className="h4 mb-3">Components</div> */}
+
                 {
                     components.length > 0 && components.map((comp) => (
-                        <div key={comp.id} className="d-flex align-items-center mb-3">
-                            <div className={`container-fluid flex-fill rounded p-2 ${!isEditMode ? (comp.status === 'good' ? 'bg-success-subtle' : comp.status === 'bad' ? 'bg-warning-subtle' : comp.status === 'maintenance' ? 'bg-info-subtle' : 'bg-danger-subtle') : ''}`}>
-                                <div className="row align-items-center">
-                                    {/* Icon/Type */}
-                                    {
-                                        isEditMode && canEditComponentDetails(user) ? (
-                                            <div className="col-12 col-md-3 p-1">
+                        <div key={comp.id} className="shadow-sm rounded bg-body-secondary mb-3 px-4 py-2">
+                            <div className="row">
+                                {/* Icon/Type */}
+                                {
+                                    isEditMode && canEditComponentDetails(user) ? (
+                                        <div className='col-12 col-md-2 p-1'>
+                                            <div className="flex-fill d-flex align-items-center rounded border">
+                                                {/* <span className='px-2'>{getComponentIcon(comp.component_type)}</span> */}
                                                 <select
-                                                    className={`form-select ${comp.is_core ? "remove-arrow-select-input " : ""} border form-select-sm p-1 bg-transparent`}
+                                                    className={`form-select bg-transparent border-0 ${comp.is_core ? "remove-arrow-select-input bg-transparent" : ""} fw-bold form-select-sm`}
                                                     value={comp.component_type}
                                                     onChange={(e) => handleLocalChange(comp.id, 'component_type', e.target.value)}
                                                     disabled={comp.is_core}
@@ -523,99 +914,190 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                                                     ))}
                                                 </select>
                                             </div>
-                                        ) : (
-                                            <div className="col-1 d-flex justify-content-center align-items-center" title={comp.component_type}>
-                                                <div className="p-1 px-2 rounded text-center bg-body-secondary">
-                                                    <span>{getComponentIcon(comp.component_type)}</span>
-                                                </div>
-                                            </div>
-                                        )
-                                    }
+                                        </div>
+                                    ) : (
+                                        ""
+                                    )
+                                }
 
-                                    {/* Brand Name */}
-                                    {
-                                        isEditMode && canEditComponentDetails(user) ? (
-                                            <div className="col-12 col-md-3 p-1">
-                                                <input type="text" className="form-control form-control-sm p-1 bg-transparent p-0" value={comp.brand_name} onChange={(e) => handleLocalChange(comp.id, 'brand_name', e.target.value)} placeholder="Brand Name" />
-                                            </div>
-                                        ) : (
-                                            <div className="col p-1 d-flex align-items-center">
-                                                <span className="fw-bold me-1">{comp.brand_name}</span>
-                                                <button className="btn btn-link p-0 text-muted" onClick={() => copyToClipboard(comp.brand_name)} title="Copy Brand">
-                                                    <i className="bi bi-clipboard" style={{ fontSize: '0.8rem' }}></i>
-                                                    <ArrowReturnLeft size={10} className="d-none" />
+                                {/* Brand Name */}
+                                {
+                                    isEditMode && canEditComponentDetails(user) ? (
+                                        <div className="col-12 col-md-3 p-1">
+                                            <input type="text" className="form-control form-control-sm p-1 bg-transparent p-0" value={comp.brand_name} onChange={(e) => handleLocalChange(comp.id, 'brand_name', e.target.value)} placeholder="Brand Name" maxLength={36} />
+                                        </div>
+                                    ) : (
+                                        <div className="col-12 col-md-4 p-1 d-flex align-items-center py-0">
+                                            <span title={getLabelByValue(comp.component_type)} className='me-2'>{getComponentIcon(comp.component_type)}</span>
+                                            <span className="cursor-pointer me-1 text-nowrap text-truncate text-uppercase" title={comp.brand_name} onClick={() => copyToClipboard(comp.brand_name)} >{comp.brand_name}</span>
+                                            <button className="btn btn-link p-0 text-muted" onClick={() => copyToClipboard(comp.brand_name)} title="Copy Name/Brand">
+                                                <Copy style={{ fontSize: "0.75rem", marginLeft: '4px' }} />
+                                            </button>
+                                        </div>
+                                    )
+                                }
+
+                                {/* Serial Number */}
+                                {
+                                    isEditMode && canEditComponentDetails(user) ? (
+                                        <div className="col-12 col-md-3 p-1">
+                                            <input type="text" className="form-control form-control-sm p-1 bg-transparent p-0" value={comp.serial_number} placeholder="Serial Number" onChange={(e) => handleLocalChange(comp.id, 'serial_number', e.target.value)} maxLength={36} />
+                                        </div>
+                                    ) : (
+                                        <div className="col-12 col-md-4 p-1 d-flex align-items-center mb-2 mb-md-0 py-0">
+                                            <span className={`me-1 rounded text-nowrap text-truncate ${comp.serial_number ? "bg-body-secondary cursor-pointer" : "cursor-help"}`} title={comp.serial_number ? comp.serial_number : "No Serial Number is Set"} onClick={() => comp.serial_number && copyToClipboard(comp.serial_number)} >
+                                                {comp.serial_number || <span className="text-muted fst-italic">Serial not set</span>}
+                                            </span>
+                                            {comp.serial_number && (
+                                                <button className="btn btn-link p-0 text-muted" onClick={() => copyToClipboard(comp.serial_number)} title="Copy Serial">
+                                                    <Copy style={{ fontSize: "0.75rem", marginLeft: '4px' }} />
                                                 </button>
-                                            </div>
-                                        )
-                                    }
+                                            )}
+                                        </div>
+                                    )
+                                }
 
-                                    {/* Serial Number */}
-                                    {
-                                        isEditMode && canEditComponentDetails(user) ? (
-                                            <div className="col-12 col-md-3 p-1">
-                                                <input type="text" className="form-control form-control-sm p-1 bg-transparent p-0" value={comp.serial_number} placeholder="Serial Number" onChange={(e) => handleLocalChange(comp.id, 'serial_number', e.target.value)} />
-                                            </div>
-                                        ) : (
-                                            <div className="col p-1 d-flex align-items-center">
-                                                <span className="p-1 px-2 bg-body-secondary rounded me-1 text-truncate" style={{ maxWidth: '150px' }}>
-                                                    {comp.serial_number || <span className="text-muted fst-italic">No S/N</span>}
-                                                </span>
-                                                {comp.serial_number && (
-                                                    <button className="btn btn-link p-0 text-muted" onClick={() => copyToClipboard(comp.serial_number)} title="Copy Serial">
-                                                        <i className="bi bi-clipboard" style={{ fontSize: '0.8rem' }}></i>
-                                                    </button>
-                                                )}
-                                            </div>
-                                        )
-                                    }
+                                {/* Status */}
+                                <div className="col p-1">
+                                    <div className="d-flex justify-content-between gap-2">
 
-                                    {/* Status */}
-                                    <div className="col p-1">
                                         {
                                             isEditMode && canEditComponentStatus(user) ? (
                                                 <select className={`form-select form-select-sm border bg-transparent p-1 ${getStatusColor(comp.status)}`} value={comp.status} onChange={(e) => handleLocalChange(comp.id, 'status', e.target.value)}>
                                                     <option value="good">Good</option><option value="bad">Bad</option><option value="maintenance">Maintenance</option><option value="missing">Missing</option>
                                                 </select>
                                             ) : (
-                                                <span className={`badge ${comp.status === 'good' ? 'bg-success' : comp.status === 'bad' ? 'bg-warning' : comp.status === 'maintenance' ? 'bg-info' : 'bg-danger'}`}>{comp.status}</span>
+                                                <ToggleButtonGroup
+                                                    type="radio"
+                                                    name={`status-${comp.id}`}
+                                                    value={comp.status}
+                                                    onChange={(val) => handleLocalChange(comp.id, 'status', val)}
+                                                    size="sm"
+                                                    className='flex-fill bg-body'
+                                                >
+                                                    <ToggleButton
+                                                        id={`tbg-btn-good-${comp.id}`}
+                                                        value="good"
+                                                        variant={comp.status === 'good' ? 'success' : 'outline-success'}
+                                                        disabled={!canEditComponentStatus(user)}
+                                                        className="p-1 d-flex align-items-center justify-content-center border-0"
+                                                        style={{ width: '30px', height: '30px' }}
+                                                        title="Good"
+                                                    >
+                                                        <Check2 size={16} />
+                                                    </ToggleButton>
+                                                    <ToggleButton
+                                                        id={`tbg-btn-bad-${comp.id}`}
+                                                        value="bad"
+                                                        variant={comp.status === 'bad' ? 'secondary' : 'outline-secondary'}
+                                                        disabled={!canEditComponentStatus(user)}
+                                                        className="p-1 d-flex align-items-center justify-content-center border-0"
+                                                        style={{ width: '30px', height: '30px' }}
+                                                        title="Bad"
+                                                    >
+                                                        <XLg size={16} />
+                                                    </ToggleButton>
+                                                    <ToggleButton
+                                                        id={`tbg-btn-maint-${comp.id}`}
+                                                        value="maintenance"
+                                                        variant={comp.status === 'maintenance' ? 'info' : 'outline-info'}
+                                                        disabled={!canEditComponentStatus(user)}
+                                                        className="p-1 d-flex align-items-center justify-content-center border-0"
+                                                        style={{ width: '30px', height: '30px' }}
+                                                        title="Maintenance"
+                                                    >
+                                                        <Tools size={16} />
+                                                    </ToggleButton>
+                                                    <ToggleButton
+                                                        id={`tbg-btn-missing-${comp.id}`}
+                                                        value="missing"
+                                                        variant={comp.status === 'missing' ? 'danger' : 'outline-danger'}
+                                                        disabled={!canEditComponentStatus(user)}
+                                                        className="p-1 d-flex align-items-center justify-content-center border-0"
+                                                        style={{ width: '30px', height: '30px' }}
+                                                        title="Missing"
+                                                    >
+                                                        <QuestionLg size={16} />
+                                                    </ToggleButton>
+                                                </ToggleButtonGroup>
                                             )
                                         }
+
+                                        {isEditMode ? (
+                                            <>
+                                                {canDeleteComponent(user) && (
+                                                    <div className="bg-body rounded">
+                                                        <button className="btn btn-sm btn-outline-danger border-0 h-100" title='Delete Component' onClick={() => handleRemove(comp)}>
+                                                            <Trash />
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </>
+                                        ) : (
+                                            <div className="bg-body rounded">
+                                                <button className="btn btn-sm btn-outline-primary border-0 h-100" title='Report Issue' onClick={() => onReport(comp)}>
+                                                    <ExclamationTriangleFill />
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
-                            </div>
-
-                            <div className="w-fit h-full gap-1 d-flex ps-2">
-                                {isEditMode ? (
-                                    <>
-                                        {canEditComponentDetails(user) && (
-                                            <button className="btn btn-sm btn-outline-warning border-0" title='Unlink (Move to Unassigned)' onClick={() => handleUnlink(comp)}>
-                                                <BoxArrowUpRight />
-                                            </button>
-                                        )}
-                                        {!comp.is_core && canDeleteComponent(user) && (
-                                            <button className="btn btn-sm btn-outline-danger border-0" title='Permanent Delete' onClick={() => handleRemove(comp)}>
-                                                <Trash />
-                                            </button>
-                                        )}
-                                    </>
-                                ) : (
-                                    <button className="btn btn-sm btn-outline-secondary border-0" title='Flag Issue'>
-                                        <ExclamationTriangleFill />
-                                    </button>
-                                )}
                             </div>
                         </div>
                     ))
                 }
+
 
                 {components.length === 0 && (
                     <div className="row">
                         <div className="text-center text-muted">No components found.</div>
                     </div>
                 )}
+
+
+                {
+                    !isEditMode && (
+                        <div className="d-flex justify-content-center gap-3 mt-4 text-muted small">
+                            <div className="d-flex align-items-center"><Check2 className="text-success me-1" size={16} /> Good</div>
+                            <div className="d-flex align-items-center"><XLg className="text-secondary me-1" size={16} /> Bad</div>
+                            <div className="d-flex align-items-center"><Tools className="text-info me-1" size={16} /> Maintenance</div>
+                            <div className="d-flex align-items-center"><QuestionLg className="text-danger me-1" size={16} /> Missing</div>
+                        </div>
+                    )
+                }
             </div>
 
-            {/* Modal Confirmation */}
+            {/* Add by Serial Modal */}
+            <Modal show={showSerialModal} onHide={() => setShowSerialModal(false)} centered>
+                <Modal.Header closeButton>
+                    <Modal.Title>Add Component by Serial</Modal.Title>
+                </Modal.Header>
+                <form onSubmit={handleAddBySerial}>
+                    <Modal.Body>
+                        <div className="mb-3">
+                            <label className="form-label">Serial Number</label>
+                            <input
+                                type="text"
+                                className="form-control"
+                                value={serialInput}
+                                onChange={(e) => setSerialInput(e.target.value)}
+                                placeholder="Enter serial number..."
+                                autoFocus
+                                required
+                            />
+                            <div className="form-text">
+                                Enter the serial number of an existing component to add it to this set.
+                            </div>
+                        </div>
+                    </Modal.Body>
+                    <Modal.Footer>
+                        <Button variant="secondary" onClick={() => setShowSerialModal(false)}>Cancel</Button>
+                        <Button variant="primary" type="submit">Check & Add</Button>
+                    </Modal.Footer>
+                </form>
+            </Modal>
+
+            {/* Confirmation Modal (Generic) */}
             <Modal show={confirmModal.show} onHide={() => handleConfirmResult(false)} centered size="sm">
                 <Modal.Header closeButton>
                     <Modal.Title>{confirmModal.title}</Modal.Title>
@@ -634,28 +1116,37 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                         isEditMode ? (
                             <>
                                 <button className="btn btn-primary btn-sm" onClick={() => setIsEditMode(false)} title="Exit Edit Mode">
-                                    <PencilSquare className="me-1" /> View Mode
+                                    <PencilSquare className="me-1" /> Edit Mode
                                 </button>
                                 {canAddComponent(user) && (
-                                    <button className="btn btn-outline-secondary btn-sm" onClick={addNewRow} title="Add New Component">
-                                        <Plus className="me-1" /> Add Component
-                                    </button>
+                                    <div className="d-flex gap-2">
+                                        <button className="btn btn-sm btn-primary" onClick={addNewRow}>
+                                            <Plus className="me-1" /> New Component
+                                        </button>
+                                        <button className="btn btn-sm btn-outline-primary" onClick={() => setShowSerialModal(true)}>
+                                            <BoxArrowUpRight className="me-1" /> Add by Serial #
+                                        </button>
+                                    </div>
                                 )}
                             </>
                         ) : (
-                            <button className="btn btn-outline-primary btn-sm" onClick={() => setIsEditMode(true)} title="Enter Edit Mode">
-                                <PencilSquare className="me-1" /> Edit Mode
+                            <button className="btn btn-primary btn-sm" onClick={() => setIsEditMode(true)} title="Enter Edit Mode">
+                                <PencilSquare className="me-1" /> View Mode
                             </button>
                         )
                     )}
                 </div>
                 <div className="d-flex gap-2">
-                    <Button variant="secondary" onClick={onClose}>Close</Button>
+                    <Button variant="secondary" onClick={onClose} disabled={isSaving}>Close</Button>
                     {(canEditComponentDetails(user) || canEditComponentStatus(user)) && (
                         isEditMode ? (
-                            <Button variant="success" onClick={handleSave}>Save Changes</Button>
+                            <Button variant="success" onClick={handleSave} disabled={isSaving}>
+                                {isSaving ? <><span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Saving...</> : 'Save Changes'}
+                            </Button>
                         ) : (
-                            <Button variant="primary" onClick={handleSave}>Save Updates</Button>
+                            <Button variant="primary" onClick={handleSave} disabled={isSaving}>
+                                {isSaving ? <><span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Updating...</> : 'Update'}
+                            </Button>
                         )
                     )}
                 </div>
@@ -664,28 +1155,31 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
     );
 };
 
-const ComputerSetCard = ({ set, components, user, onView, onEdit, onDelete }) => {
+const ComputerSetCard = ({ set, components, onView }) => {
     const [isHovered, setIsHovered] = useState(false);
     const [showMobilePreview, setShowMobilePreview] = useState(false);
 
     // Helper explicitly inside or global? Using global `getComponentIcon`
     const getStatusColor = (status) => {
         switch (status) {
-            case 'good': return 'text-success';
-            case 'bad': return 'text-warning';
+            case 'good': return 'text-white';
+            case 'bad': return 'text-secondary';
             case 'maintenance': return 'text-info';
             case 'missing': return 'text-danger';
             default: return 'text-secondary';
         }
     }
 
-    const canEdit = canEditSetDetails(user) || canEditSetStatus(user);
-    const canDelete = ['admin', 'it_head', 'lab_head'].includes(user?.role);
+    const goodCount = components.filter(c => c.status === 'good').length;
+    const badCount = components.filter(c => c.status === 'bad').length;
+    const maintCount = components.filter(c => c.status === 'maintenance').length;
+    const missingCount = components.filter(c => c.status === 'missing').length;
+    const totalCount = goodCount + badCount + maintCount
 
     return (
         <div className="col p-1">
             <div
-                className={`card h-100 position-relative overflow-hidden shadow-sm hover-shadow ${set.status === 'active' ? 'bg-success-subtle' : 'bg-warning-subtle'}`}
+                className={`card h-100 position-relative overflow-hidden shadow-sm hover-shadow ${set.status === 'active' ? 'bg-body-secondary' : 'bg-info-subtle'}`}
                 style={{ cursor: 'pointer', transition: 'transform 0.2s' }}
                 onClick={() => onView(set)}
                 onMouseEnter={() => setIsHovered(true)}
@@ -693,18 +1187,30 @@ const ComputerSetCard = ({ set, components, user, onView, onEdit, onDelete }) =>
             >
                 <div className="card-body text-center d-flex flex-column justify-content-center align-items-center" style={{ minHeight: '150px' }}>
                     <h5 className="card-title fw-bold mb-0">{set.set_name}</h5>
-                    <div className="d-flex gap-1">
-                        <span className={`badge text-capitalize ${set.status === 'active' ? 'bg-success' : 'bg-warning'} mt-2`}>
+                    <div className="d-flex gap-1 flex-wrap justify-content-center">
+                        <span className={`d-none badge text-capitalize ${set.status === 'active' ? 'bg-success' : 'bg-warning'} mt-2`}>
                             {set.status}
                         </span>
+
+                        {
+                            totalCount === goodCount ? (
+                                <span className="badge bg-primary rounded-pill mt-2" title={`${goodCount} Good Components`}>{goodCount} Operational</span>
+                            ) : (
+                                <>
+                                    {goodCount > 0 && <span className="badge bg-primary rounded-pill mt-2" title={`${goodCount} Good Components`}>{goodCount}</span>}
+                                    {badCount > 0 && <span className="badge bg-secondary rounded-pill mt-2" title={`${badCount} Bad Components`}>{badCount}</span>}
+                                    {maintCount > 0 && <span className="badge bg-info rounded-pill mt-2" title={`${maintCount} Maintenance Components`}>{maintCount}</span>}
+                                    {missingCount > 0 && <span className="badge bg-danger rounded-pill mt-2" title={`${missingCount} Missing Components`}>{missingCount}</span>}
+                                </>
+                            )
+                        }
                     </div>
 
-                    {/* Hover/Preview Overlay */}
+                    { }
                     <div
-                        className="position-absolute top-0 start-0 w-100 h-100 p-3 d-flex flex-wrap align-items-center justify-content-center"
+                        className="position-absolute top-0 start-0 w-100 h-100 p-3 d-none d-md-flex flex-wrap align-items-center justify-content-center bg-primary"
                         style={{
-                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                            opacity: (isHovered || showMobilePreview) ? 1 : 0,
+                            opacity: (isHovered) ? 1 : 0,
                             transition: 'opacity 0.3s',
                             zIndex: 10,
                             pointerEvents: 'none'
@@ -712,7 +1218,7 @@ const ComputerSetCard = ({ set, components, user, onView, onEdit, onDelete }) =>
                     >
                         <div className='d-flex flex-wrap justify-content-center'>
                             {components.map(comp => (
-                                <div key={comp.id} className={`m-1 fs-6 ${getStatusColor(comp.status)}`} title={`${comp.brand_name} (${comp.status})`}>
+                                <div key={comp.id} className={`m-1 fs-5 ${getStatusColor(comp.status)}`} title={`${comp.brand_name} (${comp.status})`}>
                                     {getComponentIcon(comp.component_type)}
                                 </div>
                             ))}
@@ -721,31 +1227,7 @@ const ComputerSetCard = ({ set, components, user, onView, onEdit, onDelete }) =>
                     </div>
                 </div>
 
-                {/* Collapsible Action Bar */}
-                {(canEdit || canDelete) && (
-                    <div className="position-absolute top-0 end-0 p-2 z-20 computer-set-actions" style={{ zIndex: 20 }} onClick={(e) => e.stopPropagation()}>
-                        <style>
-                            {`
-                                    .action-btn { background: none; border: none; padding: 4px; cursor: pointer; transition: color 0.2s; display: flex; align-items: center; justify-content: center; }
-                                    .action-btn:hover { opacity: 0.7; }
-                                    @media (max-width: 767.98px) {
-                                        .comp-mobile-actions { display: flex; gap: 4px; border-radius: 4px; padding: 2px; }
-                                        .comp-desktop-actions { display: none; }
-                                    }
-                                    @media (min-width: 768px) {
-                                        .comp-mobile-actions { display: none; }
-                                        .comp-desktop-actions { display: block; }
-                                        .card:not(:hover) .desktop-trigger-btn { opacity: 1; }
-                                        .desktop-trigger-btn { transition: opacity 0.2s; }
-                                    }
-                                `}
-                        </style>
-                        <CollapsibleActions
-                            onEdit={canEdit ? () => onEdit(set) : undefined}
-                            onDelete={canDelete ? () => onDelete(set.id) : undefined}
-                        />
-                    </div>
-                )}
+
             </div>
         </div>
     );
@@ -754,7 +1236,7 @@ const ComputerSetCard = ({ set, components, user, onView, onEdit, onDelete }) =>
 const LaboratoryComputersPage = () => {
     const { id: laboratoryId } = useParams();
     const navigate = useNavigate();
-    const [searchParams] = useSearchParams();
+    const [searchParams, setSearchParams] = useSearchParams();
     const { user } = useAuth();
     const [computerSets, setComputerSets] = useState([]);
     const [laboratory, setLaboratory] = useState(null);
@@ -762,9 +1244,15 @@ const LaboratoryComputersPage = () => {
 
     // UI Logic States only
     const [showModal, setShowModal] = useState(false);
+    const [showBatchEditModal, setShowBatchEditModal] = useState(false);
+    const [showComponentsModal, setShowComponentsModal] = useState(false);
     const [mode, setMode] = useState('create'); // 'create', 'edit', 'view'
     const [selectedSet, setSelectedSet] = useState(null);
     const [allComponents, setAllComponents] = useState([]); // Kept for Card counts
+    const [itemsPerRow, setItemsPerRow] = useState(5);
+
+    // Reporting State
+    const [reportModal, setReportModal] = useState({ show: false, target: null, type: 'set' }); // type: 'set' or 'component'
 
     const canManage = ['admin', 'it_head', 'lab_head'].includes(user?.role);
 
@@ -842,86 +1330,223 @@ const LaboratoryComputersPage = () => {
     const handleViewComponents = (set) => {
         setMode('view');
         setSelectedSet(set);
-        setShowModal(true);
+        setShowComponentsModal(true);
     };
 
-    const handleDelete = async (id) => {
-        if (!window.confirm("Are you sure you want to delete this computer set?")) return;
+    const handleDeleteSet = async (id) => {
+        if (!window.confirm("Are you sure you want to delete this computer set? (All components will be unlinked)")) return;
         try {
             await api.delete(`/computer-sets/${id}`);
-            toast.success("Computer set deleted successfully");
+            toast.success("Computer set deleted");
             fetchData();
         } catch (err) {
-            toast.error(err.response?.data?.msg || "Failed to delete computer set");
+            toast.error("Failed to delete computer set");
         }
     };
 
-    const handleFormSubmit = () => {
+    const handleReportIssue = (target, type = 'set') => {
+        setReportModal({ show: true, target: target, type: type });
+    };
+
+    const handleReportSubmit = async (data) => {
+        try {
+            const payload = {
+                laboratory_id: laboratoryId,
+                title: data.title,
+                description: data.description,
+                priority: data.priority
+            };
+
+            if (reportModal.type === 'set') {
+                payload.computer_set_id = reportModal.target.id;
+            } else {
+                payload.computer_set_id = reportModal.target.computer_set_id; // Still link to set if possible? Yes, components usually in set.
+                payload.component_id = reportModal.target.id;
+            }
+
+            await api.post('/issues/', payload);
+            toast.success("Issue reported successfully");
+            setReportModal({ ...reportModal, show: false });
+        } catch (err) {
+            toast.error(err.response?.data?.msg || "Failed to report issue");
+        }
+    };
+
+    const handleCloseSetModal = () => {
         setShowModal(false);
+        searchParams.delete('set');
+        searchParams.delete('edit');
+        setSearchParams(searchParams);
+    };
+
+    const handleCloseComponentsModal = () => {
+        setShowComponentsModal(false);
+        searchParams.delete('set');
+        searchParams.delete('components');
+        setSearchParams(searchParams);
+    };
+
+    const handleFormSubmit = () => {
+        handleCloseSetModal();
         fetchData();
     };
 
+    const handleBatchUpdate = async (ids, status) => {
+        try {
+            const promises = ids.map(id => {
+                const set = computerSets.find(s => s.id === id);
+                if (!set) return Promise.resolve();
+                return api.put(`/computer-sets/${id}`, {
+                    laboratory_id: laboratoryId,
+                    set_name: set.set_name,
+                    status: status
+                });
+            });
+            await Promise.all(promises);
+            toast.success(`Updated ${ids.length} computer sets successfully`);
+            fetchData();
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to update some computer sets");
+        }
+    };
+
+    const handleBatchDelete = async (ids) => {
+        try {
+            const promises = ids.map(id => api.delete(`/computer-sets/${id}`));
+            await Promise.all(promises);
+            toast.success(`Deleted ${ids.length} computer sets successfully`);
+            fetchData();
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to delete some computer sets");
+        }
+    };
 
     if (loading) return <LoadingSpinner centered />;
     if (!laboratory) return <div className="container py-3">Laboratory not found</div>;
 
     return (
-        <div className="container py-3">
-            <div className="d-flex justify-content-between align-items-center mb-3">
-                <div>
-                    <h4 className='h4 mb-0'>Computer Sets ({laboratory.name})</h4>
+        <div className="container-fluid py-3">
+            <div className="row mb-4">
+                <div className='col-12 col-md-6 mb-2 mb-md-0'>
+                    <div className="h4 fw-bold mb-0">{laboratory?.name}</div>
+                    <div className="text-muted mb-0">{laboratory?.description}</div>
                 </div>
-                {canManage &&
-                    <button className="btn btn-primary" onClick={handleCreate}>
-                        <div className="d-inline d-md-none"><Plus /></div>
-                        <span className='d-none d-md-inline'>New Computer Set</span>
-                    </button>}
+                <div className="col-12 col-md-6">
+                    <div className="d-flex justify-content-start justify-content-md-end align-items-end h-100 gap-2">
+                        {(canManage || user?.role === 'it_technician') && (
+                            <button className="btn btn-sm btn-primary text-nowrap" onClick={() => setShowBatchEditModal(true)}>
+                                <PencilSquare /> Batch Edit
+                            </button>
+                        )}
+                        {canManage && (
+                            <button className="btn btn-sm btn-primary text-nowrap" onClick={handleCreate}>
+                                <Plus /> New Computer Set
+                            </button>
+                        )}
+                    </div>
+                </div>
             </div>
 
-            <div className="row row-cols-2 row-cols-xs-3 row-cols-md-4 row-cols-lg-5">
-                {computerSets.map(set => (
-                    <ComputerSetCard
-                        key={set.id}
-                        set={set}
-                        components={getSetComponents(set.id)}
-                        user={user}
-                        onView={handleViewComponents}
-                        onEdit={handleEdit}
-                        onDelete={handleDelete}
-                    />
-                ))}
-            </div>
-            {computerSets.length === 0 && <div className="text-center text-muted"><p>No computer sets found in this laboratory.</p></div>}
+            <div className="container-fluid">
 
-            <Modal className='pb-5' show={showModal} onHide={() => setShowModal(false)} size="lg">
+                <div className="d-flex justify-content-start mb-2">
+                    <select
+                        className="form-select form-select-sm w-auto"
+                        value={itemsPerRow}
+                        onChange={(e) => setItemsPerRow(parseInt(e.target.value))}
+                        title="Items per row"
+                    >
+                        <option value={3}>3 per row</option>
+                        <option value={4}>4 per row</option>
+                        <option value={5}>5 per row</option>
+                    </select>
+                </div>
+
+                <div className={`row row-cols-2 row-cols-md-${itemsPerRow}`}>
+                    {
+                        computerSets.length > 0 && (
+                            computerSets.map(set => (
+                                <ComputerSetCard
+                                    key={set.id}
+                                    set={set}
+                                    components={allComponents ? allComponents.filter(c => c.computer_set_id === set.id) : []}
+                                    onView={handleViewComponents}
+                                />
+                            ))
+                        )
+                    }
+                </div>
+
+                {
+                    computerSets.length == 0 && (
+                        <div className="col-12">
+                            <div className="text-center text-muted"><p>No computer sets found in this laboratory.</p></div>
+                        </div>
+                    )
+                }
+            </div>
+
+            {/* Computer Set Form Modal (Create/Edit) */}
+            <Modal className='pb-5' show={showModal} onHide={handleCloseSetModal} size="lg">
                 <Modal.Header closeButton>
                     <Modal.Title>
-                        {mode === 'view' ? "Computer Components" : (mode === 'edit' ? 'Edit Computer Set' : 'New Computer Set')}
+                        {mode === 'edit' ? 'Edit Computer Set' : 'New Computer Set'}
                     </Modal.Title>
                 </Modal.Header>
                 <Modal.Body className='p-0'>
-                    {mode === 'view' && selectedSet ? (
-                        <ComponentsManager
-                            set={selectedSet}
-                            initialComponents={getSetComponents(selectedSet.id)}
-                            laboratoryId={laboratoryId}
-                            onClose={() => setShowModal(false)}
-                            onUpdate={fetchData}
-                            user={user}
-                        />
-                    ) : (
-                        <ComputerSetForm
-                            mode={mode}
-                            editingId={selectedSet?.id}
-                            initialData={selectedSet}
-                            laboratoryId={laboratoryId}
-                            onSubmit={handleFormSubmit}
-                            onCancel={() => setShowModal(false)}
-                            user={user}
-                        />
-                    )}
+                    <ComputerSetForm
+                        mode={mode}
+                        editingId={selectedSet?.id}
+                        initialData={selectedSet}
+                        laboratoryId={laboratoryId}
+                        onSubmit={handleFormSubmit}
+                        onCancel={handleCloseSetModal}
+                        user={user}
+                    />
                 </Modal.Body>
             </Modal>
+
+            {/* Batch Edit Modal */}
+            <BatchEditSetsModal
+                show={showBatchEditModal}
+                onHide={() => setShowBatchEditModal(false)}
+                computerSets={computerSets}
+                user={user}
+                onBatchUpdate={handleBatchUpdate}
+                onBatchDelete={handleBatchDelete}
+            />
+
+            {/* Components Manager Modal (View) */}
+            {selectedSet && (
+                <Modal show={showComponentsModal} onHide={handleCloseComponentsModal} size="lg" backdrop="static" animation={true}>
+                    <Modal.Header closeButton>
+                        <Modal.Title>Computer Set</Modal.Title>
+                    </Modal.Header>
+                    <ComponentsManager
+                        key={selectedSet.id}
+                        set={selectedSet}
+                        initialComponents={allComponents.filter(c => c.computer_set_id === selectedSet.id)}
+                        laboratoryId={laboratoryId}
+                        onClose={handleCloseComponentsModal}
+                        onUpdate={() => { fetchData(); }}
+                        user={user}
+                        onDelete={handleDeleteSet}
+                        onReport={(target) => handleReportIssue(target, target.serial_number ? 'component' : 'set')}
+                    />
+                </Modal>
+            )}
+
+            {/* Report Issue Modal */}
+            <ReportIssueModal
+                show={reportModal.show}
+                onHide={() => setReportModal({ ...reportModal, show: false })}
+                target={reportModal.target}
+                type={reportModal.type}
+                user={user}
+                onSubmit={handleReportSubmit}
+            />
         </div>
     );
 };

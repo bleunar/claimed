@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Modal, Button, Form } from 'react-bootstrap';
+import { Modal, Button, Form, InputGroup } from 'react-bootstrap';
+import { Eye, EyeSlash } from 'react-bootstrap-icons';
 import toast from 'react-hot-toast';
 import api from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
@@ -10,6 +11,7 @@ const ChangeEmailModal = ({ show, onHide, onSuccess }) => {
     const [newEmail, setNewEmail] = useState('');
     const [otp, setOtp] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
 
     const handleSendOtp = async (e) => {
@@ -96,13 +98,21 @@ const ChangeEmailModal = ({ show, onHide, onSuccess }) => {
                         </Form.Group>
                         <Form.Group className="mb-3">
                             <Form.Label>Current Password</Form.Label>
-                            <Form.Control
-                                type="password"
-                                placeholder="Confirm with current password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                required
-                            />
+                            <InputGroup>
+                                <Form.Control
+                                    type={showPassword ? "text" : "password"}
+                                    placeholder="Confirm with current password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    required
+                                />
+                                <Button
+                                    variant="primary"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                >
+                                    {showPassword ? <EyeSlash /> : <Eye />}
+                                </Button>
+                            </InputGroup>
                         </Form.Group>
                         <div className="d-grid gap-2">
                             <Button variant="primary" type="submit" disabled={loading}>

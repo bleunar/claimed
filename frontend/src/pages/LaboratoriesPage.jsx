@@ -13,16 +13,16 @@ const CollapsibleActions = ({ onEdit, onDelete }) => {
     return (
         <div className="d-flex align-items-center justify-content-end">
             <div className="mobile-actions">
-                <button className="action-btn text-primary" onClick={onEdit} title="Edit">
+                <button className="action-btn" onClick={onEdit} title="Edit">
                     <PencilSquare size={18} />
                 </button>
-                <button className="action-btn text-danger" onClick={onDelete} title="Delete">
+                <button className="action-btn" onClick={onDelete} title="Delete">
                     <Trash size={18} />
                 </button>
             </div>
 
             <div className="desktop-actions d-none d-md-flex align-items-center justify-content-end">
-                <div className="d-flex align-items-center shadow-sm rounded-pill bg-body text-body rounded-circle">
+                <div className={`d-flex align-items-center text-body rounded-pill ${isExpanded ? "bg-body" : "bg-transparent"}`}>
                     <Collapse in={isExpanded} dimension="width">
                         <div>
                             <div className="d-flex align-items-center text-nowrap">
@@ -37,7 +37,7 @@ const CollapsibleActions = ({ onEdit, onDelete }) => {
                     </Collapse>
 
                     <button
-                        className="action-btn rounded-circle"
+                        className="action-btn rounded-circle bg-transparent"
                         onClick={() => setIsExpanded(!isExpanded)}
                         title={isExpanded ? "Collapse" : "Show Actions"}
                     >
@@ -53,7 +53,7 @@ const LaboratoryCard = ({ lab, canManage, onEdit, onDelete, onNavigate }) => {
     return (
         <div className="col p-2">
             <div
-                className="card bg-body-tertiary h-100 shadow-sm hover-shadow"
+                className="card bg-body-secondary h-100 shadow-sm hover-shadow"
                 style={{ cursor: 'pointer', transition: 'transform 0.2s' }}
                 onClick={() => onNavigate(lab.id)}
             >
@@ -214,29 +214,31 @@ const LaboratoriesPage = () => {
             <div className="d-flex justify-content-between align-items-center mb-4">
                 <div className='h4'>Laboratories</div>
                 {canManage && (
-                    <button className="btn btn-primary d-flex align-items-center" onClick={handleCreate}>
+                    <button className="btn btn-sm btn-primary d-flex align-items-center" onClick={handleCreate}>
                         <Plus className='d-block d-md-none' />
                         <span className='d-none d-md-inline'>New Laboratory</span>
                     </button>
                 )}
             </div>
 
-            {loading ? (
-                <LoadingSpinner centered />
-            ) : (
-                <div className="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xxl-4">
-                    {laboratories.map(lab => (
-                        <LaboratoryCard
-                            key={lab.id}
-                            lab={lab}
-                            canManage={canManage}
-                            onEdit={handleEdit}
-                            onDelete={handleDelete}
-                            onNavigate={(id) => navigate(`/dashboard/laboratories/${id}`)}
-                        />
-                    ))}
-                </div>
-            )}
+            <div className="container-fluid">
+                {loading ? (
+                    <LoadingSpinner centered />
+                ) : (
+                    <div className="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xxl-4">
+                        {laboratories.map(lab => (
+                            <LaboratoryCard
+                                key={lab.id}
+                                lab={lab}
+                                canManage={canManage}
+                                onEdit={handleEdit}
+                                onDelete={handleDelete}
+                                onNavigate={(id) => navigate(`/dashboard/laboratories/${id}`)}
+                            />
+                        ))}
+                    </div>
+                )}
+            </div>
 
             {/* Modal */}
             <Modal className='pb-5' show={showModal} onHide={() => setShowModal(false)}>
@@ -248,15 +250,11 @@ const LaboratoriesPage = () => {
                         <div className="p-3">
                             <div className="mb-3">
                                 <label className="form-label">Name</label>
-                                <input type="text" className="form-control" name="name" value={formData.name} onChange={handleInputChange} required />
-                            </div>
-                            <div className="mb-3">
-                                <label className="form-label">Location</label>
-                                <input type="text" className="form-control" name="location" value={formData.location} onChange={handleInputChange} />
+                                <input type="text" className="form-control" name="name" value={formData.name} onChange={handleInputChange} required placeholder='CL X' />
                             </div>
                             <div className="mb-3">
                                 <label className="form-label">Description</label>
-                                <textarea className="form-control" name="description" value={formData.description} onChange={handleInputChange} rows="3"></textarea>
+                                <textarea className="form-control" name="description" value={formData.description} onChange={handleInputChange} rows="2" placeholder='Computer Laboratory X'></textarea>
                             </div>
                         </div>
                         <div className="modal-footer">

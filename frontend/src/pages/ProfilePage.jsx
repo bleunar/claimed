@@ -3,7 +3,7 @@ import { useTheme } from '../context/ThemeContext';
 import { Form, Button, Card, Row, Col, Image, Modal } from 'react-bootstrap';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
-import { Person, PersonCircle } from 'react-bootstrap-icons';
+import { Person, PersonCircle, Eye, EyeSlash } from 'react-bootstrap-icons';
 import ChangeEmailModal from '../components/modals/ChangeEmailModal';
 import toast from 'react-hot-toast';
 
@@ -19,6 +19,8 @@ const ProfilePage = () => {
     const [selectedFile, setSelectedFile] = useState(null);
     const [showPreviewModal, setShowPreviewModal] = useState(false);
     const [previewImage, setPreviewImage] = useState(null);
+    const [showNewPassword, setShowNewPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     useEffect(() => {
         if (user) {
@@ -134,7 +136,7 @@ const ProfilePage = () => {
             <Row className="g-4 mb-4">
                 <Col md={4}>
                     <Card className='h-100 overflow-hidden shadow-sm'>
-                        <Card.Header className='text-bg-primary fw-bold'>Profile Picture</Card.Header>
+                        <Card.Header className='text-body-secondary fw-bold'>Profile Picture</Card.Header>
                         <Card.Body className="text-center bg-body-tertiary">
                             <div className="mb-3 position-relative d-inline-block">
                                 {getProfileImageUrl() ? (
@@ -176,7 +178,7 @@ const ProfilePage = () => {
 
                 <Col md={8}>
                     <Card className='h-100 shadow-sm overflow-hidden'>
-                        <Card.Header className='text-bg-primary fw-bold'>Profile Information</Card.Header>
+                        <Card.Header className='text-body-secondary fw-bold'>Profile Information</Card.Header>
                         <Card.Body className='bg-body-tertiary'>
                             <Form onSubmit={handleUpdateName}>
                                 <Form.Group className="mb-3">
@@ -216,7 +218,7 @@ const ProfilePage = () => {
             <Row className='g-4'>
                 <Col md={4}>
                     <Card className='mb-4 mb-md-0 h-100 shadow-sm overflow-hidden'>
-                        <Card.Header className='text-bg-primary fw-bold'>Settings</Card.Header>
+                        <Card.Header className='text-body-secondary fw-bold'>Settings</Card.Header>
                         <Card.Body className='bg-body-tertiary'>
                             <Form.Group className="mb-3 d-flex justify-content-between align-items-center">
                                 <Form.Label className="mb-0">Dark Mode</Form.Label>
@@ -237,9 +239,7 @@ const ProfilePage = () => {
                                         toast.success("Toast position updated!");
                                     }}
                                 >
-                                    <option value="top-left">Top Left</option>
                                     <option value="top-center">Top Center</option>
-                                    <option value="top-right">Top Right</option>
                                     <option value="bottom-left">Bottom Left</option>
                                     <option value="bottom-center">Bottom Center</option>
                                     <option value="bottom-right">Bottom Right</option>
@@ -251,29 +251,45 @@ const ProfilePage = () => {
 
                 <Col md={8}>
                     <Card className='h-100 shadow-sm overflow-hidden'>
-                        <Card.Header className='text-bg-primary fw-bold'>Update Password</Card.Header>
+                        <Card.Header className='text-body-secondary fw-bold'>Update Password</Card.Header>
                         <Card.Body className='bg-body-tertiary'>
                             <Form onSubmit={handleUpdatePassword}>
                                 <Form.Group className="mb-3">
                                     <Form.Label>New Password</Form.Label>
-                                    <Form.Control
-                                        type="password"
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        placeholder="Enter new password"
-                                        required
-                                    />
+                                    <div className="input-group">
+                                        <Form.Control
+                                            type={showNewPassword ? "text" : "password"}
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
+                                            placeholder="Enter new password"
+                                            required
+                                        />
+                                        <Button
+                                            variant="primary"
+                                            onClick={() => setShowNewPassword(!showNewPassword)}
+                                        >
+                                            {showNewPassword ? <EyeSlash /> : <Eye />}
+                                        </Button>
+                                    </div>
                                 </Form.Group>
 
                                 <Form.Group className="mb-3">
                                     <Form.Label>Confirm New Password</Form.Label>
-                                    <Form.Control
-                                        type="password"
-                                        value={confirmPassword}
-                                        onChange={(e) => setConfirmPassword(e.target.value)}
-                                        placeholder="Confirm new password"
-                                        required
-                                    />
+                                    <div className="input-group">
+                                        <Form.Control
+                                            type={showConfirmPassword ? "text" : "password"}
+                                            value={confirmPassword}
+                                            onChange={(e) => setConfirmPassword(e.target.value)}
+                                            placeholder="Confirm new password"
+                                            required
+                                        />
+                                        <Button
+                                            variant="secondary"
+                                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                        >
+                                            {showConfirmPassword ? <EyeSlash /> : <Eye />}
+                                        </Button>
+                                    </div>
                                 </Form.Group>
 
                                 <div className="text-end">

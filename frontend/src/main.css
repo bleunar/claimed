@@ -7,8 +7,25 @@
 
 }
 
+.cursor-pointer {
+    cursor: pointer;
+}
+
+.cursor-help {
+    cursor: help;
+}
+
 
 .bordered *{
-    border: 1px solid red;
-    transition: all ease-in-out 1s;
+    border: 1px solid rgb(63, 63, 63);
+}
+
+.navbar-frosted {
+    background-color: rgba(#ffffff, 0.7) !important;
+    backdrop-filter: blur(12px);
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+
+    [data-bs-theme="dark"] & {
+        background-color: rgba(#212529, 0.7) !important;
+    }
 }

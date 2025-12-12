@@ -73,6 +73,18 @@ def create_computer_set():
             count = int(batch_config.get('count', 1))
             components = batch_config.get('components', [])
             
+            # Check for name collisions before creating anything
+            intended_names = [f"{prefix}{start_number + i}" for i in range(count)]
+            if intended_names:
+                placeholders = ', '.join(['%s'] * len(intended_names))
+                query = f"SELECT set_name FROM computer_sets WHERE laboratory_id = %s AND set_name IN ({placeholders})"
+                cursor.execute(query, (laboratory_id, *intended_names))
+                existing_names = [row['set_name'] for row in cursor.fetchall()]
+                
+                if existing_names:
+                    cursor.close()
+                    return jsonify({"msg": f"The following computer set names already exist in this laboratory: {', '.join(existing_names)}"}), 409
+
             created_ids = []
             
             for i in range(count):
@@ -110,6 +122,12 @@ def create_computer_set():
                 cursor.close()
                 return jsonify({"msg": "Set Name is required"}), 400
 
+            # Check for name collision
+            cursor.execute("SELECT id FROM computer_sets WHERE laboratory_id = %s AND set_name = %s", (laboratory_id, set_name))
+            if cursor.fetchone():
+                cursor.close()
+                return jsonify({"msg": f"Computer set '{set_name}' already exists in this laboratory."}), 409
+
             set_id = uuid.uuid4().hex[:16]
             
             # Create Computer Set
@@ -138,7 +156,7 @@ def create_computer_set():
 
 @computer_sets_bp.route('/<id>', methods=['PUT'])
 @jwt_required()
-@role_required(['admin', 'it_head', 'lab_head'])
+@role_required(['admin', 'it_head', 'lab_head', 'it_technician'])
 def update_computer_set(id):
     data = request.json
     laboratory_id = data.get('laboratory_id')
@@ -162,6 +180,12 @@ def update_computer_set(id):
     if not cursor.fetchone():
         cursor.close()
         return jsonify({"msg": "Laboratory not found"}), 404
+
+    # Check for name collision (excluding self)
+    cursor.execute("SELECT id FROM computer_sets WHERE laboratory_id = %s AND set_name = %s AND id != %s", (laboratory_id, set_name, id))
+    if cursor.fetchone():
+        cursor.close()
+        return jsonify({"msg": f"Computer set '{set_name}' already exists in this laboratory."}), 409
 
     try:
         cursor.execute(

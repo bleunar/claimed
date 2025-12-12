@@ -29,8 +29,6 @@ def profile():
     
     db = get_db()
     cursor = db.cursor(dictionary=True)
-    db = get_db()
-    cursor = db.cursor(dictionary=True)
     cursor.execute("SELECT id, name, email, role, status, profile_picture, birth_date, gender, department_name FROM accounts WHERE id = %s", (current_user_id,))
     user = cursor.fetchone()
     cursor.close()
@@ -142,7 +140,7 @@ def upload_profile_picture():
         
         db = get_db()
         cursor = db.cursor()
-                
+        
         relative_path = f"profile/{unique_filename}"
         cursor.execute("UPDATE accounts SET profile_picture = %s WHERE id = %s", (relative_path, current_user_id))
         db.commit()
@@ -277,15 +275,22 @@ def create_account():
     email = data.get('email')
     password = data.get('password')
     role = data.get('role')
+    birth_date = data.get('birth_date') or None
+    gender = data.get('gender') or None
+    department_name = data.get('department_name') or None
 
     if not all([name, email, password, role]):
         return jsonify({"msg": "Missing required fields"}), 400
         
     # validation based on Hierarchy
     if current_role == 'it_head' and role != 'it_technician':
-        return jsonify({"msg": "IT Head can only create IT Technicians"}), 403
+        return jsonify({"msg": "Protection Policy: IT Head can only create IT Technicians"}), 403
     if current_role == 'lab_head' and role != 'lab_assistant':
-        return jsonify({"msg": "Lab Head can only create Lab Assistants"}), 403
+        return jsonify({"msg": "Protection Policy: Lab Head can only create Lab Assistants"}), 403
+    
+    # Policy: Only Admin can create Head roles
+    if role in ['admin', 'it_head', 'lab_head'] and current_role != 'admin':
+        return jsonify({"msg": "Protection Policy: Only Admin can create management roles"}), 403
 
     db = get_db()
     cursor = db.cursor(dictionary=True)
@@ -309,8 +314,8 @@ def create_account():
     
     try:
         cursor.execute(
-            "INSERT INTO accounts (id, name, email, password_hash, role) VALUES (%s, %s, %s, %s, %s)",
-            (account_id, name, email, hashed_pw, role)
+            "INSERT INTO accounts (id, name, email, password_hash, role, birth_date, gender, department_name) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+            (account_id, name, email, hashed_pw, role, birth_date, gender, department_name)
         )
         db.commit()
         cursor.close()
@@ -332,38 +337,66 @@ def list_accounts():
     status = request.args.get('status', '')
     include_deleted = request.args.get('include_deleted', 'false').lower() == 'true'
 
-    query = "SELECT id, name, email, role, status, created_at, profile_picture FROM accounts WHERE 1=1"
+    query = "SELECT id, name, email, role, status, created_at, profile_picture, birth_date, gender, department_name FROM accounts WHERE 1=1"
     params = []
 
     if not include_deleted or current_role != 'admin':
          query += " AND status != 'deleted'"
     
-    # filter by head role
+    # RBAC Filtering
     if current_role == 'it_head':
-        query += " AND role = 'it_technician'"
+        query += " AND role = %s"
+        params.append('it_technician')
     elif current_role == 'lab_head':
-        query += " AND role = 'lab_assistant'"
+        query += " AND role = %s"
+        params.append('lab_assistant')
 
+    # User Filters
     if search:
         query += " AND (name LIKE %s OR email LIKE %s)"
         params.extend([f"%{search}%", f"%{search}%"])
-
+    
     if role:
         query += " AND role = %s"
         params.append(role)
-
+        
     if status:
         query += " AND status = %s"
         params.append(status)
-
+        
     query += " ORDER BY created_at DESC"
-
+    
     db = get_db()
     cursor = db.cursor(dictionary=True)
+    
     cursor.execute(query, tuple(params))
     accounts = cursor.fetchall()
+    
+    # Stats logic needs to respect visibility too
+    # Simplify stats for Heads or filter stats? 
+    # For now, let's filter the stats queries too to be consistent.
+    
+    stats_query = "SELECT role, COUNT(*) as count FROM accounts WHERE status != 'deleted'"
+    stats_params = []
+    
+    if current_role == 'it_head':
+        stats_query += " AND role = %s"
+        stats_params.append('it_technician')
+    elif current_role == 'lab_head':
+        stats_query += " AND role = %s"
+        stats_params.append('lab_assistant')
+        
+    stats_query += " GROUP BY role"
+    
+    cursor.execute(stats_query, tuple(stats_params))
+    role_counts = {row['role']: row['count'] for row in cursor.fetchall()}
+    
     cursor.close()
-    return jsonify(accounts), 200
+    
+    return jsonify({
+        "accounts": accounts,
+        "stats": role_counts
+    }), 200
 
 
 @accounts_bp.route('/<id>', methods=['PUT'])
@@ -372,49 +405,44 @@ def list_accounts():
 def update_account(id):
     current_claims = get_jwt()
     current_role = current_claims.get("role")
-    
-    data = request.json
-    name = data.get('name')
-    email = data.get('email')
-    password = data.get('password')
-    role = data.get('role')
-    status = data.get('status')
+    current_id = get_jwt_identity()
 
-    if not all([name, email, role, status]):
-        return jsonify({"msg": "Name, Email, Role, and Status are required"}), 400
-
-    # validation based on role
-    if current_role == 'it_head' and role != 'it_technician':
-        return jsonify({"msg": "IT Head can only manage IT Technicians"}), 403
-    if current_role == 'lab_head' and role != 'lab_assistant':
-        return jsonify({"msg": "Lab Head can only manage Lab Assistants"}), 403
+    if current_id == id:
+         return jsonify({"msg": "You cannot edit your own account permissions here"}), 403
 
     db = get_db()
     cursor = db.cursor(dictionary=True)
     
-    # check if exists and validate hierarchy access to target
-    cursor.execute("SELECT id, role FROM accounts WHERE id = %s", (id,))
+    # Check existence and current role of target
+    cursor.execute("SELECT role FROM accounts WHERE id = %s", (id,))
     target_account = cursor.fetchone()
     
     if not target_account:
         cursor.close()
         return jsonify({"msg": "Account not found"}), 404
         
-    if current_role == 'it_head' and target_account['role'] != 'it_technician':
-        cursor.close()
-        return jsonify({"msg": "IT Head can only update IT Technicians"}), 403
-    if current_role == 'lab_head' and target_account['role'] != 'lab_assistant':
-        cursor.close()
-        return jsonify({"msg": "Lab Head can only update Lab Assistants"}), 403
-
-    # check single admin rule
-    if role == 'admin' and target_account['role'] != 'admin':
-        cursor.execute("SELECT COUNT(*) as count FROM accounts WHERE role = 'admin' AND status != 'deleted'")
-        result = cursor.fetchone()
-        if result['count'] >= 1:
-            cursor.close()
-            return jsonify({"msg": "Only one admin account allowed"}), 400
-
+    target_role = target_account['role']
+    
+    # RBAC Check: Cannot edit superiors or peers if not admin
+    if current_role == 'it_head':
+        if target_role != 'it_technician':
+             cursor.close()
+             return jsonify({"msg": "Access Denied: You can only manage IT Technicians"}), 403
+             
+    if current_role == 'lab_head':
+        if target_role != 'lab_assistant':
+             cursor.close()
+             return jsonify({"msg": "Access Denied: You can only manage Lab Assistants"}), 403
+             
+    data = request.json
+    name = data.get('name')
+    email = data.get('email')
+    password = data.get('password')
+    role = data.get('role')
+    status = data.get('status')
+    birth_date = data.get('birth_date') or None
+    gender = data.get('gender') or None
+    department_name = data.get('department_name') or None
     # check if email exists
     cursor.execute("SELECT id FROM accounts WHERE email = %s AND id != %s", (email, id))
     if cursor.fetchone():
@@ -425,13 +453,13 @@ def update_account(id):
         if password:
             hashed_pw = hash_password(password)
             cursor.execute(
-                "UPDATE accounts SET name = %s, email = %s, password_hash = %s, role = %s, status = %s WHERE id = %s",
-                (name, email, hashed_pw, role, status, id)
+                "UPDATE accounts SET name = %s, email = %s, password_hash = %s, role = %s, status = %s, birth_date = %s, gender = %s, department_name = %s WHERE id = %s",
+                (name, email, hashed_pw, role, status, birth_date, gender, department_name, id)
             )
         else:
             cursor.execute(
-                "UPDATE accounts SET name = %s, email = %s, role = %s, status = %s WHERE id = %s",
-                (name, email, role, status, id)
+                "UPDATE accounts SET name = %s, email = %s, role = %s, status = %s, birth_date = %s, gender = %s, department_name = %s WHERE id = %s",
+                (name, email, role, status, birth_date, gender, department_name, id)
             )
         db.commit()
         cursor.close()

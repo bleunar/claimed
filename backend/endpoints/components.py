@@ -43,6 +43,8 @@ def list_components():
 
     if unassigned == 'true':
         query += " AND c.computer_set_id IS NULL"
+    elif unassigned == 'false':
+        query += " AND c.computer_set_id IS NOT NULL"
 
     if request.args.get('component_type'):
         query += " AND c.component_type = %s"
@@ -85,7 +87,7 @@ def check_serial():
     cursor = db.cursor(dictionary=True)
     
     query = """
-        SELECT c.id, c.computer_set_id, c.component_type, c.status, c.brand_name,
+        SELECT c.id, c.computer_set_id, c.component_type, c.status, c.brand_name, c.serial_number,
                cs.set_name as computer_set_name, l.name as laboratory_name
         FROM computer_set_components c
         LEFT JOIN computer_sets cs ON c.computer_set_id = cs.id

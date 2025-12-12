@@ -5,6 +5,7 @@ from .computer_sets import computer_sets_bp
 from .components import components_bp
 from .analytics import analytics_bp
 from .activities import activities_bp
+from .issues import issues_bp
 from flask import jsonify
 
 def register_blueprints(app):
@@ -15,6 +16,7 @@ def register_blueprints(app):
     app.register_blueprint(components_bp)
     app.register_blueprint(analytics_bp)
     app.register_blueprint(activities_bp)
+    app.register_blueprint(issues_bp)
 
     # Status endpoint
     @app.route("/status", methods=["GET"])

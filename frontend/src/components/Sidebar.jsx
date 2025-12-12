@@ -77,25 +77,23 @@ const Sidebar = ({ isOpen, isMobile, options, onClose, onToggle }) => {
         top: 0,
         left: 0,
         zIndex: 1000,
-        backgroundColor: '#006633',
         color: '#fff',
         whiteSpace: 'nowrap'
     };
 
 
     return (
-        <div style={sidebarStyle} className="d-flex flex-column flex-shrink-0">
-            <div className={`d-flex align-items-center justify-content-center w-100 mb-md-0 text-decoration-none ${!isOpen ? 'justify-content-center' : 'me-md-auto'}`} style={{ height: '7vh' }}>
+        <div style={sidebarStyle} className="d-flex flex-column flex-shrink-0 bg-primary">
+            <div className={`d-flex align-items-center justify-content-center w-100 mb-md-0 text-decoration-none bg-primary ${!isOpen ? 'justify-content-center' : 'me-md-auto'}`} style={{ height: '7vh' }}>
                 <img className="fs-4" style={{ height: '5vh' }} src={isOpen ? Logo : LogoShrinked} />
             </div>
             <NavItems />
             <div className="mt-auto">
-
                 <div className="pt-3 pb-3 d-flex justify-content-center">
                     <div
                         onClick={onToggle}
-                        className="d-flex align-items-center justify-content-center rounded-circle hover-bg-secondary"
-                        style={{ width: '30px', height: '30px', cursor: 'pointer', backgroundColor: '#0000007a' }}
+                        className="d-flex align-items-center justify-content-center"
+                        style={{ width: '30px', height: '30px', cursor: 'pointer'}}
                         title={isOpen ? "Collapse Sidebar" : "Expand Sidebar"}
                     >
                         {isOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}

@@ -85,13 +85,6 @@ const DashboardPage = () => {
                     <PieChart title="Component Status" data={componentsByStatusData} />
                 </div>
             </div>
-
-            {/* Role Based Content Examples (Preserved) */}
-            <RoleBasedContent allowedRoles={['admin']}>
-                <div className="alert alert-light border shadow-sm">
-                    <strong>Admin Quick Actions:</strong> <a href="/dashboard/accounts" className="alert-link">Manage Accounts</a> | <a href="/dashboard/laboratories" className="alert-link">Manage Labs</a>
-                </div>
-            </RoleBasedContent>
         </div>
     );
 };

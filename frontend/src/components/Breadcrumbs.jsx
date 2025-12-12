@@ -18,7 +18,7 @@ const Breadcrumbs = () => {
     };
 
     return (
-        <div className="container-fluid bg-body-secondary shadow-sm rounded mx-0 mt-2">
+        <div className="container-fluid bg-body-tertiaryy shadoww-sm rounded mx-0 mt-2">
             <Breadcrumb className="p-0 m-0 rounded" style={{ '--bs-breadcrumb-divider': "'/'" }}>
                 {pathnames.map((value, index) => {
                     const to = `/${pathnames.slice(0, index + 1).join('/')}`;
@@ -36,6 +36,8 @@ const Breadcrumbs = () => {
                     );
                 })}
             </Breadcrumb>
+
+            <hr />
         </div>
     );
 };

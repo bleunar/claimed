@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import Pagination from '../components/Pagination';
-import { Funnel, Search, Tools, Hdd, Cpu, Display, Keyboard, Mouse, Webcam, Backspace, EnvelopePaper, PencilSquare, Trash, Plus, Printer, ArrowClockwise } from 'react-bootstrap-icons';
+import { Funnel, Search, Tools, Hdd, Cpu, Display, Keyboard, Mouse, Webcam, Backspace, EnvelopePaper, PencilSquare, Trash, Plus, Printer, ArrowClockwise, CheckCircleFill } from 'react-bootstrap-icons';
 
 const COMPONENT_TYPES = [
     { label: 'System Unit', value: 'system_unit' },
@@ -23,10 +23,16 @@ const ComponentsPage = () => {
     const [components, setComponents] = useState([]);
     const [loading, setLoading] = useState(true);
 
+    // Bulk Operations State
+    const [selectedItems, setSelectedItems] = useState([]); // Array of component objects
+    const [isBulkSubmitting, setIsBulkSubmitting] = useState(false);
+    const [bulkStatus, setBulkStatus] = useState('');
+    const [showSelectedModal, setShowSelectedModal] = useState(false);
+
     // Filters
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
-    const [unassignedFilter, setUnassignedFilter] = useState(false);
+    const [assignmentFilter, setAssignmentFilter] = useState('false'); // 'false'=Assigned (default), 'true'=Unassigned, ''=All
     const [labFilter, setLabFilter] = useState('');
     const [setFilter, setSetFilter] = useState('');
     const [typeFilter, setTypeFilter] = useState('');
@@ -76,7 +82,7 @@ const ComponentsPage = () => {
             let query = `/components/?`;
             if (statusFilter) query += `status=${statusFilter}&`;
             if (typeFilter) query += `component_type=${typeFilter}&`;
-            if (unassignedFilter) query += `unassigned=true&`;
+            if (assignmentFilter) query += `unassigned=${assignmentFilter}&`;
             if (search) query += `search=${search}&`;
             if (labFilter) query += `laboratory_id=${labFilter}&`;
             if (setFilter) query += `computer_set_id=${setFilter}&`;
@@ -112,7 +118,8 @@ const ComponentsPage = () => {
         }, 500);
 
         return () => clearTimeout(timer);
-    }, [search, statusFilter, unassignedFilter, labFilter, setFilter, typeFilter]);
+        return () => clearTimeout(timer);
+    }, [search, statusFilter, assignmentFilter, labFilter, setFilter, typeFilter]);
 
     const handleSearch = (e) => {
         e.preventDefault();
@@ -168,6 +175,76 @@ const ComponentsPage = () => {
         }
     };
 
+    // Bulk Operations Handlers
+    const handleSelect = (comp) => {
+        if (selectedItems.some(item => item.id === comp.id)) {
+            setSelectedItems(selectedItems.filter(item => item.id !== comp.id));
+        } else {
+            setSelectedItems([...selectedItems, comp]);
+        }
+    };
+
+    const handleSelectAll = (e) => {
+        if (e.target.checked) {
+            // Add all currently filtered components (avoiding duplicates)
+            const newItems = components.filter(c => !selectedItems.some(sel => sel.id === c.id));
+            setSelectedItems([...selectedItems, ...newItems]);
+        } else {
+            // Deselect ONLY the currently filtered components? 
+            // Or deselect all? Typically "Select All" checkbox in header toggles *page* selection.
+            // But here "components" is the FULL fetched list (unless pagination is server side? No, client side slicing).
+            // "components" state comes from API, and pagination slices it.
+            // Let's assume user wants to toggle selection for the visible list.
+            // Actually `components` is the FULL list from fetchComponents (it fetches ALL matching filters).
+            // So this selects ALL items matching current filter. Correct.
+
+            // To deselect, we remove items that are in the current `components` list.
+            const currentIds = components.map(c => c.id);
+            setSelectedItems(selectedItems.filter(item => !currentIds.includes(item.id)));
+        }
+    };
+
+    const handleBulkStatusUpdate = async () => {
+        if (selectedItems.length === 0 || !bulkStatus) return;
+        if (!window.confirm(`Are you sure you want to set status to "${bulkStatus}" for ${selectedItems.length} components?`)) return;
+
+        setIsBulkSubmitting(true);
+        try {
+            const promises = selectedItems.map(item => {
+                return api.put(`/components/${item.id}`, { ...item, status: bulkStatus });
+            });
+            await Promise.all(promises);
+            toast.success(`Updated ${selectedItems.length} components successfully`);
+            setSelectedItems([]); // Clear selection
+            setBulkStatus('');
+            fetchComponents();
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to update some components");
+        } finally {
+            setIsBulkSubmitting(false);
+        }
+    };
+
+    const handleBulkDelete = async () => {
+        if (selectedItems.length === 0) return;
+        if (!window.confirm(`Are you sure you want to PERMANENTLY DELETE ${selectedItems.length} components?`)) return;
+
+        setIsBulkSubmitting(true);
+        try {
+            const promises = selectedItems.map(item => api.delete(`/components/${item.id}`));
+            await Promise.all(promises);
+            toast.success(`Deleted ${selectedItems.length} components successfully`);
+            setSelectedItems([]); // Clear selection
+            fetchComponents();
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to delete some components");
+        } finally {
+            setIsBulkSubmitting(false);
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
@@ -188,16 +265,23 @@ const ComponentsPage = () => {
 
                     if (editingComponent && existing.id === editingComponent.id) {
                         // Same component, just proceed
+                    } else if (existing.computer_set_name) {
+                        // Case 1: Assigned to another set
+                        const locationMsg = `assigned to ${existing.computer_set_name} in ${existing.laboratory_name}`;
+                        const confirmMsg = `Serial Number "${formData.serial_number}" is currently ${locationMsg}.\n\nDo you want to MOVE this component to this new configuration?`;
+
+                        if (!window.confirm(confirmMsg)) return;
+
+                        // Switch to PUT on the EXISTING component
+                        targetId = existing.id;
+                        method = 'put';
+                        url = `/components/${targetId}`;
+
                     } else {
-                        const locationMsg = existing.computer_set_name
-                            ? `assigned to ${existing.computer_set_name} in ${existing.laboratory_name}`
-                            : `Unassigned (Rogue)`;
+                        // Case 2: Unassigned (Rogue)
+                        const confirmMsg = `Serial Number "${formData.serial_number}" exists but is currently UNASSIGNED.\n\nDo you want to LINK this component to this configuration?`;
 
-                        const confirmMsg = `Serial Number "${formData.serial_number}" is already currently ${locationMsg}.\n\nDo you want to MOVE/UPDATE that component to this new configuration?`;
-
-                        if (!window.confirm(confirmMsg)) {
-                            return; // User cancelled
-                        }
+                        if (!window.confirm(confirmMsg)) return;
 
                         // Switch to PUT on the EXISTING component
                         targetId = existing.id;
@@ -262,7 +346,7 @@ const ComponentsPage = () => {
         setSetFilter('');
         setStatusFilter('');
         setTypeFilter('');
-        setUnassignedFilter(false);
+        setAssignmentFilter('false');
         setCurrentPage(1);
         // fetchComponents will be triggered by useEffect dependency changes
     };
@@ -272,7 +356,7 @@ const ComponentsPage = () => {
             <div className="d-flex justify-content-between align-items-center mb-4">
                 <div className='h4'>Computer Components</div>
                 {canManage && (
-                    <button className="btn btn-primary" onClick={handleCreate}>
+                    <button className="btn btn-sm btn-primary" onClick={handleCreate}>
                         <span className='d-none d-md-inline'>New Component</span>
                         <Plus className='d-inline d-md-none' />
                     </button>
@@ -285,7 +369,6 @@ const ComponentsPage = () => {
                     <form onSubmit={handleSearch} className="row g-3 align-items-end">
 
                         <div className="col-md-4">
-                            <label className="form-label">Search</label>
                             <div className="input-group">
                                 <span className="input-group-text"><Search /></span>
                                 <input
@@ -298,31 +381,29 @@ const ComponentsPage = () => {
                             </div>
                         </div>
 
-                        <div className="col-sm-6 col-md-2">
-                            <label className="form-label">Laboratory</label>
+                        <div className="col-6 col-md-2">
                             <select
-                                className="form-select"
+                                className="form-select form-select-sm"
                                 value={labFilter}
                                 onChange={(e) => {
                                     setLabFilter(e.target.value);
-                                    if (e.target.value) setUnassignedFilter(false);
+                                    // if (e.target.value) setAssignmentFilter('false'); // Optional: force assignment filter? No, let user decide.
                                 }}
-                                disabled={unassignedFilter}
+                                disabled={assignmentFilter === 'true'}
                             >
-                                <option value="">All Laboratories</option>
+                                <option value="">All Laboratory</option>
                                 {laboratories.map(lab => (
                                     <option key={lab.id} value={lab.id}>{lab.name}</option>
                                 ))}
                             </select>
                         </div>
 
-                        <div className="col-sm-6 col-md-2">
-                            <label className="form-label">Computer Set</label>
+                        <div className="col-6 col-md-2">
                             <select
-                                className="form-select"
+                                className="form-select form-select-sm"
                                 value={setFilter}
                                 onChange={(e) => setSetFilter(e.target.value)}
-                                disabled={!labFilter || unassignedFilter}
+                                disabled={!labFilter || assignmentFilter === 'true'}
                             >
                                 <option value="">All Sets</option>
                                 {computerSets.map(set => (
@@ -331,14 +412,13 @@ const ComponentsPage = () => {
                             </select>
                         </div>
 
-                        <div className="col-sm-6 col-md-2">
-                            <label className="form-label">Status</label>
+                        <div className="col-6 col-md-2">
                             <select
-                                className="form-select"
+                                className="form-select form-select-sm"
                                 value={statusFilter}
                                 onChange={(e) => setStatusFilter(e.target.value)}
                             >
-                                <option value="">All Statuses</option>
+                                <option value="">All Status</option>
                                 <option value="good">Good</option>
                                 <option value="bad">Bad</option>
                                 <option value="maintenance">Maintenance</option>
@@ -346,10 +426,9 @@ const ComponentsPage = () => {
                             </select>
                         </div>
 
-                        <div className="col-sm-6 col-md-2">
-                            <label className="form-label">Type</label>
+                        <div className="col-6 col-md-2">
                             <select
-                                className="form-select"
+                                className="form-select form-select-sm"
                                 value={typeFilter}
                                 onChange={(e) => setTypeFilter(e.target.value)}
                             >
@@ -361,43 +440,113 @@ const ComponentsPage = () => {
                         </div>
 
                         <div className="col-12">
-                            <div className="form-check mb-2">
-                                <input
-                                    className="form-check-input"
-                                    type="checkbox"
-                                    id="unassignedCheck"
-                                    checked={unassignedFilter}
-                                    onChange={(e) => {
-                                        setUnassignedFilter(e.target.checked);
-                                        if (e.target.checked) {
-                                            setLabFilter('');
-                                            setSetFilter('');
-                                        }
-                                    }}
-                                />
-                                <label className="form-check-label" htmlFor="unassignedCheck" title='Components not assigned to a Computer Set'>
-                                    Rogue Components
-                                </label>
-                            </div>
-                        </div>
-
-                        <div className="col-12">
-                            <div className="d-flex justify-content-between justify-content-md-end gap-2">
-                                <button type="button" className="btn btn-secondary" onClick={handleClearFilters}><Backspace /> Clear Filters</button>
-                                <button type="button" className="btn btn-secondary" onClick={() => fetchComponents()} title="Refresh"><ArrowClockwise /></button>
-                                <button type="submit" className="btn btn-primary"><Search /> Search</button>
+                            <div className="row row-cols-md-2">
+                                <div className="col-12 col-md-4 d-flex justify-content-center justify-content-md-start mb-3 mb-md-0">
+                                    <select
+                                        className="form-select form-select-sm"
+                                        value={assignmentFilter}
+                                        onChange={(e) => {
+                                            setAssignmentFilter(e.target.value);
+                                            if (e.target.value === 'true') { // 'true' is Unassigned
+                                                setLabFilter('');
+                                                setSetFilter('');
+                                            }
+                                        }}
+                                    >
+                                        <option value="false">Active Components</option>
+                                        <option value="true">Rogue Components</option>
+                                        <option value="">Show All</option>
+                                    </select>
+                                </div>
+                                <div className="col-12 col-md-8 d-flex justify-content-end justify-content-md-end gap-2">
+                                    <button type="button" className="btn btn-sm btn-primary border-0" onClick={handleClearFilters}><Backspace /> <span className='d-none d-md-inline'>Clear Filters</span></button>
+                                    <button type="button" className="btn btn-sm btn-primary border-0" onClick={() => fetchComponents()} title="Refresh"><ArrowClockwise /></button>
+                                    <button type="submit" className="btn btn-sm btn-primary"><Search /> <span className='d-none d-md-inline'>Search</span></button>
+                                </div>
                             </div>
                         </div>
                     </form>
                 </div>
             </div>
 
+            {/* Bulk Actions Toolbar */}
+            {selectedItems.length > 0 && (
+                <div className="card mb-4 border-0">
+                    <div className="card-body bg-body-tertiary rounded shadow-sm border p-2 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <div className="row w-100 align-items-center">
+                            <div className="col-12 col-md-6">
+                                <span className='mb-3 fw-bold text-primary'>
+                                    <CheckCircleFill className="me-2" />
+                                    {selectedItems.length} component{selectedItems.length !== 1 ? 's' : ''} selected
+                                </span>
+
+                                <div className="d-flex gap-2">
+                                    <button className="btn btn-sm btn-link text-nowrap text-decoration-none" onClick={() => setShowSelectedModal(true)}>
+                                        View
+                                    </button>
+
+                                    <button
+                                        className="btn btn-sm btn-link text-nowrap text-decoration-none"
+                                        onClick={() => setSelectedItems([])}
+                                    >
+                                        Clear Selection
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="col-12 col-md-4">
+                                <div className="d-flex gap-2 align-items-center w-100">
+                                    <div className="input-group input-group-sm flex-fill">
+                                        <select
+                                            className="form-select"
+                                            value={bulkStatus}
+                                            onChange={(e) => setBulkStatus(e.target.value)}
+                                            disabled={isBulkSubmitting}
+                                        >
+                                            <option value="">Set Status...</option>
+                                            <option value="good">Good</option>
+                                            <option value="bad">Bad</option>
+                                            <option value="maintenance">Maintenance</option>
+                                            <option value="missing">Missing</option>
+                                        </select>
+                                        <button
+                                            className="btn btn-primary"
+                                            onClick={handleBulkStatusUpdate}
+                                            disabled={!bulkStatus || isBulkSubmitting}
+                                        >
+                                            Apply
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="col-12 col-md-2">
+                                <button
+                                    className="btn btn-sm btn-danger d-flex align-items-center text-nowrap w-100"
+                                    onClick={handleBulkDelete}
+                                    disabled={isBulkSubmitting}
+                                >
+                                    <Trash className="me-1" /> Delete Items
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Table */}
             <div className="card overflow-hidden border-0">
                 <div className="table-responsive border-0">
-                    <table className="table table-hover table-striped align-middle mb-0">
+                    <table className="table table-hover align-middle mb-0">
                         <thead>
                             <tr className='text-center'>
+                                <th style={{ width: '40px' }}>
+                                    <input
+                                        type="checkbox"
+                                        className="form-check-input"
+                                        onChange={handleSelectAll}
+                                        checked={components.length > 0 && components.every(c => selectedItems.some(item => item.id === c.id))}
+                                    />
+                                </th>
                                 <th>Type</th>
                                 <th className='text-start'>Brand</th>
                                 <th className='text-start'>Serial</th>
@@ -414,22 +563,29 @@ const ComponentsPage = () => {
                             ) : (
                                 currentComponents.map(comp => (
                                     <tr key={comp.id}>
+                                        <td className="text-center">
+                                            <input
+                                                type="checkbox"
+                                                className="form-check-input"
+                                                checked={selectedItems.some(item => item.id === comp.id)}
+                                                onChange={() => handleSelect(comp)}
+                                            />
+                                        </td>
                                         <td className='text-center'>
                                             <span className="fs-5" title={COMPONENT_TYPES.find(t => t.value === comp.component_type)?.label || comp.component_type}>
                                                 {getComponentIcon(comp.component_type)}
                                             </span>
                                         </td>
-                                        <td>{comp.brand_name}</td>
-                                        <td>{comp.serial_number || '-'}</td>
+                                        <td className='text-truncate'>{comp.brand_name}</td>
+                                        <td className='text-truncate'>{comp.serial_number || '-'}</td>
                                         <td>
                                             <div className="d-flex justify-content-start">
                                                 {
                                                     comp.computer_set_name ? (
                                                         <>
-                                                            <Link to={`/dashboard/laboratories/${comp.laboratory_id}`} className="badge fw-normal bg-dark text-decoration-none" title="Go to Laboratory">
+                                                            <Link to={`/dashboard/laboratories/${comp.laboratory_id}`} className="badge fw-normal bg-dark text-decoration-none me-1" title="Go to Laboratory">
                                                                 {comp?.laboratory_name}
                                                             </Link>
-                                                            <span className='mx-1'> -</span>
                                                             <Link to={`/dashboard/laboratories/${comp.laboratory_id}?set=${comp.computer_set_id}&components=true`} className="badge fw-normal bg-dark text-decoration-none" title="View in Computer Set">
                                                                 {comp?.computer_set_name}
                                                             </Link>
@@ -501,6 +657,7 @@ const ComponentsPage = () => {
                                 value={formData.brand_name}
                                 onChange={(e) => setFormData({ ...formData, brand_name: e.target.value })}
                                 required
+                                maxLength="50"
                             />
                         </div>
                         <div className="mb-3">
@@ -510,6 +667,7 @@ const ComponentsPage = () => {
                                 className="form-control"
                                 value={formData.serial_number}
                                 onChange={(e) => setFormData({ ...formData, serial_number: e.target.value })}
+                                maxLength="36"
                             />
                         </div>
                         <div className="mb-3">
@@ -583,6 +741,57 @@ const ComponentsPage = () => {
                         <Button variant="primary" type="submit">Save</Button>
                     </Modal.Footer>
                 </form>
+            </Modal>
+
+            {/* View Selected Items Modal */}
+            <Modal show={showSelectedModal} onHide={() => setShowSelectedModal(false)} size="lg" centered>
+                <Modal.Header closeButton>
+                </Modal.Header>
+                <Modal.Body>
+                    <div className="h4 fw-bold">Selected Components ({selectedItems.length})</div>
+
+                    {
+                        selectedItems.length > 0 ? (
+                            <div className="px-3 overflow-auto" style={{ maxHeight: "50vh" }}>
+                                <div className="table-responsive">
+                                    <table className="table table-hover align-middle mb-0">
+                                        <thead className="table-light sticky-top">
+                                            <tr>
+                                                <th>Brand</th>
+                                                <th>Serial</th>
+                                                <th>Type</th>
+                                                <th className="text-end">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {selectedItems.map(item => (
+                                                <tr key={item.id}>
+                                                    <td>{item.brand_name}</td>
+                                                    <td>{item.serial_number || '-'}</td>
+                                                    <td>{item.component_type}</td>
+                                                    <td className="text-end">
+                                                        <button
+                                                            className="btn btn-sm btn-outline-danger"
+                                                            onClick={() => handleSelect(item)}
+                                                            title="Remove from selection"
+                                                        >
+                                                            <Trash />
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        ) : (
+                            <span className='text-center'>No Items Selected</span>
+                        )
+                    }
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={() => setShowSelectedModal(false)}>Close</Button>
+                </Modal.Footer>
             </Modal>
         </div>
     );
