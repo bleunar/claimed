@@ -9,7 +9,7 @@ const Navbar = ({ onToggleSidebar, sideBarToggled }) => {
     const { theme, toggleTheme } = useTheme();
 
     return (
-        <nav className={`navbar navbar-expand-lg p-0 sticky-top navbar-frosted navbar-${theme} ${theme}`} style={{ height: '7vh' }}>
+        <nav className={`navbar navbar-expand-lg p-0 sticky-top navbar-frosted shadow`} style={{ height: '7vh' }}>
             <div className="container-fluid pe-0">
                 <div className="d-flex align-items-center d-md-none">
                     <div className="btn p-0">
