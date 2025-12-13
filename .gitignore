@@ -22,7 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-
+.env
 *.sql
 frontend/.env
 backend/logs
@@ -30,8 +30,9 @@ backend/uploads
 backend/venv
 backend/.venv
 backend/.env
-
 secrets/.*
+
+.env
 
 __pycache__
 
