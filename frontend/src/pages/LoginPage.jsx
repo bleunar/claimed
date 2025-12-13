@@ -27,7 +27,15 @@ const LoginPage = () => {
             await login(email, password);
             navigate('/dashboard');
         } catch (err) {
-            toast.error('Invalid credentials');
+            if (!err?.response) {
+                toast.error('Unable to connect to the server. Please check your network connection.');
+            } else if (err.response.status === 401) {
+                toast.error('Invalid email or password');
+            } else if (err.response.status === 403) {
+                toast.error('Your account has been suspended. Please contact the administrator.');
+            } else {
+                toast.error('An unexpected error occurred. Please try again.');
+            }
             setIsLoading(false);
         }
     };
@@ -43,7 +51,7 @@ const LoginPage = () => {
                 height: "100dvh"
             }}
         >
-            <div className="col-md-4 col-sm-8 col-10">
+            <div className="col-md-4 col-sm-8 col-12">
                 <div className="mb-4">
                     <div className="d-flex justify-content-center">
                         <img

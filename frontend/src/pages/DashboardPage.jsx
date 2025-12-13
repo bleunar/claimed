@@ -10,24 +10,24 @@ import { useState, useEffect } from 'react';
 
 const DashboardPage = () => {
     const { user } = useAuth();
-    const [data, setData] = useState(null);
+    const [kpiData, setKpiData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
     useEffect(() => {
-        const fetchData = async () => {
+        const fetchKpiData = async () => {
             try {
-                const response = await api.get('/analytics/dashboard');
-                setData(response.data);
+                const response = await api.get('/analytics/kpi');
+                setKpiData(response.data);
             } catch (err) {
-                console.error("Error fetching dashboard data:", err);
-                setError("Failed to load dashboard data.");
+                console.error("Error fetching KPI data:", err);
+                setError("Failed to load dashboard KPIs.");
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchData();
+        fetchKpiData();
     }, []);
 
     const getQuickActions = () => {
@@ -66,7 +66,7 @@ const DashboardPage = () => {
         }
 
         // Common Actions
-        actions.push({ label: 'My Profile', path: '/profile', icon: <PersonCircle />, variant: 'primary' });
+        actions.push({ label: 'My Profile', path: '/dashboard/profile', icon: <PersonCircle />, variant: 'primary' });
 
         return actions;
     };
@@ -74,45 +74,15 @@ const DashboardPage = () => {
     if (loading) return <div className="text-center mt-5"><div className="spinner-border text-primary"></div></div>;
     if (error) return <div className="alert alert-danger mt-5">{error}</div>;
 
-    // Prepare Chart Data
-    const computersByLabData = {
-        labels: data?.charts?.computers_by_lab?.map(item => item.name) || [],
-        datasets: [{
-            label: 'Computer Sets',
-            data: data?.charts?.computers_by_lab?.map(item => item.count) || [],
-            backgroundColor: 'rgba(54, 162, 235, 0.6)',
-            borderColor: 'rgba(54, 162, 235, 1)',
-            borderWidth: 1
-        }]
-    };
-
-    const computersByStatusData = {
-        labels: data?.charts?.computers_by_status?.map(item => item.status) || [],
-        datasets: [{
-            data: data?.charts?.computers_by_status?.map(item => item.count) || [],
-            backgroundColor: ['#28a745', '#ffc107', '#dc3545', '#6c757d'],
-            borderWidth: 1
-        }]
-    };
-
-    const componentsByStatusData = {
-        labels: data?.charts?.components_by_status?.map(item => item.status) || [],
-        datasets: [{
-            data: data?.charts?.components_by_status?.map(item => item.count) || [],
-            backgroundColor: ['#28a745', '#ffc107', '#17a2b8', '#dc3545'],
-            borderWidth: 1
-        }]
-    };
-
     return (
         <div className="container-fluid py-3">
 
             {/* KPI Cards */}
             <div className="row row-cols-2 row-cols-md-4 mb-4">
-                <KPICard title="Total Users" value={data?.kpis?.total_users} icon={<People />} color="secondary" />
-                <KPICard title="Total Labs" value={data?.kpis?.total_labs} icon={<DoorClosed />} color="secondary" />
-                <KPICard title="Computer Sets" value={data?.kpis?.total_computers} icon={<PcDisplay />} color="secondary" />
-                <KPICard title="Total Components" value={data?.kpis?.total_components} icon={<Keyboard />} color="secondary" />
+                <KPICard title="Total Users" value={kpiData?.total_users} icon={<People />} color="secondary" />
+                <KPICard title="Total Labs" value={kpiData?.total_labs} icon={<DoorClosed />} color="secondary" />
+                <KPICard title="Computer Sets" value={kpiData?.total_computers} icon={<PcDisplay />} color="secondary" />
+                <KPICard title="Total Components" value={kpiData?.total_components} icon={<Keyboard />} color="secondary" />
             </div>
 
             <div className="mb-4">
@@ -130,13 +100,25 @@ const DashboardPage = () => {
             {/* Charts */}
             <div className="row">
                 <div className="col-lg-6 mb-4">
-                    <BarChart title="Computer Sets per Laboratory" data={computersByLabData} />
+                    <BarChart
+                        title="Computer Sets per Laboratory"
+                        apiPath="/analytics/bar/computers-by-lab"
+                        label="Computers"
+                    />
                 </div>
                 <div className="col-lg-3 mb-4">
-                    <PieChart title="Computer Status" data={computersByStatusData} />
+                    <PieChart
+                        title="Computer Status"
+                        apiPath="/analytics/pie/computers-by-status"
+                        colors={['#28a745', '#ffc107', '#dc3545', '#6c757d']}
+                    />
                 </div>
                 <div className="col-lg-3 mb-4">
-                    <PieChart title="Component Status" data={componentsByStatusData} />
+                    <PieChart
+                        title="Component Status"
+                        apiPath="/analytics/pie/components-by-status"
+                        colors={['#28a745', '#ffc107', '#17a2b8', '#dc3545']}
+                    />
                 </div>
             </div>
         </div>
