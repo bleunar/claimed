@@ -15,6 +15,7 @@ def get_config(key, secret_file=None, default=None):
 class Config:
     APP_ENV =  os.getenv('APP_ENV', 'development')
     LOG_MODE = get_config('LOG_MODE', default='HIGH').upper()
+    CORS_ORIGINS = get_config('CORS_ORIGINS', default='*').split(',')
     
     SECRET_KEY = get_config('SECRET_KEY', 'secret_key', 'secret-ni-boiii-hehhee')
     
