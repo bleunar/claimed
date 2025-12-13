@@ -19,6 +19,11 @@ services:
       - MYSQL_PASSWORD_FILE=/run/secrets/mysql_password
       - MYSQL_DB_FILE=/run/secrets/mysql_db
       - SECRET_KEY_FILE=/run/secrets/secret_key
+    ports:
+      - "${BACKEND_PORT}:5000"
+    volumes:
+      - upload_data:/app/uploads
+      - ./backend_logs:/app/logs
     networks:
       - claimed
       - production
@@ -29,8 +34,8 @@ services:
     restart: unless-stopped
     env_file:
       - ./frontend/.env
-    environment:
-      - PROXY_TARGET=http://claimed_backend:5000
+    ports:
+      - "${FRONTEND_PORT}:80"
     depends_on:
       - claimed_backend
     networks:
@@ -44,14 +49,31 @@ networks:
   production:
     external: true
 
+volumes:
+  upload_data:
+
 secrets:
-  mysql_password:
-    file: ./secrets/mysql_password
   secret_key:
-    file: ./secrets/secret_key
+    file: ./secrets/.secret_key
+  jwt_secret_key:
+    file: ./secrets/.jwt_secret_key
   mysql_host:
-    file: ./secrets/mysql_host
-  mysql_user:
-    file: ./secrets/mysql_user
+    file: ./secrets/.mysql_host
   mysql_db:
-    file: ./secrets/mysql_db
+    file: ./secrets/.mysql_db
+  mysql_user:
+    file: ./secrets/.mysql_user
+  mysql_password:
+    file: ./secrets/.mysql_password
+  mail_server:
+    file: ./secrets/.mail_server
+  mail_server_port:
+    file: ./secrets/.mail_server_port
+  mail_username:
+    file: ./secrets/.mail_username
+  mail_password:
+    file: ./secrets/.mail_password
+  default_admin_email:
+    file: ./secrets/.default_admin_email
+  default_admin_password:
+    file: ./secrets/.default_admin_password

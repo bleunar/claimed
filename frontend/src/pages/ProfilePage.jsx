@@ -6,6 +6,7 @@ import api from '../api/axios';
 import { Person, PersonCircle, Eye, EyeSlash } from 'react-bootstrap-icons';
 import ChangeEmailModal from '../components/modals/ChangeEmailModal';
 import toast from 'react-hot-toast';
+import ProfileImage from '../components/common/ProfileImage';
 
 const ProfilePage = () => {
     const { user, refreshUser } = useAuth();
@@ -139,20 +140,16 @@ const ProfilePage = () => {
                         <Card.Header className='text-body-secondary fw-bold'>Profile Picture</Card.Header>
                         <Card.Body className="text-center bg-body-tertiary">
                             <div className="mb-3 position-relative d-inline-block">
-                                {getProfileImageUrl() ? (
-                                    <Image
-                                        src={getProfileImageUrl()}
-                                        roundedCircle
-                                        style={{ width: '150px', height: '150px', objectFit: 'cover' }}
-                                    />
-                                ) : (
-                                    <Person size={150} className="text-body" />
-                                )}
+                                <ProfileImage
+                                    src={getProfileImageUrl()}
+                                    size="150px"
+                                    shape='circle'
+                                />
                             </div>
                             <h4 className="mb-0">{user?.name}</h4>
                             <div className="text-muted mb-3 text-uppercase" style={{ fontSize: '0.75rem' }}>{user?.role.replace('_', ' ').toLowerCase()}</div>
                         </Card.Body>
-                        <Card.Footer className='d-flex justify-content-evenly p-0 m-0 border-0'>
+                        <Card.Footer className='d-flex justify-content-evenly p-0 m-0 border-top'>
                             <Form.Label htmlFor="upload-photo" className="btn btn-outline-primary flex-fill rounded-0 border-0 mb-0">
                                 Change Phoyo
                             </Form.Label>
@@ -256,39 +253,41 @@ const ProfilePage = () => {
                             <Form onSubmit={handleUpdatePassword}>
                                 <Form.Group className="mb-3">
                                     <Form.Label>New Password</Form.Label>
-                                    <div className="input-group">
+                                    <div className="input-group bg-body rounded border">
                                         <Form.Control
                                             type={showNewPassword ? "text" : "password"}
                                             value={password}
                                             onChange={(e) => setPassword(e.target.value)}
                                             placeholder="Enter new password"
+                                            className='border-0'
                                             required
                                         />
-                                        <Button
-                                            variant="primary"
+                                        <div
+                                            className="btn"
                                             onClick={() => setShowNewPassword(!showNewPassword)}
                                         >
                                             {showNewPassword ? <EyeSlash /> : <Eye />}
-                                        </Button>
+                                        </div>
                                     </div>
                                 </Form.Group>
 
                                 <Form.Group className="mb-3">
                                     <Form.Label>Confirm New Password</Form.Label>
-                                    <div className="input-group">
+                                    <div className="input-group bg-body rounded border">
                                         <Form.Control
                                             type={showConfirmPassword ? "text" : "password"}
                                             value={confirmPassword}
                                             onChange={(e) => setConfirmPassword(e.target.value)}
                                             placeholder="Confirm new password"
+                                            className='border-0'
                                             required
                                         />
-                                        <Button
-                                            variant="secondary"
+                                        <div
+                                            className="btn"
                                             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                                         >
                                             {showConfirmPassword ? <EyeSlash /> : <Eye />}
-                                        </Button>
+                                        </div>
                                     </div>
                                 </Form.Group>
 

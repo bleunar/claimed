@@ -24,52 +24,68 @@ def setup_logging(app):
     os.makedirs(log_dir, exist_ok=True)
     
     # generate filename: yyyy_ddd_timestamp.txt
-    # where, ddd = day of the year (365 o3 366)
     timestamp = datetime.now().strftime('%Y_%j_%H%M%S')
     log_file = os.path.join(log_dir, f"{timestamp}.txt")
     
     # root logger configuration
     root_logger = logging.getLogger()
-    root_logger.setLevel(logging.DEBUG)
     
-    # Clear existing handlers to avoid duplicates
+    # Clear existing handlers
     if root_logger.hasHandlers():
         root_logger.handlers.clear()
         
-    # File Handler (Critical/Error logs)
+    # Handlers
     file_handler = logging.FileHandler(log_file, delay=True)
-    file_handler.setLevel(logging.ERROR) 
+    console_handler = logging.StreamHandler(sys.stdout)
+    
+    # Formatters
     file_formatter = RequestFormatter(
         '[%(asctime)s] %(remote_addr)s requested %(url)s\n'
         '%(levelname)s in %(module)s: %(message)s'
     )
-    file_handler.setFormatter(file_formatter)
-    root_logger.addHandler(file_handler)
-    
-    # Console Handler
-    console_handler = logging.StreamHandler(sys.stdout)
-    
+    console_formatter = None # Set based on mode
+
+    # Level Logic
     if log_mode == 'HIGH':
-        # Detailed logs
+        # Detailed logs (DEBUG) for both
+        root_logger.setLevel(logging.DEBUG)
+        
+        file_handler.setLevel(logging.DEBUG)
         console_handler.setLevel(logging.DEBUG)
+        
         console_formatter = logging.Formatter(
             '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
         )
+        
     elif log_mode == 'LOW':
-        # Minimal logs
+        # Necessary details (INFO) for both
+        root_logger.setLevel(logging.INFO)
+        
+        file_handler.setLevel(logging.INFO)
         console_handler.setLevel(logging.INFO)
+        
         console_formatter = logging.Formatter(
             '%(levelname)s: %(message)s'
         )
+        
     else: # NONE
-        console_handler.setLevel(logging.CRITICAL + 1)
-        console_formatter = logging.Formatter('%(message)s')
+        # No logging
+        # We might still want CRITICAL errors to show up? 
+        # User said "NONE no logging".
+        root_logger.setLevel(logging.CRITICAL + 1)
+        # Don't add handlers if NONE
+        app.logger.info("Logging disabled (NONE mode)")
+        return
 
+    # Apply Formatters
+    file_handler.setFormatter(file_formatter)
     console_handler.setFormatter(console_formatter)
     
-    if log_mode != 'NONE':
-        root_logger.addHandler(console_handler)
+    # Add Handlers
+    root_logger.addHandler(file_handler)
+    root_logger.addHandler(console_handler)
         
+    # Hijack werkzeug
     logging.getLogger('werkzeug').handlers = root_logger.handlers
     
-    app.logger.info(f"Logging initialized in {log_mode} mode. Critical logs writing to {log_file}")
+    app.logger.info(f"Logging initialized in {log_mode} mode. Writing to {log_file}")

@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink, Link, useLocation } from 'react-router-dom';
+import { NavLink, Link, useLocation, useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'react-bootstrap-icons';
 import { Offcanvas } from 'react-bootstrap';
 import RoleBasedContent from './ComponentProtector';
@@ -10,6 +10,7 @@ import LogoShrinked from '../assets/img/logo-transparent.svg'
 const Sidebar = ({ isOpen, isMobile, options, onClose, onToggle }) => {
     const { user, logout } = useAuth();
     const location = useLocation();
+    const navigate = useNavigate()
 
     const linkStyle = ({ isActive }) => ({
         textDecoration: 'none',
@@ -84,7 +85,7 @@ const Sidebar = ({ isOpen, isMobile, options, onClose, onToggle }) => {
 
     return (
         <div style={sidebarStyle} className="d-flex flex-column flex-shrink-0 bg-primary">
-            <div className={`d-flex align-items-center justify-content-center w-100 mb-md-0 text-decoration-none bg-primary ${!isOpen ? 'justify-content-center' : 'me-md-auto'}`} style={{ height: '7vh' }}>
+            <div onClick={() => navigate("/dashboard")} className={`d-flex align-items-center justify-content-center w-100 mb-md-0 text-decoration-none bg-primary ${!isOpen ? 'justify-content-center' : 'me-md-auto'}`} style={{ height: '7vh' }}>
                 <img className="fs-4" style={{ height: '5vh' }} src={isOpen ? Logo : LogoShrinked} />
             </div>
             <NavItems />

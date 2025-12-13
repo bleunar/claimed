@@ -331,14 +331,15 @@ def create_account():
 def list_accounts():
     current_claims = get_jwt()
     current_role = current_claims.get("role")
+    current_user_id = get_jwt_identity()
     
     search = request.args.get('search', '')
     role = request.args.get('role', '')
     status = request.args.get('status', '')
     include_deleted = request.args.get('include_deleted', 'false').lower() == 'true'
 
-    query = "SELECT id, name, email, role, status, created_at, profile_picture, birth_date, gender, department_name FROM accounts WHERE 1=1"
-    params = []
+    query = "SELECT id, name, email, role, status, created_at, profile_picture, birth_date, gender, department_name FROM accounts WHERE id != %s"
+    params = [current_user_id]
 
     if not include_deleted or current_role != 'admin':
          query += " AND status != 'deleted'"

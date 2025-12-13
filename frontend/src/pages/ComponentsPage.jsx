@@ -536,7 +536,7 @@ const ComponentsPage = () => {
             {/* Table */}
             <div className="card overflow-hidden border-0">
                 <div className="table-responsive border-0">
-                    <table className="table table-hover align-middle mb-0">
+                    <table className="table table-hover table-borderless table-striped align-middle mb-0">
                         <thead>
                             <tr className='text-center'>
                                 <th style={{ width: '40px' }}>
@@ -557,9 +557,9 @@ const ComponentsPage = () => {
                         </thead>
                         <tbody>
                             {loading ? (
-                                <tr><td colSpan="6" className="text-center py-4">Loading...</td></tr>
+                                <tr><td colSpan={canManage ? 7 : 6} className="text-center py-4">Loading...</td></tr>
                             ) : components.length === 0 ? (
-                                <tr><td colSpan="6" className="text-center py-4">No components found.</td></tr>
+                                <tr><td colSpan={canManage ? 7 : 6} className="text-center py-4">No components found.</td></tr>
                             ) : (
                                 currentComponents.map(comp => (
                                     <tr key={comp.id}>

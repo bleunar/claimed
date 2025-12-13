@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { People, Building, PcDisplay, ExclamationTriangle, Hdd, DoorClosed, Mouse, Keyboard, JournalText, Tools, PersonCheck, PersonCircle } from 'react-bootstrap-icons';
 import { useAuth } from '../context/AuthContext';
 import RoleBasedContent from '../components/ComponentProtector';
 import api from '../api/axios';
 import KPICard from '../components/analytics/KPICard';
 import BarChart from '../components/analytics/BarChart';
 import PieChart from '../components/analytics/PieChart';
-import { People, Building, PcDisplay, ExclamationTriangle, Hdd } from 'react-bootstrap-icons';
+import { useState, useEffect } from 'react';
 
 const DashboardPage = () => {
     const { user } = useAuth();
@@ -28,6 +29,47 @@ const DashboardPage = () => {
 
         fetchData();
     }, []);
+
+    const getQuickActions = () => {
+        if (!user) return [];
+        const actions = [];
+
+        // Role Specific Actions
+        switch (user.role) {
+            case 'admin':
+                actions.push(
+                    { label: 'Manage Accounts', path: '/dashboard/accounts', icon: <People />, variant: 'primary' },
+                    { label: 'Manage Laboratories', path: '/dashboard/laboratories', icon: <Building />, variant: 'primary' },
+                    { label: 'Activity Logs', path: '/dashboard/activities', icon: <JournalText />, variant: 'primary' }
+                );
+                break;
+            case 'it_head':
+                actions.push(
+                    { label: 'Manage Technicians', path: '/dashboard/accounts?role=it_technician', icon: <Tools />, variant: 'primary' },
+                    { label: 'View Laboratories', path: '/dashboard/laboratories', icon: <PcDisplay />, variant: 'primary' }
+                );
+                break;
+            case 'lab_head':
+                actions.push(
+                    { label: 'Manage Assistants', path: '/dashboard/accounts?role=lab_assistant', icon: <PersonCheck />, variant: 'primary' },
+                    { label: 'View Laboratories', path: '/dashboard/laboratories', icon: <PcDisplay />, variant: 'primary' }
+                );
+                break;
+            case 'it_technician':
+            case 'lab_assistant':
+                actions.push(
+                    { label: 'View Laboratories', path: '/dashboard/laboratories', icon: <PcDisplay />, variant: 'primary' }
+                );
+                break;
+            default:
+                break;
+        }
+
+        // Common Actions
+        actions.push({ label: 'My Profile', path: '/profile', icon: <PersonCircle />, variant: 'primary' });
+
+        return actions;
+    };
 
     if (loading) return <div className="text-center mt-5"><div className="spinner-border text-primary"></div></div>;
     if (error) return <div className="alert alert-danger mt-5">{error}</div>;
@@ -57,7 +99,7 @@ const DashboardPage = () => {
         labels: data?.charts?.components_by_status?.map(item => item.status) || [],
         datasets: [{
             data: data?.charts?.components_by_status?.map(item => item.count) || [],
-            backgroundColor: ['#28a745', '#ffc107', '#17a2b8', '#dc3545'], // Green, Yellow, Info, Red
+            backgroundColor: ['#28a745', '#ffc107', '#17a2b8', '#dc3545'],
             borderWidth: 1
         }]
     };
@@ -67,10 +109,22 @@ const DashboardPage = () => {
 
             {/* KPI Cards */}
             <div className="row row-cols-2 row-cols-md-4 mb-4">
-                <KPICard title="Total Users" value={data?.kpis?.total_users} icon={<People />} color="primary" />
-                <KPICard title="Total Labs" value={data?.kpis?.total_labs} icon={<Building />} color="success" />
-                <KPICard title="Computer Sets" value={data?.kpis?.total_computers} icon={<PcDisplay />} color="info" />
-                <KPICard title="Total Components" value={data?.kpis?.total_components} icon={<Hdd />} color="secondary" />
+                <KPICard title="Total Users" value={data?.kpis?.total_users} icon={<People />} color="secondary" />
+                <KPICard title="Total Labs" value={data?.kpis?.total_labs} icon={<DoorClosed />} color="secondary" />
+                <KPICard title="Computer Sets" value={data?.kpis?.total_computers} icon={<PcDisplay />} color="secondary" />
+                <KPICard title="Total Components" value={data?.kpis?.total_components} icon={<Keyboard />} color="secondary" />
+            </div>
+
+            <div className="mb-4">
+                <div className="h6 fw-bold mb-3">Quick Actions</div>
+                <div className="d-flex flex-wrap gap-2">
+                    {getQuickActions().map((action, idx) => (
+                        <Link key={idx} to={action.path} className={`btn btn-sm btn-${action.variant} d-flex align-items-center gap-2 shadow-sm`}>
+                            {action.icon}
+                            {action.label}
+                        </Link>
+                    ))}
+                </div>
             </div>
 
             {/* Charts */}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Modal, Button, Form, InputGroup } from 'react-bootstrap';
 import { Funnel, Search, Tools, CheckCircle, XCircle, Trash, Plus, ArrowClockwise, Backspace, PersonCircle, PersonCheck, Eye, EyeSlash, PencilSquare, PersonX } from 'react-bootstrap-icons';
 import toast from 'react-hot-toast';
@@ -35,10 +35,12 @@ const AccountsPage = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage] = useState(10);
 
+    const [searchParams] = useSearchParams();
+
     // Filters
     const [searchTerm, setSearchTerm] = useState('');
-    const [filterRole, setFilterRole] = useState('');
-    const [filterStatus, setFilterStatus] = useState('');
+    const [filterRole, setFilterRole] = useState(searchParams.get('role') || '');
+    const [filterStatus, setFilterStatus] = useState(searchParams.get('status') || '');
     const [includeDeleted, setIncludeDeleted] = useState(false);
 
 
@@ -305,12 +307,12 @@ const AccountsPage = () => {
                     </div>
                 ) : (
                     <div className="table-responsive">
-                        <table className="table table-hover align-middle mb-0">
+                        <table className="table table-hover table-borderless table-striped align-middle mb-0">
                             <thead className="">
                                 <tr>
                                     <th className="ps-4">User</th>
-                                    <th className=''>Role</th>
-                                    <th className='text-center'>Status</th>
+                                    <th>Role</th>
+                                    <th>Status</th>
                                     <th className="text-end pe-4">Actions</th>
                                 </tr>
                             </thead>
@@ -340,13 +342,12 @@ const AccountsPage = () => {
                                             <span className="text-muted text-uppercase">{account.role.replace('_', ' ').toLowerCase()}</span>
                                         </td>
                                         <td>
-                                            <div className='d-flex justify-content-center'>
-                                                {/* 5. Add handling for 'deleted' status in the table (Badge color) */}
+                                            <div className='d-flex justify-content-start align-items-center'>
                                                 <div className={`rounded-circle shadow-sm ${account.status === 'active' ? 'bg-success' : account.status === 'suspended' ? 'bg-warning' : 'bg-secondary'}`} title={account?.status.toUpperCase()} style={{ height: '16px', width: '16px' }}></div>
+                                                <span className='text-capitalize ms-2'>{account.status}</span>
                                             </div>
                                         </td>
                                         <td>
-
                                             <div className="d-flex gap-2 justify-content-start justify-content-md-end flex-wrap">
                                                 <button className="btn btn-outline-primary btn-sm border-0" onClick={() => handlePreview(account)} title="View Details">
                                                     <Eye />

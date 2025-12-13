@@ -150,9 +150,9 @@ const BatchEditSetsModal = ({ show, onHide, computerSets, user, onBatchUpdate, o
     };
 
     return (
-        <Modal show={show} onHide={onHide} size="lg" backdrop="static">
+        <Modal show={show} onHide={onHide} size="lg" backdrop="static" className='pb-5'>
             <Modal.Header closeButton>
-                <Modal.Title>Batch Edit Computer Sets</Modal.Title>
+                <Modal.Title>Batch Editor</Modal.Title>
             </Modal.Header>
             <Modal.Body>
                 <div className="row mb-5">
@@ -865,7 +865,7 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                             <h5 className="mb-0 text-center fw-bold">{set.set_name}</h5>
                             <div className="d-flex align-items-center gap-2">
                                 {canManage ? (
-                                    <ToggleButtonGroup type="radio" name="set-status-toggle" value={setStatus} onChange={setSetStatus} size="sm" className='bg-body-tertiary'>
+                                    <ToggleButtonGroup type="radio" name="set-status-toggle" value={setStatus} onChange={setSetStatus} size="sm" className='bg-body-secondary'>
                                         <ToggleButton id="tbg-set-active" value="active" variant={setStatus === 'active' ? 'success' : 'outline-success'} title="Active" className='border-0'>
                                             <span className='ms-1'>Active</span>
                                         </ToggleButton>
@@ -878,11 +878,11 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                                         {set.status}
                                     </span>
                                 )}
-                                <button className="btn btn-sm btn-outline-warning border-0 bg-body-tertiary" title="Report Issue" onClick={() => onReport(set)}>
-                                    <Flag />
+                                <button className="btn btn-sm border-0 bg-body-secondary" title="Report Issue" onClick={() => onReport(set)}>
+                                    <ExclamationTriangleFill />
                                 </button>
                                 {canManage && (
-                                    <button className="btn btn-sm btn-outline-danger border-0 bg-body-tertiary" title="Delete Set" onClick={() => onDelete(set.id)}>
+                                    <button className="btn btn-sm border-0 bg-body-secondary" title="Delete Set" onClick={() => onDelete(set.id)}>
                                         <Trash />
                                     </button>
                                 )}
@@ -895,7 +895,7 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
 
                 {
                     components.length > 0 && components.map((comp) => (
-                        <div key={comp.id} className="shadow-sm rounded bg-body-secondary mb-3 px-4 py-2">
+                        <div key={comp.id} className="shadow-sm rounded bg-body-tertiary border mb-3 px-4 py-2">
                             <div className="row">
                                 {/* Icon/Type */}
                                 {
@@ -904,7 +904,7 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                                             <div className="flex-fill d-flex align-items-center rounded border">
                                                 {/* <span className='px-2'>{getComponentIcon(comp.component_type)}</span> */}
                                                 <select
-                                                    className={`form-select bg-transparent border-0 ${comp.is_core ? "remove-arrow-select-input bg-transparent" : ""} fw-bold form-select-sm`}
+                                                    className={`form-select bg-body-secondary border-0 ${comp.is_core ? "remove-arrow-select-input bg-transparent" : ""} fw-bold form-select-sm`}
                                                     value={comp.component_type}
                                                     onChange={(e) => handleLocalChange(comp.id, 'component_type', e.target.value)}
                                                     disabled={comp.is_core}
@@ -924,7 +924,7 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                                 {
                                     isEditMode && canEditComponentDetails(user) ? (
                                         <div className="col-12 col-md-3 p-1">
-                                            <input type="text" className="form-control form-control-sm p-1 bg-transparent p-0" value={comp.brand_name} onChange={(e) => handleLocalChange(comp.id, 'brand_name', e.target.value)} placeholder="Brand Name" maxLength={36} />
+                                            <input type="text" className="form-control form-control-sm p-1 bg-body-secondary p-0" value={comp.brand_name} onChange={(e) => handleLocalChange(comp.id, 'brand_name', e.target.value)} placeholder="Brand Name" maxLength={36} />
                                         </div>
                                     ) : (
                                         <div className="col-12 col-md-4 p-1 d-flex align-items-center py-0">
@@ -941,11 +941,11 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                                 {
                                     isEditMode && canEditComponentDetails(user) ? (
                                         <div className="col-12 col-md-3 p-1">
-                                            <input type="text" className="form-control form-control-sm p-1 bg-transparent p-0" value={comp.serial_number} placeholder="Serial Number" onChange={(e) => handleLocalChange(comp.id, 'serial_number', e.target.value)} maxLength={36} />
+                                            <input type="text" className="form-control form-control-sm p-1 bg-body-secondary p-0" value={comp.serial_number} placeholder="Serial Number" onChange={(e) => handleLocalChange(comp.id, 'serial_number', e.target.value)} maxLength={36} />
                                         </div>
                                     ) : (
                                         <div className="col-12 col-md-4 p-1 d-flex align-items-center mb-2 mb-md-0 py-0">
-                                            <span className={`me-1 rounded text-nowrap text-truncate ${comp.serial_number ? "bg-body-secondary cursor-pointer" : "cursor-help"}`} title={comp.serial_number ? comp.serial_number : "No Serial Number is Set"} onClick={() => comp.serial_number && copyToClipboard(comp.serial_number)} >
+                                            <span className={`me-1 px-1 rounded text-nowrap text-truncate ${comp.serial_number ? "bg-body-secondary cursor-pointer" : "cursor-help"}`} title={comp.serial_number ? comp.serial_number : "No Serial Number is Set"} onClick={() => comp.serial_number && copyToClipboard(comp.serial_number)} >
                                                 {comp.serial_number || <span className="text-muted fst-italic">Serial not set</span>}
                                             </span>
                                             {comp.serial_number && (
@@ -963,7 +963,7 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
 
                                         {
                                             isEditMode && canEditComponentStatus(user) ? (
-                                                <select className={`form-select form-select-sm border bg-transparent p-1 ${getStatusColor(comp.status)}`} value={comp.status} onChange={(e) => handleLocalChange(comp.id, 'status', e.target.value)}>
+                                                <select className={`form-select form-select-sm border bg-body-secondary p-1 ${getStatusColor(comp.status)}`} value={comp.status} onChange={(e) => handleLocalChange(comp.id, 'status', e.target.value)}>
                                                     <option value="good">Good</option><option value="bad">Bad</option><option value="maintenance">Maintenance</option><option value="missing">Missing</option>
                                                 </select>
                                             ) : (
@@ -973,7 +973,7 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                                                     value={comp.status}
                                                     onChange={(val) => handleLocalChange(comp.id, 'status', val)}
                                                     size="sm"
-                                                    className='flex-fill bg-body'
+                                                    className='flex-fill bg-body-secondary'
                                                 >
                                                     <ToggleButton
                                                         id={`tbg-btn-good-${comp.id}`}
@@ -1026,7 +1026,7 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                                         {isEditMode ? (
                                             <>
                                                 {canDeleteComponent(user) && (
-                                                    <div className="bg-body rounded">
+                                                    <div className="bg-body-secondary rounded">
                                                         <button className="btn btn-sm btn-outline-danger border-0 h-100" title='Delete Component' onClick={() => handleRemove(comp)}>
                                                             <Trash />
                                                         </button>
@@ -1034,7 +1034,7 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                                                 )}
                                             </>
                                         ) : (
-                                            <div className="bg-body rounded">
+                                            <div className="bg-body-secondary rounded">
                                                 <button className="btn btn-sm btn-outline-primary border-0 h-100" title='Report Issue' onClick={() => onReport(comp)}>
                                                     <ExclamationTriangleFill />
                                                 </button>
@@ -1109,18 +1109,18 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                 </Modal.Footer>
             </Modal>
 
-            <div className="modal-footer border-0 d-flex justify-content-between">
-                <div className="d-flex gap-2">
+            <div className={`modal-footer border-0 d-flex justify-content-${isEditMode ? "edit" : "between"} justify-content-md-between`}>
+                <div className={`d-flex justify-content-center justify-content-md-start ${isEditMode ? "mb-4" : "mb-0"} mb-md-0 gap-2 flex-wrap`}>
                     {/* Edit Mode Toggle */}
                     {(canEditComponentDetails(user) || canEditComponentStatus(user)) && (
                         isEditMode ? (
                             <>
                                 <button className="btn btn-primary btn-sm" onClick={() => setIsEditMode(false)} title="Exit Edit Mode">
-                                    <PencilSquare className="me-1" /> Edit Mode
+                                    <PencilSquare className="me-1" /> Exit Edit Mode
                                 </button>
                                 {canAddComponent(user) && (
                                     <div className="d-flex gap-2">
-                                        <button className="btn btn-sm btn-primary" onClick={addNewRow}>
+                                        <button className="btn btn-sm btn-outline-primary" onClick={addNewRow}>
                                             <Plus className="me-1" /> New Component
                                         </button>
                                         <button className="btn btn-sm btn-outline-primary" onClick={() => setShowSerialModal(true)}>
@@ -1131,7 +1131,7 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                             </>
                         ) : (
                             <button className="btn btn-primary btn-sm" onClick={() => setIsEditMode(true)} title="Enter Edit Mode">
-                                <PencilSquare className="me-1" /> View Mode
+                                <PencilSquare className="me-1" /> Edit
                             </button>
                         )
                     )}
@@ -1177,9 +1177,9 @@ const ComputerSetCard = ({ set, components, onView }) => {
     const totalCount = goodCount + badCount + maintCount
 
     return (
-        <div className="col p-1">
+        <div className="col p-0 border">
             <div
-                className={`card h-100 position-relative overflow-hidden shadow-sm hover-shadow ${set.status === 'active' ? 'bg-body-secondary' : 'bg-info-subtle'}`}
+                className={`card h-100 position-relative border-0 rounded-0 overflow-hidden shadow-sm hover-shadow ${set.status === 'active' ? 'bg-body-secondary' : 'bg-info-subtle'}`}
                 style={{ cursor: 'pointer', transition: 'transform 0.2s' }}
                 onClick={() => onView(set)}
                 onMouseEnter={() => setIsHovered(true)}
@@ -1449,22 +1449,22 @@ const LaboratoryComputersPage = () => {
                 </div>
             </div>
 
-            <div className="container-fluid">
+            <div className="container-fluid p-0">
 
-                <div className="d-flex justify-content-start mb-2">
+                <div className="d-md-flex justify-content-end mb-2 d-none">
                     <select
                         className="form-select form-select-sm w-auto"
                         value={itemsPerRow}
                         onChange={(e) => setItemsPerRow(parseInt(e.target.value))}
                         title="Items per row"
                     >
-                        <option value={3}>3 per row</option>
-                        <option value={4}>4 per row</option>
-                        <option value={5}>5 per row</option>
+                        <option value={5}>5 PC per row</option>
+                        <option value={4}>4 PC per row</option>
+                        <option value={3}>3 PC per row</option>
                     </select>
                 </div>
 
-                <div className={`row row-cols-2 row-cols-md-${itemsPerRow}`}>
+                <div className={`row overflow-hidden border rounded row-cols-2 row-cols-md-${itemsPerRow}`}>
                     {
                         computerSets.length > 0 && (
                             computerSets.map(set => (
@@ -1520,7 +1520,7 @@ const LaboratoryComputersPage = () => {
 
             {/* Components Manager Modal (View) */}
             {selectedSet && (
-                <Modal show={showComponentsModal} onHide={handleCloseComponentsModal} size="lg" backdrop="static" animation={true}>
+                <Modal show={showComponentsModal} onHide={handleCloseComponentsModal} size="lg" backdrop="static" animation={true} className='pb-5'>
                     <Modal.Header closeButton>
                         <Modal.Title>Computer Set</Modal.Title>
                     </Modal.Header>
@@ -1535,6 +1535,12 @@ const LaboratoryComputersPage = () => {
                         onDelete={handleDeleteSet}
                         onReport={(target) => handleReportIssue(target, target.serial_number ? 'component' : 'set')}
                     />
+                    {reportModal.show && (
+                        <div
+                            className="position-absolute w-100 h-100 start-0 top-0 bg-dark"
+                            style={{ opacity: 0.5, zIndex: 1050 }}
+                        ></div>
+                    )}
                 </Modal>
             )}
 

@@ -3,101 +3,141 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import ForgotPasswordModal from '../components/modals/ForgotPasswordModal';
-import { Eye, EyeSlash } from 'react-bootstrap-icons';
+import { Eye, EyeSlash, ShieldLock, Cpu, Motherboard, Globe, Wifi } from 'react-bootstrap-icons';
 
 import loginBg from '../assets/img/login_bg.png';
+import logo from '../assets/img/claims-name-white.png'
+import pui from '../assets/img/pui.png'
+import pui_full from '../assets/img/pui_full.png'
+import cite from '../assets/img/pui_cite.jpg'
 
 const LoginPage = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [showForgotModal, setShowForgotModal] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
     const { login } = useAuth();
     const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setIsLoading(true);
         try {
             await login(email, password);
             navigate('/dashboard');
         } catch (err) {
             toast.error('Invalid credentials');
+            setIsLoading(false);
         }
     };
 
     return (
         <div
-            className="container-fluid vh-100 d-flex align-items-center justify-content-center"
+            className="container-fluid d-flex align-items-center justify-content-center"
             style={{
                 backgroundImage: `url(${loginBg})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat'
+                backgroundRepeat: 'no-repeat',
+                height: "100dvh"
             }}
         >
             <div className="col-md-4 col-sm-8 col-10">
+                <div className="mb-4">
+                    <div className="d-flex justify-content-center">
+                        <img
+                            src={logo}
+                            alt="logo"
+                            style={{
+                                width: 'auto',
+                                height: '48px',
+                            }}
+                        />
+                    </div>
+
+                    <div
+                        className="text-center text-light"
+                        style={{
+                            fontSize: '0.8rem'
+                        }}>
+                        Computer Laboratory Inventory and Management System
+                    </div>
+                </div>
+
                 <div
-                    className="card border-0 shadow-lg"
+                    className="card border-0 shadow bg-body"
                     style={{
-                        background: 'rgba(255, 255, 255, 0.75)', // Light frosted glass
                         backdropFilter: 'blur(12px)',
                         WebkitBackdropFilter: 'blur(12px)',
-                        border: '1px solid rgba(255, 255, 255, 0.3)'
                     }}
                 >
-                    <div className="card-header bg-transparent border-bottom-0 text-center pt-4 pb-2">
-                        <h3 className="mb-0 fw-bold text-primary">Login</h3>
-                    </div>
                     <div className="card-body p-4">
                         <form onSubmit={handleSubmit}>
                             <div className="mb-3">
-                                <label className="form-label fw-semibold">Email</label>
+                                <label className="form-label">Email</label>
                                 <input
                                     type="email"
-                                    className="form-control bg-light border-0"
+                                    className="form-control border-0 bg-body-secondary"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    placeholder="Enter your email"
                                     required
+                                    disabled={isLoading}
                                 />
                             </div>
                             <div className="mb-4">
-                                <label className="form-label fw-semibold">Password</label>
-                                <div className="input-group">
+                                <label className="form-label">Password</label>
+                                <div className="input-group bg-body-secondary rounded">
                                     <input
                                         type={showPassword ? "text" : "password"}
-                                        className="form-control bg-light border-0"
+                                        className="form-control border-0 bg-transparent"
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
-                                        placeholder="Enter your password"
                                         required
+                                        disabled={isLoading}
                                     />
                                     <button
-                                        className="btn btn-light border-0"
+                                        className="btn border-0"
                                         type="button"
+                                        tabIndex={-1}
                                         onClick={() => setShowPassword(!showPassword)}
+                                        disabled={isLoading}
                                     >
                                         {showPassword ? <EyeSlash /> : <Eye />}
                                     </button>
                                 </div>
                             </div>
-                            <div className="d-flex justify-content-between align-items-center mb-3">
+                            <div className="d-flex justify-content-end gap-3">
                                 <button
                                     type="button"
                                     className="btn btn-link text-decoration-none p-0"
                                     onClick={() => setShowForgotModal(true)}
+                                    disabled={isLoading}
                                 >
                                     Forgot Password?
                                 </button>
-                            </div>
-                            <div className="d-grid">
-                                <button type="submit" className="btn btn-primary py-2 fw-bold">Sign In</button>
+                                <button type="submit" className="btn btn-primary" disabled={isLoading}>
+                                    {isLoading ? (
+                                        <>
+                                            <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                        </>
+                                    ) : 'Login'}
+                                </button>
                             </div>
                         </form>
                     </div>
                 </div>
             </div>
             <ForgotPasswordModal show={showForgotModal} onHide={() => setShowForgotModal(false)} />
+
+            {/* Tech Logos Placeholder */}
+            <div className="fixed-bottom p-4">
+                <div className="d-flex justify-content-center gap-4 ">
+                    <img src={pui} alt='phinma ui logo' height={40} />
+                    <img src={pui_full} alt='phinma ui full logo' height={40} />
+                    <img src={cite} alt='phinma ui cite logo' height={40} />
+                </div>
+            </div>
         </div>
     );
 };

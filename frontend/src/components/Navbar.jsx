@@ -3,6 +3,7 @@ import { List, Person, PersonCircle, X } from 'react-bootstrap-icons';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import ProfileImage from './common/ProfileImage';
 
 const Navbar = ({ onToggleSidebar, sideBarToggled }) => {
     const { user, logout } = useAuth();
@@ -31,14 +32,11 @@ const Navbar = ({ onToggleSidebar, sideBarToggled }) => {
                                 <div className={`me-2 text-body`} style={{ fontSize: '0.75rem' }}>{user?.email}</div>
                             </div>
 
-                            {user?.profile_picture ? (
-                                <img src={`/api/accounts/${user.id}/picture?t=${user._picTimestamp || ''}`} alt="profile" style={{ objectFit: 'cover', height: '7vh', width: "7vh" }} />
-                            ) : (
-                                <div className='p-2 bg-dark-subtle' style={{ height: '7vh', width: '7vh' }}>
-
-                                    <Person className="text-primary h-100 w-100" />
-                                </div>
-                            )}
+                            <ProfileImage
+                                src={user?.profile_picture ? `/api/accounts/${user.id}/picture?t=${user._picTimestamp || ''}` : null}
+                                size="7vh"
+                                shape="square"
+                            />
                         </a>
                         <ul className={`dropdown-menu dropdown-menu-end dropdown-menu-${theme}`} aria-labelledby="dropdownUser1">
                             <li><Link className="dropdown-item" to="/dashboard/profile">Profile</Link></li>

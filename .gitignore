@@ -22,14 +22,16 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-.env
+
 *.sql
-/frontend/.env
-/backend/logs
-/backend/uploads
-/backend/venv
-/backend/.venv
-/backend/.env
+frontend/.env
+backend/logs
+backend/uploads
+backend/venv
+backend/.venv
+backend/.env
+
+secrets/.*
 
 __pycache__
 

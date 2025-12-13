@@ -214,9 +214,9 @@ const LaboratoriesPage = () => {
             <div className="d-flex justify-content-between align-items-center mb-4">
                 <div className='h4'>Laboratories</div>
                 {canManage && (
-                    <button className="btn btn-sm btn-primary d-flex align-items-center" onClick={handleCreate}>
-                        <Plus className='d-block d-md-none' />
-                        <span className='d-none d-md-inline'>New Laboratory</span>
+                    <button className="btn btn-sm btn-primary" onClick={handleCreate}>
+                        <span className='d-none d-md-inline'>New Account</span>
+                        <Plus className='d-inline d-md-none' />
                     </button>
                 )}
             </div>
