@@ -1430,7 +1430,7 @@ const LaboratoryComputersPage = () => {
         <div className="container-fluid py-3">
             <div className="row mb-4">
                 <div className='col-12 col-md-6 mb-2 mb-md-0'>
-                    <div className="h4 fw-bold mb-0">{laboratory?.name}</div>
+                    <div className="h4 fw-semibold mb-0">{laboratory?.name}</div>
                     <div className="text-muted mb-0">{laboratory?.description}</div>
                 </div>
                 <div className="col-12 col-md-6">
@@ -1449,7 +1449,7 @@ const LaboratoryComputersPage = () => {
                 </div>
             </div>
 
-            <div className="container-fluid p-0">
+            <div className="container p-0">
 
                 <div className="d-md-flex justify-content-end mb-2 d-none">
                     <select

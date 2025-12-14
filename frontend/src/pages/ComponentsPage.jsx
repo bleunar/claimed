@@ -157,10 +157,13 @@ const ComponentsPage = () => {
             serial_number: comp.serial_number || '',
             status: comp.status,
             component_type: comp.component_type,
-            laboratory_id: '', // Reset assignment fields on edit for now (or could pre-fill if we want to allow moving via edit)
-            computer_set_id: '',
-            isAssigning: false
+            laboratory_id: comp.laboratory_id || '',
+            computer_set_id: comp.computer_set_id || '',
+            isAssigning: !!comp.computer_set_id
         });
+        if (comp.laboratory_id) {
+            fetchModalComputerSets(comp.laboratory_id);
+        }
         setShowModal(true);
     };
 

@@ -210,9 +210,9 @@ const LaboratoriesPage = () => {
     };
 
     return (
-        <div className="container py-3">
+        <div className="container-fluid py-3">
             <div className="d-flex justify-content-between align-items-center mb-4">
-                <div className='h4'>Laboratories</div>
+                <div className='h4 fw-semibold'>Laboratories</div>
                 {canManage && (
                     <button className="btn btn-sm btn-primary" onClick={handleCreate}>
                         <span className='d-none d-md-inline'>New Account</span>
@@ -221,7 +221,7 @@ const LaboratoriesPage = () => {
                 )}
             </div>
 
-            <div className="container-fluid">
+            <div className="container">
                 {loading ? (
                     <LoadingSpinner centered />
                 ) : (

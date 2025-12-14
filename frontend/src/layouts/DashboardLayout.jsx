@@ -3,7 +3,7 @@ import { Outlet } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 
-import { Speedometer2, People, Building, BoxSeam, Tools, JournalText, List, ListOl, Grid, Person, ExclamationTriangleFill } from 'react-bootstrap-icons';
+import { Speedometer2, People, DoorClosed, BoxSeam, Keyboard, JournalText, List, ListOl, Grid, Person, ExclamationTriangleFill } from 'react-bootstrap-icons';
 import Breadcrumbs from '../components/Breadcrumbs';
 
 const DashboardLayout = () => {
@@ -12,9 +12,9 @@ const DashboardLayout = () => {
 
     const NavigationOptions = [
         { path: '/dashboard', name: 'Dashboard', icon: <Grid />, requiredRoles: ['admin', 'it_head', 'it_technician', 'lab_head', 'lab_assistant'], end: true },
-        { path: '/dashboard/laboratories', name: 'Laboratories', icon: <Building />, requiredRoles: ['admin', 'it_head', 'lab_head', 'it_technician', 'lab_assistant'] },
-        { path: '/dashboard/components', name: 'PC Components', icon: <Tools />, requiredRoles: ['admin', 'it_head', 'lab_head'] },
-        { path: '/dashboard/activities', name: 'Activity Logs', icon: <ListOl />, requiredRoles: ['admin', 'it_head', 'lab_head'] },
+        { path: '/dashboard/laboratories', name: 'Laboratories', icon: <DoorClosed />, requiredRoles: ['admin', 'it_head', 'lab_head', 'it_technician', 'lab_assistant'] },
+        { path: '/dashboard/components', name: 'PC Components', icon: <Keyboard />, requiredRoles: ['admin', 'it_head', 'lab_head'] },
+        { path: '/dashboard/activities', name: 'Activity Logs', icon: <JournalText />, requiredRoles: ['admin', 'it_head', 'lab_head'] },
         { path: '/dashboard/issues', name: 'Lab Issues', icon: <ExclamationTriangleFill />, requiredRoles: ['admin', 'it_head', 'lab_head'] },
         { path: '/dashboard/accounts', name: 'Accounts', icon: <People />, requiredRoles: ['admin', 'it_head', 'lab_head'] },
         { path: '/dashboard/profile', name: 'My Account', icon: <Person />, requiredRoles: ['admin', 'it_head', 'it_technician', 'lab_head', 'lab_assistant'] },

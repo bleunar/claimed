@@ -56,7 +56,7 @@ const ForgotPasswordModal = ({ show, onHide }) => {
     return (
         <Modal centered show={show} onHide={handleClose}>
             <Modal.Header closeButton>
-                <Modal.Title>Forgot Password</Modal.Title>
+                <Modal.Title>Account Recovery</Modal.Title>
             </Modal.Header>
             <Modal.Body>
                 {step === 1 ? (
@@ -114,12 +114,12 @@ const ForgotPasswordModal = ({ show, onHide }) => {
                                 </Button>
                             </InputGroup>
                         </Form.Group>
-                        <div className="d-grid gap-2">
-                            <Button variant="primary" type="submit" disabled={loading}>
-                                {loading ? 'Resetting...' : 'Reset Password'}
-                            </Button>
-                            <Button variant="secondary" onClick={() => setStep(1)} disabled={loading}>
+                        <div className="d-flex gap-2">
+                            <Button variant="secondary" onClick={() => setStep(1)} disabled={loading} className='col-6'>
                                 Back
+                            </Button>
+                            <Button variant="primary" type="submit" disabled={loading} className='col-6'>
+                                {loading ? 'Resetting...' : 'Reset Password'}
                             </Button>
                         </div>
                     </Form>
