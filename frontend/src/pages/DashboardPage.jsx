@@ -79,10 +79,10 @@ const DashboardPage = () => {
 
             {/* KPI Cards */}
             <div className="row row-cols-2 row-cols-md-4 mb-4">
-                <KPICard title="Total Users" value={kpiData?.total_users} icon={<People />} color="secondary" />
-                <KPICard title="Total Labs" value={kpiData?.total_labs} icon={<DoorClosed />} color="secondary" />
-                <KPICard title="Computer Sets" value={kpiData?.total_computers} icon={<PcDisplay />} color="secondary" />
-                <KPICard title="Total Components" value={kpiData?.total_components} icon={<Keyboard />} color="secondary" />
+                <KPICard title="Total Users" value={kpiData?.total_users} icon={<People />} color="primary" />
+                <KPICard title="Total Labs" value={kpiData?.total_labs} icon={<DoorClosed />} color="primary" />
+                <KPICard title="Computer Sets" value={kpiData?.total_computers} icon={<PcDisplay />} color="primary" />
+                <KPICard title="Total Components" value={kpiData?.total_components} icon={<Keyboard />} color="primary" />
             </div>
 
             <div className="mb-4">

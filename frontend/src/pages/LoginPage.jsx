@@ -66,7 +66,7 @@ const LoginPage = () => {
                             alt="logo"
                             style={{
                                 width: 'auto',
-                                height: '48px',
+                                height: '36px',
                             }}
                         />
                     </div>
@@ -74,7 +74,7 @@ const LoginPage = () => {
                     <div
                         className="text-center text-light"
                         style={{
-                            fontSize: '0.8rem'
+                            fontSize: '0.67rem'
                         }}>
                         Computer Laboratory Inventory and Management System
                     </div>
@@ -82,14 +82,14 @@ const LoginPage = () => {
 
                 <div className="row p-0 d-flex justify-content-center">
                     <div
-                        className="col-12 col-md-8 col-xl-6 card border-0 shadow bg-body px-0"
+                        className="col-12 col-md-6 col-xl-4 card border-0 shadow bg-body px-0"
                         style={{
                             backdropFilter: 'blur(12px)',
                             WebkitBackdropFilter: 'blur(12px)',
                         }}
                     >
                         <div className="card-header">
-                            <div className="h4 mb-0 mt-1 text-center">Login</div>
+                            <div className="p fw-bold text-center">Login</div>
                         </div>
                         <div className="card-body p-4">
                             <form onSubmit={handleSubmit}>
@@ -126,7 +126,7 @@ const LoginPage = () => {
                                         </button>
                                     </div>
                                 </div>
-                                <div className="d-flex justify-content-end gap-3">
+                                <div className="d-flex justify-content-between gap-3">
                                     <button
                                         type="button"
                                         className="btn btn-link text-decoration-none p-0"
@@ -150,12 +150,12 @@ const LoginPage = () => {
             </div>
             <ForgotPasswordModal show={showForgotModal} onHide={() => setShowForgotModal(false)} />
 
-            {/* Tech Logos Placeholder */}
+
             <div className="fixed-bottom p-4">
                 <div className="d-flex justify-content-center gap-4 ">
-                    <img src={pui} alt='phinma ui logo' height={40} />
-                    <img src={pui_full} alt='phinma ui full logo' height={40} />
-                    <img src={cite} alt='phinma ui cite logo' height={40} />
+                    <img src={pui} alt='phinma ui logo' height={36} />
+                    <img src={pui_full} alt='phinma ui full logo' height={36} />
+                    <img src={cite} alt='phinma ui cite logo' height={36} />
                 </div>
             </div>
         </div>
