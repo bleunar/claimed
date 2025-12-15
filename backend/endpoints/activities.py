@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
+from utilities.decorators import role_required
 from core.database import get_db
 
 activities_bp = Blueprint('activities', __name__, url_prefix='/activities')
@@ -11,23 +12,27 @@ def list_activities():
     action_type = request.args.get('action_type')
     target_type = request.args.get('target_type')
     show_all = request.args.get('show_all', 'false').lower() == 'true'
+    pending_only = request.args.get('pending_only', 'false').lower() == 'true'
     
     db = get_db()
     cursor = db.cursor(dictionary=True)
 
     # Updated query for new schema
-    # Note: 'changes' alias for 'metadata' to keep frontend compatible if it expects 'changes'
     query = """
-        SELECT l.id, l.lab_target_id, l.account_id, l.action_type, l.summary, l.metadata as changes, l.created_at,
-               l.set_target_id, l.comp_target_id,
+        SELECT l.id, l.lab_target_id, l.account_id, l.action_type, l.summary, l.metadata, l.created_at,
+               l.set_target_id, l.comp_target_id, l.email_notification_status,
                a.name as user_name, lab.name as laboratory_name
         FROM laboratory_activity l
         JOIN accounts a ON l.account_id = a.id
         LEFT JOIN laboratories lab ON l.lab_target_id = lab.id
         WHERE 1=1
     """
-    
-    if not show_all:
+    params = []
+
+    if pending_only:
+        query += " AND l.email_notification_status = 'pending'"
+
+    if not show_all and not pending_only:
         # Filter: For 'update' actions on Components/Sets, show only the latest one.
         # Implemented by excluding rows where a NEWER row exists with same target and action='update'.
         query += """
@@ -57,7 +62,6 @@ def list_activities():
             )
         )
         """
-    params = []
     
     if laboratory_id:
         query += " AND l.lab_target_id = %s"
@@ -96,3 +100,142 @@ def list_activities():
     cursor.close()
     
     return jsonify(activities), 200
+
+
+@activities_bp.route('/report', methods=['POST'])
+@jwt_required()
+@role_required(['admin'])
+def send_activity_report():
+    from utilities.email_sender import send_email
+    from flask import render_template
+    import json
+    from datetime import datetime
+
+    db = get_db()
+    cursor = db.cursor(dictionary=True)
+
+    # 1. Fetch Recipients (Admin, IT Head, Lab Head)
+    cursor.execute("SELECT email FROM accounts WHERE role IN ('admin', 'it_head', 'lab_head') AND status != 'deleted'")
+    recipients = [row['email'] for row in cursor.fetchall()]
+    
+    if not recipients:
+         cursor.close()
+         return jsonify({"msg": "No recipients found"}), 400
+
+    # 2. Fetch Pending Activities
+    query = """
+        SELECT l.id, l.lab_target_id, l.action_type, l.summary, l.metadata, l.created_at,
+               l.set_target_id, l.comp_target_id,
+               a.name as user_name
+        FROM laboratory_activity l
+        JOIN accounts a ON l.account_id = a.id
+        WHERE l.email_notification_status = 'pending'
+        ORDER BY l.created_at DESC
+        LIMIT 500
+    """
+    cursor.execute(query)
+    activities = cursor.fetchall()
+
+    if not activities:
+        cursor.close()
+        return jsonify({"msg": "No pending activities to report"}), 400
+
+    # 3. Group Data: Date -> Lab -> Set
+    grouped_data = {}
+    activity_ids = []
+
+    for log in activities:
+        activity_ids.append(log['id'])
+        # Parse Metadata
+        try:
+            meta = json.loads(log['metadata']) if isinstance(log['metadata'], str) else log['metadata']
+        except:
+            meta = {}
+        
+        snapshot = meta.get('snapshot', {}).get('target', {})
+        
+        # Keys
+        date_key = log['created_at'].strftime('%Y-%m-%d')
+        lab_key = snapshot.get('laboratory', {}).get('name') or "General Laboratory"
+        set_key = snapshot.get('computer_set', {}).get('name') or "General Activities"
+
+        if date_key not in grouped_data:
+            grouped_data[date_key] = {}
+        if lab_key not in grouped_data[date_key]:
+            grouped_data[date_key][lab_key] = {}
+        if set_key not in grouped_data[date_key][lab_key]:
+            grouped_data[date_key][lab_key][set_key] = []
+            
+        # Extract "Current Value" of changes if update
+        changes_display = ""
+        changes = meta.get('changes', {})
+        if changes:
+             parts = []
+             for field, val in changes.items():
+                 # val might be {previous: x, current: y} or just val
+                 curr = val.get('current') if isinstance(val, dict) and 'current' in val else val
+                 parts.append(f"{field}: {curr}")
+             changes_display = ", ".join(parts)
+        
+        log_entry = {
+            'time': log['created_at'].strftime('%H:%M:%S'),
+            'user': log['user_name'],
+            'summary': log['summary'],
+            'changes': changes_display
+        }
+        grouped_data[date_key][lab_key][set_key].append(log_entry)
+
+    # 4. Generate HTML using Template
+    final_html = render_template('activity_report.html', 
+                               grouped_data=grouped_data, 
+                               generation_time=datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+
+    # 5. Send Email
+    success = send_email(recipients, f"Activity Report - {datetime.now().strftime('%Y-%m-%d')}", final_html)
+    
+    if success:
+        # 6. Update DB Status
+        if activity_ids:
+            format_ids = ','.join(['%s'] * len(activity_ids))
+            update_query = f"UPDATE laboratory_activity SET email_notification_status = 'sent', email_sent_at = NOW() WHERE id IN ({format_ids})"
+            cursor.execute(update_query, tuple(activity_ids))
+            db.commit()
+            
+        cursor.close()
+        return jsonify({"msg": "Report sent and activities marked as sent"}), 200
+    else:
+        cursor.close()
+        return jsonify({"msg": "Failed to send email"}), 500
+
+@activities_bp.route('/status', methods=['PUT'])
+@jwt_required()
+@role_required(['admin', 'it_head'])
+def batch_update_activity_status():
+    data = request.json
+    ids = data.get('ids', [])
+    status = data.get('status')
+    
+    if not ids or not status:
+        return jsonify({"msg": "IDs and Status are required"}), 400
+        
+    allowed_statuses = ['pending', 'sent', 'skipped']
+    if status not in allowed_statuses:
+        return jsonify({"msg": f"Invalid status. Allowed: {', '.join(allowed_statuses)}"}), 400
+
+    db = get_db()
+    cursor = db.cursor()
+    
+    try:
+        format_ids = ','.join(['%s'] * len(ids))
+        query = f"UPDATE laboratory_activity SET email_notification_status = %s WHERE id IN ({format_ids})"
+        # If status is 'sent', should we update sent_at? The prompt mainly asks for 'checked' -> 'skipped'.
+        # 'skipped' implies no email sent, so no sent_at needed.
+        
+        cursor.execute(query, (status, *ids))
+        db.commit()
+        cursor.close()
+        return jsonify({"msg": f"Updated {len(ids)} activities to {status}"}), 200
+    except Exception as e:
+        db.rollback()
+        cursor.close()
+        return jsonify({"msg": f"Failed to update activities: {str(e)}"}), 500

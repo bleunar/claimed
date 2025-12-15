@@ -82,8 +82,9 @@ def update_laboratory(id: str):
     cursor = db.cursor(dictionary=True)
     
     # Check if exists
-    cursor.execute("SELECT id FROM laboratories WHERE id = %s", (id,))
-    if not cursor.fetchone():
+    cursor.execute("SELECT id, name, description, location FROM laboratories WHERE id = %s", (id,))
+    existing_lab = cursor.fetchone()
+    if not existing_lab:
         cursor.close()
         return jsonify({"msg": "Laboratory not found"}), 404
 
@@ -92,7 +93,22 @@ def update_laboratory(id: str):
             "UPDATE laboratories SET name = %s, description = %s, location = %s WHERE id = %s",
             (name, description, location, id)
         )
-        log_activity(db, get_jwt_identity(), id, 'laboratory', id, 'update', f"Updated laboratory {name}", changes=data)
+        
+        # Calculate changes
+        changes = {}
+        fields_to_check = ['name', 'description', 'location']
+        for field in fields_to_check:
+            old_val = existing_lab.get(field)
+            new_val = data.get(field)
+            if new_val is not None and str(old_val) != str(new_val):
+                changes[field] = {
+                    "previous": old_val,
+                    "current": new_val
+                }
+
+        if changes:
+             log_activity(db, get_jwt_identity(), id, 'laboratory', id, 'update', f"Updated laboratory {name}", changes=changes)
+             
         db.commit()
         cursor.close()
         return jsonify({"msg": "Laboratory updated successfully"}), 200

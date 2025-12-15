@@ -462,8 +462,8 @@ const ComponentsPage = () => {
                                     </select>
                                 </div>
                                 <div className="col-12 col-md-8 d-flex justify-content-end justify-content-md-end gap-2">
-                                    <button type="button" className="btn btn-sm btn-primary border-0" onClick={handleClearFilters}><Backspace /> <span className='d-none d-md-inline'>Clear Filters</span></button>
-                                    <button type="button" className="btn btn-sm btn-primary border-0" onClick={() => fetchComponents()} title="Refresh"><ArrowClockwise /></button>
+                                    <button type="button" className="btn btn-sm btn-link border-0" onClick={handleClearFilters}>Clear Filters</button>
+                                    <button type="button" className="btn btn-sm btn-link border-0" onClick={() => fetchComponents()} title="Refresh">Refresh</button>
                                     <button type="submit" className="btn btn-sm btn-primary"><Search /> <span className='d-none d-md-inline'>Search</span></button>
                                 </div>
                             </div>

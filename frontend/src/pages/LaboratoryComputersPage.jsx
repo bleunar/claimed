@@ -266,7 +266,7 @@ const canDeleteComponent = (user) => ['admin', 'it_head', 'lab_head', 'it_techni
 const canAddComponent = (user) => ['admin', 'it_head', 'lab_head', 'it_technician'].includes(user?.role);
 const canEditComponentStatus = (user) => true;
 
-const ComputerSetForm = ({ mode, editingId, initialData, laboratoryId, onSubmit, onCancel, existingTopLevelComponents, user }) => {
+const ComputerSetForm = ({ mode, editingId, initialData, laboratoryId, laboratoryName, onSubmit, onCancel, existingTopLevelComponents, user }) => {
     const [creationMode, setCreationMode] = useState('single');
     const [formData, setFormData] = useState({
         set_name: initialData?.set_name || '',
@@ -296,7 +296,27 @@ const ComputerSetForm = ({ mode, editingId, initialData, laboratoryId, onSubmit,
     }, [editingId]);
 
     const handleInputChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
-    const handleBatchChange = (e) => setBatchConfig({ ...batchConfig, [e.target.name]: e.target.value });
+    const handleBatchChange = (e) => {
+        const { name, value } = e.target;
+        let newConfig = { ...batchConfig, [name]: value };
+
+        const start = parseInt(newConfig.start_number);
+        const end = parseInt(newConfig.count);
+
+        if (!isNaN(start) && !isNaN(end) && start > end) {
+            // Auto-correct start number
+            const correctedStart = Math.max(1, end - 1);
+            newConfig.start_number = correctedStart;
+
+            // Only show toast if the invalid state was actually entered/attempted
+            // To prevent spam, we might check if it was valid before? 
+            // But requirement says "triggers a notification".
+            // Since we correct it immediately, the user sees the corrected value.
+            toast.error("Start count must be less than the end count");
+        }
+
+        setBatchConfig(newConfig);
+    };
 
     const handleComponentChange = (index, field, value) => {
         const newComponents = [...components];
@@ -320,6 +340,7 @@ const ComputerSetForm = ({ mode, editingId, initialData, laboratoryId, onSubmit,
         setComponents(newComponents);
     };
 
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsSubmitting(true);
@@ -334,7 +355,7 @@ const ComputerSetForm = ({ mode, editingId, initialData, laboratoryId, onSubmit,
                     const start = parseInt(batchConfig.start_number);
                     const endNumber = parseInt(batchConfig.count); // UI field is 'End Number' but state key is 'count'
 
-                    if (start > endNumber) { toast.error("Start Number must be lower than or equal to End Number"); setIsSubmitting(false); return; }
+                    if (start > endNumber) { toast.error("Start Number cannot be greater than End Number"); setIsSubmitting(false); return; }
                     if (endNumber > 67) { toast.error("End Number cannot be greater than 67"); setIsSubmitting(false); return; }
 
                     const quantity = endNumber - start + 1;
@@ -391,6 +412,47 @@ const ComputerSetForm = ({ mode, editingId, initialData, laboratoryId, onSubmit,
                         <div className="col-12 col-md-4 mb-3"><label className="form-label">Prefix Name</label><input type="text" className="form-control" name="prefix" value={batchConfig.prefix} onChange={handleBatchChange} required placeholder="PC " /></div>
                         <div className="col-6 col-md-4 mb-3"><label className="form-label">Start Number</label><input type="number" className="form-control" name="start_number" value={batchConfig.start_number} onChange={handleBatchChange} required min="1" /></div>
                         <div className="col-6 col-md-4 mb-3"><label className="form-label">End Number</label><input type="number" className="form-control" name="count" value={batchConfig.count} onChange={handleBatchChange} required min="1" max="67" /></div>
+
+                        {/* Batch Preview */}
+                        {(() => {
+                            const prefix = batchConfig.prefix || '';
+                            const start = parseInt(batchConfig.start_number) || 0;
+                            const end = parseInt(batchConfig.count) || 0; // 'count' stores End Number here
+
+                            if (start > 0 && end >= start) {
+                                const count = end - start + 1;
+                                let previewText = '';
+
+                                if (count <= 6) {
+                                    // List all
+                                    const names = [];
+                                    for (let i = start; i <= end; i++) {
+                                        names.push(`${prefix}${i}`);
+                                    }
+                                    previewText = names.join(', ');
+                                } else {
+                                    // Show first 3 ... last 2
+                                    const first3 = [];
+                                    for (let i = 0; i < 3; i++) {
+                                        first3.push(`${prefix}${start + i}`);
+                                    }
+                                    const last2 = [];
+                                    for (let i = 1; i >= 0; i--) {
+                                        last2.push(`${prefix}${end - i}`);
+                                    }
+                                    previewText = `${first3.join(', ')}, ..., ${last2.join(', ')}`;
+                                }
+
+                                return (
+                                    <div className="col-12">
+                                        <div className="form-text text-muted">
+                                            Computer sets named {previewText} will be created on <strong>{laboratoryName || 'this laboratory'}</strong>
+                                        </div>
+                                    </div>
+                                );
+                            }
+                            return null;
+                        })()}
                     </div>
                 )}
 
@@ -643,32 +705,34 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
     };
 
     const handleSave = async () => {
-        const promises = [];
-        let changesCount = 0;
+        const batchPayload = {
+            creates: [],
+            updates: [],
+            deletes: [],
+            laboratory_id: laboratoryId
+        };
+
         let conflictFoundAndCancelled = false;
+        let changesCount = 0;
 
         setIsSaving(true);
         try {
             // 1. Process Pending Deletes
-            for (const id of pendingDeletes) {
-                promises.push(api.delete(`/components/${id}`));
-                changesCount++;
-            }
+            batchPayload.deletes = [...pendingDeletes];
 
-            // 2. Process Pending Unlinks
+            // 2. Process Pending Unlinks (Treat as updates: set computer_set_id to null)
             for (const id of pendingUnlinks) {
                 const original = originalComponents.find(c => c.id === id);
                 if (original) {
-                    promises.push(api.put(`/components/${id}`, { ...original, computer_set_id: null }));
-                    changesCount++;
+                    batchPayload.updates.push({ ...original, computer_set_id: null });
                 }
             }
 
-            // 3. Process Updates and Creates
+            // 3. Process Components
             for (const comp of components) {
                 if (conflictFoundAndCancelled) break;
 
-                // Skip if this component is marked for deletion/unlinking (shouldn't be in 'components' array if logic is correct, but safe check)
+                // Skip if marked for delete/unlink
                 if (pendingDeletes.includes(comp.id) || pendingUnlinks.includes(comp.id)) continue;
 
                 if (comp.id.toString().startsWith('new-')) {
@@ -703,34 +767,30 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                     }
 
                     const isCore = ['system_unit', 'monitor', 'keyboard', 'mouse'].includes(comp.component_type);
-                    changesCount++;
 
                     if (targetId) {
-                        // MERGE/MOVE existing component
-                        promises.push(
-                            api.put(`/components/${targetId}`, {
-                                computer_set_id: set.id,
-                                laboratory_id: laboratoryId,
-                                component_type: comp.component_type,
-                                brand_name: comp.brand_name,
-                                serial_number: comp.serial_number,
-                                is_core: isCore,
-                                status: comp.status
-                            })
-                        );
+                        // MERGE/MOVE existing component (Update)
+                        batchPayload.updates.push({
+                            id: targetId,
+                            computer_set_id: set.id,
+                            laboratory_id: laboratoryId,
+                            component_type: comp.component_type,
+                            brand_name: comp.brand_name,
+                            serial_number: comp.serial_number,
+                            is_core: isCore,
+                            status: comp.status
+                        });
                     } else {
                         // CREATE normally
-                        promises.push(
-                            api.post('/components/', {
-                                computer_set_id: set.id,
-                                component_type: comp.component_type,
-                                brand_name: comp.brand_name,
-                                serial_number: comp.serial_number,
-                                is_core: isCore,
-                                laboratory_id: laboratoryId,
-                                status: comp.status
-                            })
-                        );
+                        batchPayload.creates.push({
+                            computer_set_id: set.id,
+                            component_type: comp.component_type,
+                            brand_name: comp.brand_name,
+                            serial_number: comp.serial_number,
+                            is_core: isCore,
+                            laboratory_id: laboratoryId,
+                            status: comp.status
+                        });
                     }
 
                 } else {
@@ -753,16 +813,17 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                                     msg += `Do you want to MOVE that component here instead (replacing the current one)?`;
 
                                     if (await showConfirm("Confirm Move", msg)) {
-                                        changesCount++;
-                                        promises.push(api.put(`/components/${comp.id}`, { ...comp, computer_set_id: null })); // Unlink current
-                                        promises.push(api.put(`/components/${existing.id}`, {
-                                            ...existing,
+                                        // Complex Move: Unlink current, Update existing to link here
+                                        batchPayload.updates.push({ id: comp.id, computer_set_id: null }); // Unlink current
+
+                                        batchPayload.updates.push({
+                                            id: existing.id,
                                             computer_set_id: set.id,
                                             laboratory_id: laboratoryId,
                                             component_type: comp.component_type,
                                             brand_name: comp.brand_name,
                                             status: comp.status
-                                        }));
+                                        });
                                         continue;
                                     } else {
                                         conflictFoundAndCancelled = true;
@@ -771,8 +832,7 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                                 }
                             }
 
-                            changesCount++;
-                            promises.push(api.put(`/components/${comp.id}`, comp));
+                            batchPayload.updates.push(comp);
                         }
                     }
                 }
@@ -783,7 +843,20 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                 return;
             }
 
-            // 4. Update Set Info
+            // 4. Update Set Info separate call (simple) OR bundle it?
+            // Since backend batch endpoint is for components only, let's keep set update separate or add it?
+            // The existing flow put it in promises. We can keep it separate. 
+            // BUT wait, we want "one log" if possible. 
+            // If we update Set Info + Components, we get two logs: "Updated Set" and "Batch Components".
+            // That is acceptable. The User asked for "adding/deleting computer sets and computer components by batch".
+
+            const promises = [];
+
+            if (batchPayload.creates.length > 0 || batchPayload.updates.length > 0 || batchPayload.deletes.length > 0) {
+                promises.push(api.post('/components/batch-transaction', batchPayload));
+                changesCount += (batchPayload.creates.length + batchPayload.updates.length + batchPayload.deletes.length);
+            }
+
             if (setName !== set.set_name || setStatus !== set.status) {
                 changesCount++;
                 promises.push(api.put(`/computer-sets/${set.id}`, {
@@ -835,7 +908,7 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
 
     return (
         <>
-            <div className="p-3">
+            <div className="p-3 pb-0">
                 <div className="mb-5 d-flex flex-column align-items-center gap-2 p-3 bg-body-s rounded">
                     {isEditMode && canManage ? (
                         <div className="row g-2 w-100 justify-content-center">
@@ -1067,6 +1140,18 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                 }
             </div>
 
+
+            {isEditMode && canAddComponent(user) && (
+                <div className="d-flex justify-content-start px-3 gap-2">
+                    <button className="btn btn-sm btn-link" onClick={addNewRow}>
+                        Add New Component
+                    </button>
+                    <button className="btn btn-sm btn-link" onClick={() => setShowSerialModal(true)}>
+                        Add by Serial Number
+                    </button>
+                </div>
+            )}
+
             {/* Add by Serial Modal */}
             <Modal show={showSerialModal} onHide={() => setShowSerialModal(false)} centered>
                 <Modal.Header closeButton>
@@ -1115,23 +1200,10 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                     {(canEditComponentDetails(user) || canEditComponentStatus(user)) && (
                         isEditMode ? (
                             <>
-                                <button className="btn btn-primary btn-sm" onClick={() => setIsEditMode(false)} title="Exit Edit Mode">
-                                    <PencilSquare className="me-1" /> Exit Edit Mode
-                                </button>
-                                {canAddComponent(user) && (
-                                    <div className="d-flex gap-2">
-                                        <button className="btn btn-sm btn-outline-primary" onClick={addNewRow}>
-                                            <Plus className="me-1" /> New Component
-                                        </button>
-                                        <button className="btn btn-sm btn-outline-primary" onClick={() => setShowSerialModal(true)}>
-                                            <BoxArrowUpRight className="me-1" /> Add by Serial #
-                                        </button>
-                                    </div>
-                                )}
                             </>
                         ) : (
                             <button className="btn btn-primary btn-sm" onClick={() => setIsEditMode(true)} title="Enter Edit Mode">
-                                <PencilSquare className="me-1" /> Edit
+                                <PencilSquare className="me-1" /> Edit Mode
                             </button>
                         )
                     )}
@@ -1140,7 +1212,7 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                     <Button variant="secondary" onClick={onClose} disabled={isSaving}>Close</Button>
                     {(canEditComponentDetails(user) || canEditComponentStatus(user)) && (
                         isEditMode ? (
-                            <Button variant="success" onClick={handleSave} disabled={isSaving}>
+                            <Button variant="primary" onClick={handleSave} disabled={isSaving}>
                                 {isSaving ? <><span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Saving...</> : 'Save Changes'}
                             </Button>
                         ) : (
@@ -1151,6 +1223,14 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                     )}
                 </div>
             </div>
+
+            {/* Background Overlay for Serial Modal */}
+            {showSerialModal && (
+                <div
+                    className="position-absolute w-100 h-100 start-0 top-0 bg-dark"
+                    style={{ opacity: 0.5, zIndex: 1050 }}
+                ></div>
+            )}
         </>
     );
 };
@@ -1334,7 +1414,7 @@ const LaboratoryComputersPage = () => {
     };
 
     const handleDeleteSet = async (id) => {
-        if (!window.confirm("Are you sure you want to delete this computer set? (All components will be unlinked)")) return;
+        if (!window.confirm("Are you sure you want to delete this computer set? (All components will be PERMANENTLY DELETED)")) return;
         try {
             await api.delete(`/computer-sets/${id}`);
             toast.success("Computer set deleted");
@@ -1413,8 +1493,7 @@ const LaboratoryComputersPage = () => {
 
     const handleBatchDelete = async (ids) => {
         try {
-            const promises = ids.map(id => api.delete(`/computer-sets/${id}`));
-            await Promise.all(promises);
+            await api.post('/computer-sets/batch-delete', { ids });
             toast.success(`Deleted ${ids.length} computer sets successfully`);
             fetchData();
         } catch (err) {
@@ -1464,7 +1543,7 @@ const LaboratoryComputersPage = () => {
                     </select>
                 </div>
 
-                <div className={`row overflow-hidden border rounded row-cols-2 row-cols-md-${itemsPerRow}`}>
+                <div className={`row rounded row-cols-2 row-cols-md-${itemsPerRow}`}>
                     {
                         computerSets.length > 0 && (
                             computerSets.map(set => (
@@ -1482,7 +1561,7 @@ const LaboratoryComputersPage = () => {
                 {
                     computerSets.length == 0 && (
                         <div className="col-12">
-                            <div className="text-center text-muted"><p>No computer sets found in this laboratory.</p></div>
+                            <div className="text-center text-muted"><p>No computer sets found in this laboratory. <div className='btn btn-link px-0' onClick={handleCreate}>Add Computers</div></p></div>
                         </div>
                     )
                 }
@@ -1501,6 +1580,7 @@ const LaboratoryComputersPage = () => {
                         editingId={selectedSet?.id}
                         initialData={selectedSet}
                         laboratoryId={laboratoryId}
+                        laboratoryName={laboratory?.name}
                         onSubmit={handleFormSubmit}
                         onCancel={handleCloseSetModal}
                         user={user}

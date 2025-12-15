@@ -223,7 +223,7 @@ const AccountsPage = () => {
             <div className="d-flex justify-content-between align-items-center mb-4">
                 <div className='h4'>Account Management</div>
                 <button className="btn btn-sm btn-primary" onClick={handleCreate}>
-                    <span className='d-none d-md-inline'>New Account</span>
+                    <span className='d-none d-md-inline'>Add New Account</span>
                     <Plus className='d-inline d-md-none' />
                 </button>
             </div>
@@ -290,8 +290,8 @@ const AccountsPage = () => {
                                     )}
                                 </div>
                                 <div className="col d-flex justify-content-center justify-content-md-end gap-2">
-                                    <button type="button" className="btn btn-sm btn-primary" onClick={() => { setSearchTerm(''); setFilterRole(''); setFilterStatus(''); setIncludeDeleted(false); fetchAccounts(); }}><Backspace /> <span className='d-none d-md-inline'>Clear Filters</span></button>
-                                    <button type="button" className="btn btn-sm btn-primary" onClick={() => fetchAccounts()} title="Refresh"><ArrowClockwise /></button>
+                                    <button type="button" className="btn btn-sm btn-link" onClick={() => { setSearchTerm(''); setFilterRole(''); setFilterStatus(''); setIncludeDeleted(false); fetchAccounts(); }}>Clear Filters</button>
+                                    <button type="button" className="btn btn-sm btn-link" onClick={() => fetchAccounts()} title="Refresh">Refresh</button>
                                     <button type="submit" className="btn btn-sm btn-primary"><Search /> <span className='d-none d-md-inline'>Search</span></button>
                                 </div>
                             </div>

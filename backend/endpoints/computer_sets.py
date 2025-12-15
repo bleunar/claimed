@@ -71,6 +71,10 @@ def create_computer_set():
             prefix = batch_config.get('prefix', 'PC-')
             start_number = int(batch_config.get('start_number', 1))
             count = int(batch_config.get('count', 1))
+
+            if count < 1:
+                cursor.close()
+                return jsonify({"msg": "Start Number cannot be greater than End Number"}), 400
             components = batch_config.get('components', [])
             
             # Check for name collisions before creating anything
@@ -105,8 +109,15 @@ def create_computer_set():
                         "INSERT INTO computer_set_components (id, computer_set_id, component_type, is_core, brand_name, serial_number, status) VALUES (%s, %s, %s, %s, %s, %s, %s)",
                         (comp_id, set_id, comp.get('component_type'), comp.get('is_core', False), comp.get('brand_name'), comp.get('serial_number'), 'good')
                     )
-                
-                log_activity(db, get_jwt_identity(), laboratory_id, 'computer_set', set_id, 'create', f"Created computer set {set_name} (Batch)", changes={'batch_config': batch_config})
+            
+            # Log single batch activity
+            set_names_str = ", ".join([f"{prefix}{start_number + i}" for i in range(count)])
+            # Truncate if too long for summary
+            summary = f"Batch created {count} computer sets: {set_names_str}"
+            if len(summary) > 255:
+                summary = f"Batch created {count} computer sets ({prefix}{start_number} - {prefix}{start_number + count - 1})"
+
+            log_activity(db, get_jwt_identity(), laboratory_id, 'computer_set', created_ids[0], 'create', summary, changes={'batch_config': batch_config, 'created_ids': created_ids})
             
             db.commit()
             cursor.close()
@@ -187,12 +198,33 @@ def update_computer_set(id):
         cursor.close()
         return jsonify({"msg": f"Computer set '{set_name}' already exists in this laboratory."}), 409
 
+    # Fetch existing details for diff logging
+    cursor.execute("SELECT laboratory_id, set_name, status FROM computer_sets WHERE id = %s", (id,))
+    existing_set = cursor.fetchone()
+
     try:
         cursor.execute(
             "UPDATE computer_sets SET laboratory_id = %s, set_name = %s, status = %s WHERE id = %s",
             (laboratory_id, set_name, status, id)
         )
-        log_activity(db, get_jwt_identity(), laboratory_id, 'computer_set', id, 'update', f"Updated computer set {set_name}", changes=data)
+        
+        # Calculate changes for logging
+        changes = {}
+        if existing_set:
+            fields_to_check = ['laboratory_id', 'set_name', 'status']
+            for field in fields_to_check:
+                old_val = existing_set.get(field)
+                new_val = data.get(field)
+                # Handle potential type mismatches (e.g. None vs '')
+                if str(old_val) != str(new_val) and new_val is not None:
+                     changes[field] = {
+                        "previous": old_val,
+                        "current": new_val
+                    }
+
+        if changes:
+             log_activity(db, get_jwt_identity(), laboratory_id, 'computer_set', id, 'update', f"Updated computer set {set_name}", changes=changes)
+             
         db.commit()
         cursor.close()
         return jsonify({"msg": "Computer set updated successfully"}), 200
@@ -224,3 +256,60 @@ def delete_computer_set(id):
     except Exception as e:
         cursor.close()
         return jsonify({"msg": f"Failed to delete computer set: {str(e)}"}), 500
+
+@computer_sets_bp.route('/batch-delete', methods=['POST'])
+@jwt_required()
+@role_required(['admin', 'it_head', 'lab_head'])
+def batch_delete_computer_sets():
+    data = request.json
+    ids = data.get('ids', [])
+    
+    if not ids:
+        return jsonify({"msg": "No IDs provided"}), 400
+
+    db = get_db()
+    cursor = db.cursor(dictionary=True)
+    
+    try:
+        # Fetch details to verify existence and get context (Laboratory ID)
+        placeholders = ', '.join(['%s'] * len(ids))
+        query = f"SELECT id, set_name, laboratory_id FROM computer_sets WHERE id IN ({placeholders})"
+        cursor.execute(query, tuple(ids))
+        sets_to_delete = cursor.fetchall()
+        
+        if not sets_to_delete:
+            cursor.close()
+            return jsonify({"msg": "No valid computer sets found to delete"}), 404
+            
+        # Group by laboratory (should technically all be in same lab if UI enforces it, but handle robustly)
+        # We'll log one activity per laboratory involved
+        
+        from itertools import groupby
+        sets_to_delete.sort(key=lambda x: x['laboratory_id'])
+        
+        for lab_id, group in groupby(sets_to_delete, key=lambda x: x['laboratory_id']):
+            group_list = list(group)
+            group_ids = [s['id'] for s in group_list]
+            group_names = [s['set_name'] for s in group_list]
+            
+            # Delete query for this group
+            del_placeholders = ', '.join(['%s'] * len(group_ids))
+            curr = db.cursor() # specific cursor for delete? No, reuse existing is fine if we consume results
+            cursor.execute(f"DELETE FROM computer_sets WHERE id IN ({del_placeholders})", tuple(group_ids))
+            
+            # Log Activity
+            names_str = ", ".join(group_names)
+            summary = f"Batch deleted {len(group_list)} computer sets: {names_str}"
+            if len(summary) > 255:
+                summary = f"Batch deleted {len(group_list)} computer sets including {group_names[0]}"
+                
+            log_activity(db, get_jwt_identity(), lab_id, 'computer_set', group_ids[0], 'delete', summary, changes={'deleted_ids': group_ids, 'deleted_names': group_names})
+
+        db.commit()
+        cursor.close()
+        return jsonify({"msg": f"Successfully deleted {len(sets_to_delete)} computer sets"}), 200
+        
+    except Exception as e:
+        db.rollback()
+        cursor.close()
+        return jsonify({"msg": f"Failed to batch delete: {str(e)}"}), 500

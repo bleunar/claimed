@@ -215,29 +215,39 @@ const LaboratoriesPage = () => {
                 <div className='h4 fw-semibold'>Laboratories</div>
                 {canManage && (
                     <button className="btn btn-sm btn-primary" onClick={handleCreate}>
-                        <span className='d-none d-md-inline'>New Account</span>
+                        <span className='d-none d-md-inline'>New Laboratory</span>
                         <Plus className='d-inline d-md-none' />
                     </button>
                 )}
             </div>
 
             <div className="container">
-                {loading ? (
-                    <LoadingSpinner centered />
-                ) : (
-                    <div className="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xxl-4">
-                        {laboratories.map(lab => (
-                            <LaboratoryCard
-                                key={lab.id}
-                                lab={lab}
-                                canManage={canManage}
-                                onEdit={handleEdit}
-                                onDelete={handleDelete}
-                                onNavigate={(id) => navigate(`/dashboard/laboratories/${id}`)}
-                            />
-                        ))}
-                    </div>
-                )}
+                {
+                    loading ? (
+                        <LoadingSpinner centered />
+                    ) : (
+                        (
+                            laboratories.length > 0 ? (
+                                <div className="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xxl-4">
+                                    {laboratories.map(lab => (
+                                        <LaboratoryCard
+                                            key={lab.id}
+                                            lab={lab}
+                                            canManage={canManage}
+                                            onEdit={handleEdit}
+                                            onDelete={handleDelete}
+                                            onNavigate={(id) => navigate(`/dashboard/laboratories/${id}`)}
+                                        />
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="w-100 text-center">
+                                    <span className="text-muted w-100">No Laboratories Found, <span className='btn btn-link px-0' onClick={handleCreate}>Add One</span></span>
+                                </div>
+                            )
+                        )
+                    )
+                }
             </div>
 
             {/* Modal */}
