@@ -321,86 +321,94 @@ const AccountsPage = () => {
                 </div>
             </div>
 
-            {
-                loading ? (
-                    <div className="text-center p-5">
-                        <LoadingSpinner />
-                    </div>
-                ) : (
-                    <div className="table-responsive">
-                        <table className="table table-hover table-borderless table-striped align-middle mb-0">
-                            <thead className="">
-                                <tr>
-                                    <th className="ps-4">User</th>
-                                    <th>Role</th>
-                                    <th>Status</th>
-                                    <th className="text-end pe-4">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {currentUsers.map(account => (
-                                    <tr key={account.id}>
-                                        <td className="ps-4">
-                                            <div className="d-flex align-items-center">
-                                                {account.profile_picture ? (
-                                                    <img
-                                                        src={`${api.defaults.baseURL}/accounts/${account.id}/picture`}
-                                                        alt={account.name}
-                                                        className="rounded-circle me-3"
-                                                        style={{ width: '40px', height: '40px', objectFit: 'cover' }}
-                                                        onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; }}
-                                                    />
-                                                ) : (
-                                                    <PersonCircle className="me-3 text-secondary" style={{ width: '40px', height: '40px' }} />
-                                                )}
-                                                <div>
-                                                    <div className="fw-bold">{account.name}</div>
-                                                    <div className="text-muted small">{account.email}</div>
-                                                </div>
-                                            </div >
-                                        </td >
-                                        <td>
-                                            <span className="text-muted text-uppercase">{account.role.replace('_', ' ').toLowerCase()}</span>
-                                        </td>
-                                        <td>
-                                            <div className='d-flex justify-content-start align-items-center'>
-                                                <div className={`rounded-circle shadow-sm ${account.status === 'active' ? 'bg-success' : account.status === 'suspended' ? 'bg-warning' : 'bg-secondary'}`} title={account?.status.toUpperCase()} style={{ height: '16px', width: '16px' }}></div>
-                                                <span className='text-capitalize ms-2'>{account.status}</span>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div className="d-flex gap-2 justify-content-start justify-content-md-end flex-wrap">
-                                                <button className="btn btn-outline-primary btn-sm border-0" onClick={() => handlePreview(account)} title="View Details">
-                                                    <Eye />
-                                                </button>
-                                                <button className="btn btn-outline-primary btn-sm border-0" onClick={() => handleEdit(account)} title="Edit Account">
-                                                    <PencilSquare />
-                                                </button>
-                                                <button className="btn btn-outline-primary btn-sm border-0" onClick={() => handleSuspend(account)} title={account.status === 'active' ? "Suspend Account" : "Activate Account"}>
-                                                    {account.status === 'active' ? (
-                                                        <>
-                                                            <PersonX />
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <PersonCheck className="" />
-                                                        </>
-                                                    )}
-                                                </button>
-                                                {user?.role === 'admin' && (
-                                                    <button className="btn btn-outline-danger btn-sm border-0" onClick={() => handleDelete(account)} title={account.status === 'deleted' ? "Permanently Delete" : "Delete Account"}>
-                                                        <Trash />
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </td>
-                                    </tr >
-                                ))}
-                            </tbody >
-                        </table >
-                    </div >
-                )
-            }
+            <div className="container">
+                {
+                    loading ? (
+                        <div className="text-center p-5">
+                            <LoadingSpinner />
+                        </div>
+                    ) : (
+                        currentUsers.length > 0 ? (
+                            <div className="table-responsive">
+                                <table className="table table-hover table-borderless table-striped align-middle mb-0">
+                                    <thead className="">
+                                        <tr>
+                                            <th className="ps-4">User</th>
+                                            <th>Role</th>
+                                            <th>Status</th>
+                                            <th className="text-end pe-4">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {currentUsers.map(account => (
+                                            <tr key={account.id}>
+                                                <td className="ps-4">
+                                                    <div className="d-flex align-items-center">
+                                                        {account.profile_picture ? (
+                                                            <img
+                                                                src={`${api.defaults.baseURL}/accounts/${account.id}/picture`}
+                                                                alt={account.name}
+                                                                className="rounded-circle me-3"
+                                                                style={{ width: '40px', height: '40px', objectFit: 'cover' }}
+                                                                onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; }}
+                                                            />
+                                                        ) : (
+                                                            <PersonCircle className="me-3 text-secondary" style={{ width: '40px', height: '40px' }} />
+                                                        )}
+                                                        <div>
+                                                            <div className="fw-bold">{account.name}</div>
+                                                            <div className="text-muted small">{account.email}</div>
+                                                        </div>
+                                                    </div >
+                                                </td >
+                                                <td>
+                                                    <span className="text-muted text-uppercase">{account.role.replace('_', ' ').toLowerCase()}</span>
+                                                </td>
+                                                <td>
+                                                    <div className='d-flex justify-content-start align-items-center'>
+                                                        <div className={`rounded-circle shadow-sm ${account.status === 'active' ? 'bg-success' : account.status === 'suspended' ? 'bg-warning' : 'bg-secondary'}`} title={account?.status.toUpperCase()} style={{ height: '16px', width: '16px' }}></div>
+                                                        <span className='text-capitalize ms-2'>{account.status}</span>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div className="d-flex gap-2 justify-content-start justify-content-md-end flex-wrap">
+                                                        <button className="btn btn-outline-primary btn-sm border-0" onClick={() => handlePreview(account)} title="View Details">
+                                                            <Eye />
+                                                        </button>
+                                                        <button className="btn btn-outline-primary btn-sm border-0" onClick={() => handleEdit(account)} title="Edit Account">
+                                                            <PencilSquare />
+                                                        </button>
+                                                        <button className="btn btn-outline-primary btn-sm border-0" onClick={() => handleSuspend(account)} title={account.status === 'active' ? "Suspend Account" : "Activate Account"}>
+                                                            {account.status === 'active' ? (
+                                                                <>
+                                                                    <PersonX />
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <PersonCheck className="" />
+                                                                </>
+                                                            )}
+                                                        </button>
+                                                        {user?.role === 'admin' && (
+                                                            <button className="btn btn-outline-danger btn-sm border-0" onClick={() => handleDelete(account)} title={account.status === 'deleted' ? "Permanently Delete" : "Delete Account"}>
+                                                                <Trash />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr >
+                                        ))}
+                                    </tbody >
+                                </table >
+                            </div >
+                        ) : (
+                            <div className='text-center'>
+                                        <span>No Users, <span className='btn btn-sm btn-link px-0' onClick={handleCreate}>Add One</span></span>
+                            </div>
+                        )
+                    )
+                }
+            </div>
 
             <Pagination
                 itemsPerPage={itemsPerPage}
