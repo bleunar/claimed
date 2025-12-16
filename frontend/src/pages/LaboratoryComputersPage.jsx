@@ -312,7 +312,7 @@ const ComputerSetForm = ({ mode, editingId, initialData, laboratoryId, laborator
             // To prevent spam, we might check if it was valid before? 
             // But requirement says "triggers a notification".
             // Since we correct it immediately, the user sees the corrected value.
-            toast.error("Start count must be less than the end count");
+            toast.error("Start Number must be less than the End Number");
         }
 
         setBatchConfig(newConfig);
@@ -498,7 +498,9 @@ const ComputerSetForm = ({ mode, editingId, initialData, laboratoryId, laborator
                                     </div>
                                 </div>
                             ))}
-                            <button type="button" className="btn btn-link btn-sm w-100 text-end" onClick={() => addComponent()}>Add New Component</button>
+                            <div className="text-end">
+                                <button type="button" className="btn btn-link btn-sm border" onClick={() => addComponent()}>Add New Component</button>
+                            </div>
                         </>
                     )
                 }
@@ -1530,7 +1532,7 @@ const LaboratoryComputersPage = () => {
 
             <div className="container p-0">
 
-                <div className="d-md-flex justify-content-end mb-2 d-none">
+                <div className="d-lg-flex justify-content-end mb-2 d-none">
                     <select
                         className="form-select form-select-sm w-auto"
                         value={itemsPerRow}
@@ -1543,7 +1545,7 @@ const LaboratoryComputersPage = () => {
                     </select>
                 </div>
 
-                <div className={`row rounded row-cols-2 row-cols-md-${itemsPerRow}`}>
+                <div className={`row rounded row-cols-2 row-cols-md-3 row-cols-lg-${itemsPerRow}`}>
                     {
                         computerSets.length > 0 && (
                             computerSets.map(set => (

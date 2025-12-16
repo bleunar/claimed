@@ -80,9 +80,9 @@ def create_issue():
     current_user_id = get_jwt_identity()
     data = request.json
     
-    laboratory_id = data.get('laboratory_id')
-    computer_set_id = data.get('computer_set_id')
-    component_id = data.get('component_id')
+    laboratory_id = data.get('laboratory_id') or None
+    computer_set_id = data.get('computer_set_id') or None
+    component_id = data.get('component_id') or None
     title = data.get('title')
     description = data.get('description')
     priority = data.get('priority', 'medium')
@@ -93,7 +93,13 @@ def create_issue():
     issue_id = uuid.uuid4().hex[:16]
     
     db = get_db()
-    cursor = db.cursor()
+    cursor = db.cursor(dictionary=True)
+    
+    # Validate computer_set_id existence to prevent FK errors
+    if computer_set_id:
+        cursor.execute("SELECT id FROM computer_sets WHERE id = %s", (computer_set_id,))
+        if not cursor.fetchone():
+            computer_set_id = None
     
     try:
         query = """

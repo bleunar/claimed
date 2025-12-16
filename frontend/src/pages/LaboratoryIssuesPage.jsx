@@ -158,7 +158,7 @@ const LaboratoryIssuesPage = () => {
             <div className="card mb-4 overflow-hidden">
                 <div className="card-body bg-body-tertiary">
                     <div className="row g-3 align-items-end">
-                        <div className="col-md-4">
+                        <div className="col-md-6">
                             <div className="input-group">
                                 <span className="input-group-text"><Search /></span>
                                 <input
@@ -196,37 +196,39 @@ const LaboratoryIssuesPage = () => {
                             </select>
                         </div>
                         <div className="col-12">
-                            <div className="row row-cols-md-2">
-                                <div className="col d-flex justify-content-center justify-content-md-start">
-                                    <ToggleButtonGroup type="radio" name="dateFilter" value={dateFilter} onChange={(val) => setDateFilter(val)}>
-                                        <ToggleButton id="tbg-btn-1" value="today" variant="outline-primary" className='text-nowrap' size="sm">Today</ToggleButton>
-                                        <ToggleButton id="tbg-btn-2" value="week" variant="outline-primary" className='text-nowrap' size="sm">This Week</ToggleButton>
-                                        <ToggleButton id="tbg-btn-3" value="month" variant="outline-primary" className='text-nowrap' size="sm">This Month</ToggleButton>
-                                        <ToggleButton id="tbg-btn-4" value="all" variant="outline-primary" className='text-nowrap' size="sm">All Time</ToggleButton>
-                                    </ToggleButtonGroup>
-                                </div>
-                                <div className="col d-flex justify-content-end justify-content-md-end gap-2">
-                                    <button type="button" className="btn btn-sm btn-outline-primary border-0" onClick={() => fetchIssues()} title="Refresh"><ArrowClockwise /></button>
-                                    <button type="button" className="btn btn-sm btn-outline-primary border-0" onClick={() => handleClearFilters}><Backspace /> <span className='d-none d-md-inline'>Clear Filters</span></button>
-                                </div>
+                            <div className="d-flex justify-content-end justify-content-md-end gap-2 b">
+                                <button type="button" className="btn btn-sm btn-link border-0" onClick={() => fetchIssues()} title="Refresh">Refresh</button>
+                                <button type="button" className="btn btn-sm btn-link border-0" onClick={() => handleClearFilters}> Clear Filters</button>
+                                <button type="button" className="btn btn-sm btn-primary border-0" onClick={() => handleClearFilters}><Search /> <span>Search</span></button>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <Tabs
-                activeKey={activeTab}
-                onSelect={(k) => setActiveTab(k)}
-                className="mb-3"
-            >
-                <Tab eventKey="flags" title="Flags (New Issues)" />
-                <Tab eventKey="active" title="Active" />
-                <Tab eventKey="closed" title="Closed" />
-            </Tabs>
+            <div className="d-flex justify-content-center justify-content-md-between flex-wrap-reverse gap-2 w-100">
+                <Tabs
+                    activeKey={activeTab}
+                    onSelect={(k) => setActiveTab(k)}
+                    className="mb-3"
+                >
+                    <Tab eventKey="flags" title="Flags (New Issues)" />
+                    <Tab eventKey="active" title="Active" />
+                    <Tab eventKey="closed" title="Closed" />
+                </Tabs>
+
+                <div className="d-flex justify-content-center justify-content-md-end align-items-center">
+                    <ToggleButtonGroup type="radio" name="dateFilter" value={dateFilter} onChange={(val) => setDateFilter(val)}>
+                        <ToggleButton id="tbg-btn-1" value="today" variant="outline-primary" className='text-nowrap' size="sm">Today</ToggleButton>
+                        <ToggleButton id="tbg-btn-2" value="week" variant="outline-primary" className='text-nowrap' size="sm">This Week</ToggleButton>
+                        <ToggleButton id="tbg-btn-3" value="month" variant="outline-primary" className='text-nowrap' size="sm">This Month</ToggleButton>
+                        <ToggleButton id="tbg-btn-4" value="all" variant="outline-primary" className='text-nowrap' size="sm">All Time</ToggleButton>
+                    </ToggleButtonGroup>
+                </div>
+            </div>
 
             {/* Table */}
-            <div className="card overflow-hidden border-0">
+            <div className="card border-0">
                 <div className="table-responsive border-0">
                     <table className="table table-hover table-striped align-middle mb-0">
                         <thead>
@@ -260,14 +262,14 @@ const LaboratoryIssuesPage = () => {
                                             </div>
                                         </td>
                                         <td>
-                                            <div className="d-flex flex-column">
-                                                <Link to={`/dashboard/laboratories/${issue.laboratory_id}`} className="text-decoration-none fw-bold text-dark">
+                                            <div className="d-flex gap-1">
+                                                <Link to={`/dashboard/laboratories/${issue.laboratory_id}`} className="badge bg-primary text-decoration-none fw-semibold">
                                                     {issue.laboratory_name}
                                                 </Link>
                                                 {issue.computer_set_name && (
                                                     <Link
                                                         to={`/dashboard/laboratories/${issue.laboratory_id}?set=${issue.computer_set_id}&components=true`}
-                                                        className="badge fw-normal bg-light text-dark border text-decoration-none mt-1"
+                                                        className="badge bg-primary text-decoration-none fw-semibold"
                                                     >
                                                         {issue.computer_set_name}
                                                     </Link>
@@ -287,6 +289,13 @@ const LaboratoryIssuesPage = () => {
                                             {issue.resolved_by && <div className="small text-success mt-1">by {issue.resolved_by_name}</div>}
                                         </td>
                                         <td className="text-end">
+                                            {
+                                                issue.resolution_notes && (
+                                                    <button className="btn btn-sm me-2" title={issue.resolution_notes}>
+                                                        <ChatLeftText />
+                                                    </button>
+                                                )
+                                            }
                                             <button className="btn btn-sm btn-outline-primary" onClick={() => handleEdit(issue)} title="Update Status">
                                                 <PencilSquare /> Update
                                             </button>

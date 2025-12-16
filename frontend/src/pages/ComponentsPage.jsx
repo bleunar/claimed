@@ -457,7 +457,7 @@ const ComponentsPage = () => {
                                         }}
                                     >
                                         <option value="false">Active Components</option>
-                                        <option value="true">Rogue Components</option>
+                                        <option value="true" title='Components that are not assigned to computer sets'>Rogue Components</option>
                                         <option value="">Show All</option>
                                     </select>
                                 </div>

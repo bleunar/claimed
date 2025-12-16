@@ -44,6 +44,9 @@ const ActivityLogsPage = () => {
     const [selectedLogs, setSelectedLogs] = useState([]);
     const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
+    // Email Recipient List State
+    const [recipientList, setRecipientList] = useState([]);
+
     const canManageLogs = ['admin', 'it_head'].includes(user?.role);
 
     const handleSelect = (id) => {
@@ -670,14 +673,16 @@ const ActivityLogsPage = () => {
                             </div>
                         </div>
 
-                        <div className="mt-4 d-flex justify-content-center">
-                            <Pagination
-                                itemsPerPage={itemsPerPage}
-                                totalItems={logs.length}
-                                paginate={paginate}
-                                currentPage={currentPage}
-                            />
-                        </div>
+                        {viewMode === 'all' && (
+                            <div className="mt-4 d-flex justify-content-center">
+                                <Pagination
+                                    itemsPerPage={itemsPerPage}
+                                    totalItems={logs.length}
+                                    paginate={paginate}
+                                    currentPage={currentPage}
+                                />
+                            </div>
+                        )}
                     </>
                 )}
 
@@ -712,19 +717,58 @@ const ActivityLogsPage = () => {
                             <Send size={24} />
                         </Button>
 
-                        <Modal show={showSendModal} onHide={() => setShowSendModal(false)} centered>
+                        <Modal show={showSendModal} onHide={() => setShowSendModal(false)} centered onShow={() => {
+                            // Fetch recipients when modal opens
+                            const fetchRecipients = async () => {
+                                try {
+                                    const res = await api.get('/accounts/?status=active');
+                                    const recipients = res.data.accounts.filter(acc => ['admin', 'it_head', 'lab_head'].includes(acc.role));
+                                    // Sort: Admin first, then Heads
+                                    recipients.sort((a, b) => {
+                                        const roleOrder = { 'admin': 1, 'it_head': 2, 'lab_head': 2 };
+                                        if (roleOrder[a.role] !== roleOrder[b.role]) return roleOrder[a.role] - roleOrder[b.role];
+                                        return a.name.localeCompare(b.name);
+                                    });
+                                    setRecipientList(recipients);
+                                } catch (err) {
+                                    console.error("Failed to fetch recipients", err);
+                                    toast.error("Failed to load recipient list");
+                                }
+                            };
+                            fetchRecipients();
+                        }}>
                             <Modal.Header closeButton>
                                 <Modal.Title>Send Activity Report</Modal.Title>
                             </Modal.Header>
                             <Modal.Body>
-                                <p>Are you sure you want to email the <strong>period (pending)</strong> activity report to all administrators?</p>
-                                <p className="text-muted small mb-0">This will mark the currently displayed activities as 'sent' and remove them from the pending view.</p>
+                                <p>Are you sure you want to email the <strong>period (pending)</strong> activity report to all accounts with the <strong>Admin</strong> and <strong>Head</strong> roles?</p>
+
+                                <div className="mt-3">
+                                    <h6 className="fw-bold mb-2 text-secondary" style={{ fontSize: '0.85rem' }}>RECIPIENTS:</h6>
+                                    <div className="bg-light p-3 rounded" style={{ maxHeight: '150px', overflowY: 'auto' }}>
+                                        {recipientList.length > 0 ? (
+                                            <ul className="list-unstyled mb-0 small">
+                                                {recipientList.map(u => (
+                                                    <li key={u.id} className="mb-1 d-flex align-items-center">
+                                                        <PersonCircle className="text-secondary me-2" size={14} />
+                                                        <span className="fw-semibold me-2">{u.name}</span>
+                                                        <Badge bg="secondary" style={{ fontSize: '0.65rem' }} className="text-uppercase">{u.role.replace('_', ' ')}</Badge>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        ) : (
+                                            <div className="text-center text-muted small">Loading recipients...</div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <p className="text-muted small mt-3 mb-0">This will mark the currently displayed activities as 'sent' and remove them from the pending view.</p>
                             </Modal.Body>
                             <Modal.Footer>
                                 <Button variant="secondary" onClick={() => setShowSendModal(false)} disabled={sendingReport}>
                                     Cancel
                                 </Button>
-                                <Button variant="primary" onClick={handleSendReport} disabled={sendingReport}>
+                                <Button variant="primary" onClick={handleSendReport} disabled={sendingReport || recipientList.length === 0}>
                                     {sendingReport ? (
                                         <>
                                             <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" />
