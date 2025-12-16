@@ -218,6 +218,27 @@ const AccountsPage = () => {
 
     const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
+    const handleDeletePicture = async () => {
+        if (!viewingAccount || !viewingAccount.profile_picture) return;
+        if (!window.confirm("Are you sure you want to remove this profile picture?")) return;
+
+        try {
+            await api.delete(`/accounts/${viewingAccount.id}/picture`);
+            toast.success("Profile picture removed");
+
+            // Update local state
+            setViewingAccount({ ...viewingAccount, profile_picture: null });
+
+            // Update list state
+            setAccounts(accounts.map(acc =>
+                acc.id === viewingAccount.id ? { ...acc, profile_picture: null } : acc
+            ));
+
+        } catch (err) {
+            toast.error(err.response?.data?.msg || "Failed to remove profile picture");
+        }
+    };
+
     return (
         <div className="container-fluid py-3">
             <div className="d-flex justify-content-between align-items-center mb-4">
@@ -492,15 +513,25 @@ const AccountsPage = () => {
                 <Modal.Body className='text-center p-4'>
                     {viewingAccount && (
                         <div>
-                            <div className="mb-3">
+                            <div className="mb-3 position-relative d-inline-block group">
                                 {viewingAccount.profile_picture ? (
-                                    <img
-                                        src={`${api.defaults.baseURL}/accounts/${viewingAccount.id}/picture`}
-                                        alt={viewingAccount.name}
-                                        className="rounded-circle shadow-sm border"
-                                        style={{ width: '100px', height: '100px', objectFit: 'cover' }}
-                                        onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; }}
-                                    />
+                                    <>
+                                        <img
+                                            src={`${api.defaults.baseURL}/accounts/${viewingAccount.id}/picture`}
+                                            alt={viewingAccount.name}
+                                            className="shadow-sm border"
+                                            style={{ width: '100px', height: '100px', objectFit: 'cover' }}
+                                            onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; }}
+                                        />
+                                        <button
+                                            className="btn btn-sm btn-danger position-absolute top-0 start-100 translate-middle rounded-circle shadow-sm"
+                                            style={{ width: '24px', height: '24px', padding: 0 }}
+                                            onClick={handleDeletePicture}
+                                            title="Remove Profile Picture"
+                                        >
+                                            <Trash size={12} />
+                                        </button>
+                                    </>
                                 ) : (
                                     <PersonCircle className="text-secondary mx-auto shadow-sm" style={{ width: '100px', height: '100px' }} />
                                 )}

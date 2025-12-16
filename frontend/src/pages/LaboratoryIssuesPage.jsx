@@ -146,6 +146,10 @@ const LaboratoryIssuesPage = () => {
         }
     };
 
+    useEffect(() => {
+        toast("Reporting System is still in development");
+    }, [])
+
     return (
         <div className="container-fluid py-3">
             <div className='h4 mb-3'>Laboratory Issues</div>

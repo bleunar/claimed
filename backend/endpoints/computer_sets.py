@@ -60,8 +60,10 @@ def create_computer_set():
     cursor = db.cursor(dictionary=True)
     
     # Verify laboratory exists
-    cursor.execute("SELECT id FROM laboratories WHERE id = %s", (laboratory_id,))
-    if not cursor.fetchone():
+    # Verify laboratory exists and get name for log context
+    cursor.execute("SELECT id, name FROM laboratories WHERE id = %s", (laboratory_id,))
+    lab_data = cursor.fetchone()
+    if not lab_data:
         cursor.close()
         return jsonify({"msg": "Laboratory not found"}), 404
 
@@ -111,14 +113,18 @@ def create_computer_set():
                     )
             
             # Log single batch activity
-            set_names_str = ", ".join([f"{prefix}{start_number + i}" for i in range(count)])
-            # Truncate if too long for summary
-            summary = f"Batch created {count} computer sets: {set_names_str}"
-            if len(summary) > 255:
-                summary = f"Batch created {count} computer sets ({prefix}{start_number} - {prefix}{start_number + count - 1})"
-
-            log_activity(db, get_jwt_identity(), laboratory_id, 'computer_set', created_ids[0], 'create', summary, changes={'batch_config': batch_config, 'created_ids': created_ids})
+            # Truncate details for summary, metadata holds the specifics
+            summary = f"Batch created {count} computer sets in {lab_data['name']}"
             
+            # Generate names list for metadata
+            created_names = [f"{prefix}{start_number + i}" for i in range(count)]
+
+            log_activity(db, get_jwt_identity(), laboratory_id, 'computer_set', created_ids[0], 'create', summary, changes={
+                'batch_config': batch_config, 
+                'created_ids': created_ids,
+                'created_names': created_names
+            })
+
             db.commit()
             cursor.close()
             return jsonify({"msg": f"{count} computer sets created successfully", "ids": created_ids}), 201
@@ -155,7 +161,7 @@ def create_computer_set():
                     (comp_id, set_id, comp.get('component_type'), comp.get('is_core', False), comp.get('brand_name'), comp.get('serial_number'), 'good')
                 )
             
-            log_activity(db, get_jwt_identity(), laboratory_id, 'computer_set', set_id, 'create', f"Created computer set {set_name}", changes=data)
+            log_activity(db, get_jwt_identity(), laboratory_id, 'computer_set', set_id, 'create', f"Created computer set {set_name} in {lab_data['name']}", changes=data)
                 
             db.commit()
             cursor.close()
@@ -241,7 +247,13 @@ def delete_computer_set(id):
     
     # Check if exists
     # Check if exists
-    cursor.execute("SELECT id, laboratory_id FROM computer_sets WHERE id = %s", (id,))
+    # Check if exists
+    cursor.execute("""
+        SELECT cs.id, cs.laboratory_id, cs.set_name, l.name as lab_name 
+        FROM computer_sets cs 
+        JOIN laboratories l ON cs.laboratory_id = l.id 
+        WHERE cs.id = %s
+    """, (id,))
     computer_set = cursor.fetchone()
     if not computer_set:
         cursor.close()
@@ -249,7 +261,24 @@ def delete_computer_set(id):
 
     try:
         cursor.execute("DELETE FROM computer_sets WHERE id = %s", (id,))
-        log_activity(db, get_jwt_identity(), computer_set['laboratory_id'], 'computer_set', id, 'delete', f"Deleted computer set {id}")
+        
+        ctx = {
+            "target": {
+                "computer_set": {"id": id, "name": computer_set['set_name']},
+                "laboratory": {"id": computer_set['laboratory_id'], "name": computer_set['lab_name']}
+            }
+        }
+        
+        log_activity(
+            db, 
+            get_jwt_identity(), 
+            computer_set['laboratory_id'], 
+            'computer_set', 
+            id, 
+            'delete', 
+            f"Deleted computer set {computer_set['set_name']} from {computer_set['lab_name']}",
+            snapshot_context=ctx
+        )
         db.commit()
         cursor.close()
         return jsonify({"msg": "Computer set deleted successfully"}), 200
@@ -298,10 +327,7 @@ def batch_delete_computer_sets():
             cursor.execute(f"DELETE FROM computer_sets WHERE id IN ({del_placeholders})", tuple(group_ids))
             
             # Log Activity
-            names_str = ", ".join(group_names)
-            summary = f"Batch deleted {len(group_list)} computer sets: {names_str}"
-            if len(summary) > 255:
-                summary = f"Batch deleted {len(group_list)} computer sets including {group_names[0]}"
+            summary = f"Batch deleted {len(group_list)} computer sets"
                 
             log_activity(db, get_jwt_identity(), lab_id, 'computer_set', group_ids[0], 'delete', summary, changes={'deleted_ids': group_ids, 'deleted_names': group_names})
 

@@ -419,6 +419,7 @@ const ActivityLogsPage = () => {
                 <ButtonGroup>
                     <ToggleButton
                         key="default"
+                        size='sm'
                         id="radio-default"
                         type="radio"
                         variant={viewMode === 'default' ? 'primary' : 'outline-primary'}
@@ -434,6 +435,7 @@ const ActivityLogsPage = () => {
                     </ToggleButton>
                     <ToggleButton
                         key="all"
+                        size='sm'
                         id="radio-all"
                         type="radio"
                         variant={viewMode === 'all' ? 'primary' : 'outline-primary'}
@@ -453,7 +455,7 @@ const ActivityLogsPage = () => {
             {/* Filters (Only for 'All' mode) */}
             {viewMode === 'all' && (
                 <div className="card mb-4 border-0 shadow-sm">
-                    <div className="card-body bg-body-tertiary rounded">
+                    <div className="card-body bg-body-tertiary rounded border-0">
                         <div className="row g-3 align-items-center">
                             <div className="col-md-3">
                                 <Form.Select value={labFilter} onChange={(e) => setLabFilter(e.target.value)} size="sm">

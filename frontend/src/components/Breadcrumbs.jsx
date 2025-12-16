@@ -13,7 +13,7 @@ const Breadcrumbs = () => {
         'components': 'PC Components',
         'activities': 'Activity Logs',
         'profile': 'My Account',
-        'lab-resources': 'Lab Resources'
+        'issues': 'Lab Issues'
     };
 
     return (

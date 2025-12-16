@@ -2,7 +2,7 @@ import uuid
 import json
 from datetime import datetime
 
-def log_activity(db, account_id, laboratory_id, target_type, target_id, action_type, summary, changes=None):
+def log_activity(db, account_id, laboratory_id, target_type, target_id, action_type, summary, changes=None, snapshot_context=None):
     try:
         cursor = db.cursor(dictionary=True)
         
@@ -91,6 +91,12 @@ def log_activity(db, account_id, laboratory_id, target_type, target_id, action_t
         # If strict mapping is preferred:
         if target_type == 'laboratory' and not lab_target_id:
             lab_target_id = target_id
+            
+        # Merge manual snapshot context if provided (e.g. for deleted items)
+        if snapshot_context:
+            if 'target' in snapshot_context:
+                snapshot['target'].update(snapshot_context['target'])
+            # Can also support overriding account, though unlikely needed
             
         query = """
             INSERT INTO laboratory_activity 

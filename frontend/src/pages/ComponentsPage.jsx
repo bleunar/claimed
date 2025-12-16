@@ -475,9 +475,9 @@ const ComponentsPage = () => {
             {/* Bulk Actions Toolbar */}
             {selectedItems.length > 0 && (
                 <div className="card mb-4 border-0">
-                    <div className="card-body bg-body-tertiary rounded shadow-sm border p-2 d-flex align-items-center justify-content-between flex-wrap gap-2">
-                        <div className="row w-100 align-items-center">
-                            <div className="col-12 col-md-6">
+                    <div className="card-body bg-body-tertiary rounded shadow-sm border p-2 d-flex align-items-center justify-content-center flex-wrap gap-2">
+                        <div className="row w-100">
+                            <div className="col-12 col-md-6 p-1">
                                 <span className='mb-3 fw-bold text-primary'>
                                     <CheckCircleFill className="me-2" />
                                     {selectedItems.length} component{selectedItems.length !== 1 ? 's' : ''} selected
@@ -496,7 +496,7 @@ const ComponentsPage = () => {
                                     </button>
                                 </div>
                             </div>
-                            <div className="col-12 col-md-4">
+                            <div className="col-12 col-md-4 p-1">
                                 <div className="d-flex gap-2 align-items-center w-100">
                                     <div className="input-group input-group-sm flex-fill">
                                         <select
@@ -522,7 +522,7 @@ const ComponentsPage = () => {
                                 </div>
                             </div>
 
-                            <div className="col-12 col-md-2">
+                            <div className="col-12 col-md-2 p-1">
                                 <button
                                     className="btn btn-sm btn-danger d-flex align-items-center text-nowrap w-100"
                                     onClick={handleBulkDelete}
@@ -586,10 +586,10 @@ const ComponentsPage = () => {
                                                 {
                                                     comp.computer_set_name ? (
                                                         <>
-                                                            <Link to={`/dashboard/laboratories/${comp.laboratory_id}`} className="badge fw-normal bg-dark text-decoration-none me-1" title="Go to Laboratory">
+                                                            <Link to={`/dashboard/laboratories/${comp.laboratory_id}`} className="badge fw-normal bg-primary text-decoration-none me-1" title="Go to Laboratory">
                                                                 {comp?.laboratory_name}
                                                             </Link>
-                                                            <Link to={`/dashboard/laboratories/${comp.laboratory_id}?set=${comp.computer_set_id}&components=true`} className="badge fw-normal bg-dark text-decoration-none" title="View in Computer Set">
+                                                            <Link to={`/dashboard/laboratories/${comp.laboratory_id}?set=${comp.computer_set_id}&components=true`} className="badge fw-normal bg-primary text-decoration-none" title="View in Computer Set">
                                                                 {comp?.computer_set_name}
                                                             </Link>
                                                         </>
@@ -601,7 +601,7 @@ const ComponentsPage = () => {
                                         </td>
                                         <td>
                                             <div className="d-flex justify-content-center">
-                                                <span className={`badge text-capitalize ${comp.status === 'good' ? 'bg-success' :
+                                                <span className={`badge text-capitalize ${comp.status === 'good' ? 'bg-primary' :
                                                     comp.status === 'bad' ? 'bg-warning' :
                                                         comp.status === 'maintenance' ? 'bg-info' : 'bg-danger'
                                                     }`}>

@@ -105,9 +105,53 @@ def create_issue():
             issue_id, laboratory_id, computer_set_id, component_id, current_user_id, title, description, priority
         ))
         
-        # Log activity? Maybe.
+        # Log activity with specific target context
         if laboratory_id:
-             log_activity(db, current_user_id, laboratory_id, 'laboratory', laboratory_id, 'create', f"Reported issue: {title}")
+             target_type = 'laboratory'
+             target_id = laboratory_id
+             summary = f"Reported issue: {title}"
+             snapshot_ctx = {}
+             
+             if component_id:
+                 target_type = 'component'
+                 target_id = component_id
+                 cursor.execute("""
+                    SELECT c.brand_name, c.component_type, cs.set_name, cs.id as set_id, l.name as lab_name, cs.laboratory_id
+                    FROM computer_set_components c 
+                    LEFT JOIN computer_sets cs ON c.computer_set_id = cs.id
+                    LEFT JOIN laboratories l ON cs.laboratory_id = l.id
+                    WHERE c.id = %s
+                 """, (component_id,))
+                 res = cursor.fetchone()
+                 if res:
+                     summary = f"Reported issue on component {res['brand_name']} ({res['set_name']}, {res['lab_name']}): {title}"
+                     snapshot_ctx = {
+                        "target": {
+                            "component": {"id": component_id, "brand_name": res['brand_name'], "type": res['component_type']},
+                            "computer_set": {"id": res['set_id'], "name": res['set_name']},
+                            "laboratory": {"id": res['laboratory_id'], "name": res['lab_name']}
+                        }
+                     }
+             elif computer_set_id:
+                 target_type = 'computer_set'
+                 target_id = computer_set_id
+                 cursor.execute("""
+                    SELECT cs.set_name, cs.laboratory_id, l.name as lab_name 
+                    FROM computer_sets cs 
+                    JOIN laboratories l ON cs.laboratory_id = l.id 
+                    WHERE cs.id = %s
+                 """, (computer_set_id,))
+                 res = cursor.fetchone()
+                 if res:
+                     summary = f"Reported issue on computer set {res['set_name']} ({res['lab_name']}): {title}"
+                     snapshot_ctx = {
+                        "target": {
+                            "computer_set": {"id": computer_set_id, "name": res['set_name']},
+                            "laboratory": {"id": res['laboratory_id'], "name": res['lab_name']}
+                        }
+                     }
+
+             log_activity(db, current_user_id, laboratory_id, target_type, target_id, 'create', summary, snapshot_context=snapshot_ctx)
 
         db.commit()
         cursor.close()

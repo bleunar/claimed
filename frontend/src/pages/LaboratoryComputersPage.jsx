@@ -193,7 +193,7 @@ const BatchEditSetsModal = ({ show, onHide, computerSets, user, onBatchUpdate, o
                     <div className="col-12">
                         <div className="d-flex justify-content-between align-items-center mb-2">
                             <h6 className="mb-0">Available Sets ({availableSets.length})</h6>
-                            <button className="btn btn-sm btn-link" onClick={handleSelectAll}>Select All Remaining</button>
+                            <button className="btn btn-sm btn-link" onClick={handleSelectAll}>Select All</button>
                         </div>
                         <div className="border rounded p-2 bg-body-tertiary" style={{ minHeight: '150px', overflowY: 'auto' }}>
                             {availableSets.length === 0 ? (

@@ -1,64 +1,67 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-    <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; }
-        .container { width: 95%; max-width: 800px; margin: 0 auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; }
-        .header { background-color: #f8f9fa; padding: 20px; text-align: center; border-bottom: 1px solid #ddd; }
-        .header h2 { margin: 0; color: #2c3e50; }
-        .date-section { background-color: #0d6efd; color: white; padding: 8px 15px; font-weight: bold; margin-top: 0; }
-        .lab-section { background-color: #e9ecef; padding: 5px 15px; font-weight: bold; color: #495057; border-bottom: 1px solid #dee2e6; }
-        .set-section { padding: 5px 20px; font-weight: bold; color: #6c757d; font-size: 0.95em; background-color: #f8f9fa; }
-        table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
-        th, td { padding: 8px 15px; text-align: left; border-bottom: 1px solid #eee; }
-        th { background-color: #f1f3f5; color: #495057; }
-        tr:last-child td { border-bottom: none; }
-        .footer { padding: 15px; text-align: center; color: #6c757d; font-size: 0.8em; background-color: #f8f9fa; border-top: 1px solid #ddd; }
-        .changes-cell { font-family: monospace; font-size: 0.85em; color: #d63384; }
-    </style>
 </head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h2>Activity Report</h2>
-            <p style="margin: 5px 0 0; color: #6c757d; font-size: 0.9em;">Generated on {{ generation_time }}</p>
+
+<body
+    style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #444; line-height: 1.5; font-size: 14px; margin: 0; padding: 0;">
+    <div
+        style="width: 95%; max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 8px; overflow: hidden; background-color: #fff;">
+        <div style="background-color: #f8f9fa; padding: 15px 20px; border-bottom: 1px solid #eee;">
+            <h2 style="margin: 0; color: #333; font-size: 18px;">Activity Report</h2>
+            <div style="color: #888; font-size: 12px; margin-top: 5px;">Generated on {{ generation_time }}</div>
         </div>
 
         {% for date, labs in grouped_data.items() %}
-            <div class="date-section">{{ date }}</div>
-            
+        <div style="margin-bottom: 20px;">
+            <div style="background-color: #0d6efd; color: white; padding: 8px 20px; font-weight: 600; font-size: 14px;">
+                {{ date }}</div>
+
             {% for lab_name, sets in labs.items() %}
-                <div class="lab-section">Laboratory: {{ lab_name }}</div>
-                
+            <div style="padding: 0;">
+                <div
+                    style="background-color: #e9ecef; padding: 6px 20px; font-weight: 600; color: #495057; font-size: 13px; border-bottom: 1px solid #eee;">
+                    {{ lab_name }}</div>
+
                 {% for set_name, activities in sets.items() %}
-                    <div class="set-section">{{ set_name }}</div>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th style="width: 15%;">Time</th>
-                                <th style="width: 20%;">User</th>
-                                <th style="width: 35%;">Activity</th>
-                                <th style="width: 30%;">Current Value</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for log in activities %}
-                            <tr>
-                                <td>{{ log.time }}</td>
-                                <td>{{ log.user }}</td>
-                                <td>{{ log.summary }}</td>
-                                <td class="changes-cell">{{ log.changes }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                <div style="padding: 10px 20px; border-bottom: 1px solid #f1f1f1;">
+                    <div
+                        style="font-weight: 600; color: #555; font-size: 13px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">
+                        {{ set_name }}</div>
+                    <ul style="list-style: none; padding: 0; margin: 0;">
+                        {% for log in activities %}
+                        <li style="margin-bottom: 8px; padding-left: 10px; border-left: 2px solid #dee2e6;">
+                            <div>
+                                <span style="font-weight: 600; color: #333;">{{ log.summary }}</span>
+                                <div>
+                                    <span
+                                        style="color: #888; font-size: 11px; min-width: 55px; display: inline-block;">{{
+                                        log.user }}</span>:
+                                    <span
+                                        style="color: #888; font-size: 11px; min-width: 55px; display: inline-block;">{{
+                                        log.time }}</span>
+                                </div>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
                 {% endfor %}
+            </div>
             {% endfor %}
+        </div>
         {% endfor %}
-        
-        <div class="footer">
-            <p>This is an automated message from the Computer Laboratory Management System.</p>
+
+        <div
+            style="padding: 15px; text-align: center; color: #999; font-size: 11px; background-color: #f8f9fa; border-top: 1px solid #eee;">
+            <p style="margin: 0;">Computer Laboratory Management System</p>
+        </div>
+        <div
+            style="padding: 15px; text-align: center; color: #999; font-size: 11px; background-color: #f8f9fa; border-top: 1px solid #eee;">
+            <a href="https://claims.occulant.com" style="margin: 0;">Visit the website for more information</a>
         </div>
     </div>
 </body>
+
 </html>

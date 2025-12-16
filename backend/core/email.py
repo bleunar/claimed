@@ -1,10 +1,10 @@
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from flask import current_app
+from flask import current_app, render_template
 
 class EmailService:
-    def send_email(self, to, subject, body):
+    def send_email(self, to, subject, body, html_body=None):
         """
         Sends an email using the configured SMTP server.
         Falls back to printing to console if configuration is missing.
@@ -21,11 +21,17 @@ class EmailService:
             return
 
         try:
-            msg = MIMEMultipart()
+            msg = MIMEMultipart('alternative')
             msg['From'] = "CLAIMS <claims.cite@gmail.com>"
             msg['To'] = to
             msg['Subject'] = subject
+            
+            # Attach plain text version
             msg.attach(MIMEText(body, 'plain'))
+            
+            # Attach HTML version if provided
+            if html_body:
+                msg.attach(MIMEText(html_body, 'html'))
 
             server = smtplib.SMTP(server_host, server_port)
             if use_tls:
@@ -40,13 +46,23 @@ class EmailService:
             # Fallback to print so OTP is not lost in case of transient error
             print(f"------------\n[FALLBACK EMAIL] To: {to}\nSubject: {subject}\nBody: {body}\n------------")
 
-    def send_otp_email(self, to, otp_code, action="Verification"):
+    def send_otp_email(self, to, otp_code, action="Verification", user_name="User"):
         """
-        Sends an OTP email.
+        Sends an OTP email using the HTML template.
         """
         subject = f"{action} OTP Code"
-        body = f"Your OTP code is: {otp_code}\nThis code will expire in 5 minutes."
-        self.send_email(to, subject, body)
+        plain_body = f"Hello {user_name},\n\nYour OTP code is: {otp_code}\nThis code will expire in 5 minutes.\n\nDo not share this code."
+        
+        try:
+            html_body = render_template('otp_email.html', 
+                                      user_name=user_name, 
+                                      otp_code=otp_code, 
+                                      validity_minutes=5)
+        except Exception as e:
+            print(f" [WARNING] Failed to render email template: {e}")
+            html_body = None
+
+        self.send_email(to, subject, plain_body, html_body)
 
     def check_connection(self, app):
         server = app.config.get('MAIL_SERVER')

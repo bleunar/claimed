@@ -228,8 +228,6 @@ def batch_update_activity_status():
     try:
         format_ids = ','.join(['%s'] * len(ids))
         query = f"UPDATE laboratory_activity SET email_notification_status = %s WHERE id IN ({format_ids})"
-        # If status is 'sent', should we update sent_at? The prompt mainly asks for 'checked' -> 'skipped'.
-        # 'skipped' implies no email sent, so no sent_at needed.
         
         cursor.execute(query, (status, *ids))
         db.commit()
