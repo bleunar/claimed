@@ -32,7 +32,7 @@ function App() {
               <Route element={<ProtectedRoute allowedRoles={['admin', 'it_head', 'lab_head']} />}>
                 <Route path='accounts' element={<AccountsPage />} />
               </Route>
-              <Route element={<ProtectedRoute allowedRoles={['admin', 'it_head']} />}>
+              <Route element={<ProtectedRoute allowedRoles={['admin', 'it_head', 'lab_head']} />}>
                 <Route path='components' element={<ComponentsPage />} />
                 <Route path='activities' element={<ActivityLogsPage />} />
               </Route>
