@@ -114,9 +114,22 @@ def send_activity_report():
     db = get_db()
     cursor = db.cursor(dictionary=True)
 
-    # 1. Fetch Recipients (Admin, IT Head, Lab Head)
-    cursor.execute("SELECT email FROM accounts WHERE role IN ('admin', 'it_head', 'lab_head') AND status != 'deleted'")
-    recipients = [row['email'] for row in cursor.fetchall()]
+    # 1. Fetch Recipients
+    data = request.json or {}
+    recipient_ids = data.get('recipient_ids')
+
+    if recipient_ids:
+        if not isinstance(recipient_ids, list) or not recipient_ids:
+             cursor.close()
+             return jsonify({"msg": "recipient_ids must be a non-empty list"}), 400
+             
+        format_ids = ','.join(['%s'] * len(recipient_ids))
+        cursor.execute(f"SELECT email FROM accounts WHERE id IN ({format_ids}) AND status != 'deleted'", tuple(recipient_ids))
+        recipients = [row['email'] for row in cursor.fetchall()]
+    else:
+        # Default: Admin, IT Head, Lab Head
+        cursor.execute("SELECT email FROM accounts WHERE role IN ('admin', 'it_head', 'lab_head') AND status != 'deleted'")
+        recipients = [row['email'] for row in cursor.fetchall()]
     
     if not recipients:
          cursor.close()
@@ -184,6 +197,28 @@ def send_activity_report():
             'changes': changes_display
         }
         grouped_data[date_key][lab_key][set_key].append(log_entry)
+
+    # Sort Keys Naturally
+    import re
+
+    def natural_keys(text):
+        '''
+        alist.sort(key=natural_keys) sorts in human order
+        http://nedbatchelder.com/blog/200712/human_sorting.html
+        '''
+        return [ int(c) if c.isdigit() else c for c in re.split(r'(\d+)', text) ]
+
+    # Sort Laboratories and Sets
+    for date_key, labs in grouped_data.items():
+        # Sort Labs
+        sorted_labs = dict(sorted(labs.items(), key=lambda item: natural_keys(item[0])))
+        
+        # Sort Sets within Labs
+        for lab_key, sets in sorted_labs.items():
+            sorted_sets = dict(sorted(sets.items(), key=lambda item: natural_keys(item[0])))
+            sorted_labs[lab_key] = sorted_sets
+            
+        grouped_data[date_key] = sorted_labs
 
     # 4. Generate HTML using Template
     final_html = render_template('activity_report.html', 

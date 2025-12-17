@@ -114,7 +114,7 @@ def create_computer_set():
             
             # Log single batch activity
             # Truncate details for summary, metadata holds the specifics
-            summary = f"Batch created {count} computer sets in {lab_data['name']}"
+            summary = f"Created {count} computer sets in {lab_data['name']}"
             
             # Generate names list for metadata
             created_names = [f"{prefix}{start_number + i}" for i in range(count)]

@@ -151,7 +151,7 @@ const ProfilePage = () => {
                         </Card.Body>
                         <Card.Footer className='d-flex justify-content-evenly p-0 m-0 border-top'>
                             <Form.Label htmlFor="upload-photo" className="btn btn-outline-primary flex-fill rounded-0 border-0 mb-0">
-                                Change Phoyo
+                                Update Photo
                             </Form.Label>
                             <Form.Control
                                 type="file"

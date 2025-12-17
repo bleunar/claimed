@@ -11,6 +11,7 @@ import string
 from utilities.otp_store import otp_store
 from core.email import email_service
 from utilities.security import check_password, hash_password
+from email.utils import parsedate_to_datetime
 
 # profile picture uploads
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
@@ -444,6 +445,15 @@ def update_account(id):
     birth_date = data.get('birth_date') or None
     gender = data.get('gender') or None
     department_name = data.get('department_name') or None
+    
+    # Sanitise birth_date if it comes in RFC 1123 format (Tue, 16 Dec...)
+    if birth_date and ',' in str(birth_date):
+        try:
+             dt = parsedate_to_datetime(birth_date)
+             birth_date = dt.strftime('%Y-%m-%d')
+        except:
+             pass 
+             
     # check if email exists
     cursor.execute("SELECT id FROM accounts WHERE email = %s AND id != %s", (email, id))
     if cursor.fetchone():

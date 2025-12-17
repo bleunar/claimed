@@ -3,7 +3,7 @@ import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import { Badge, Card, Collapse, Form, Button, Accordion, Modal, Spinner, Table, ButtonGroup, ToggleButton } from 'react-bootstrap';
 import toast from 'react-hot-toast';
-import { Backspace, ArrowClockwise, ChevronDown, ChevronUp, PersonCircle, Calendar3, Laptop, PcDisplay, Building, HddStack, DoorClosed, Keyboard, Pc, Send } from 'react-bootstrap-icons';
+import { Backspace, ArrowClockwise, ChevronDown, ChevronUp, PersonCircle, Calendar3, Laptop, PcDisplay, Building, HddStack, DoorClosed, Keyboard, Pc, Send, Person } from 'react-bootstrap-icons';
 import Pagination from '../components/Pagination';
 
 const ActivityLogsPage = () => {
@@ -46,6 +46,7 @@ const ActivityLogsPage = () => {
 
     // Email Recipient List State
     const [recipientList, setRecipientList] = useState([]);
+    const [selectedRecipients, setSelectedRecipients] = useState([]);
 
     const canManageLogs = ['admin', 'it_head'].includes(user?.role);
 
@@ -160,16 +161,22 @@ const ActivityLogsPage = () => {
         setSelectedComponentName("");
     };
 
-    const handleSendReport = async () => {
+    const handleSendReport = async (recipientIds) => {
+        if (!recipientIds || recipientIds.length === 0) {
+            toast.error("Please select at least one recipient");
+            return;
+        }
+
         setSendingReport(true);
         try {
-            await api.post('/activities/report');
-            toast.success("Activity report sent successfully!");
+            await api.post('/activities/report', { recipient_ids: recipientIds });
+            toast.success("Activity report sent successfully");
             setShowSendModal(false);
-            setRefreshKey(prev => prev + 1); // Refresh to clear pending logs
-        } catch (error) {
-            console.error("Failed to send report", error);
-            toast.error("Failed to send activity report.");
+            // Refresh logs to update pending status
+            fetchLogs();
+        } catch (err) {
+            console.error("Failed to send report", err);
+            toast.error(err.response?.data?.msg || "Failed to send report");
         } finally {
             setSendingReport(false);
         }
@@ -725,11 +732,14 @@ const ActivityLogsPage = () => {
                                     const recipients = res.data.accounts.filter(acc => ['admin', 'it_head', 'lab_head'].includes(acc.role));
                                     // Sort: Admin first, then Heads
                                     recipients.sort((a, b) => {
-                                        const roleOrder = { 'admin': 1, 'it_head': 2, 'lab_head': 2 };
+                                        const roleOrder = { 'admin': 1, 'it_head': 2, 'lab_head': 3 };
                                         if (roleOrder[a.role] !== roleOrder[b.role]) return roleOrder[a.role] - roleOrder[b.role];
                                         return a.name.localeCompare(b.name);
                                     });
                                     setRecipientList(recipients);
+                                    // Default selection: IT Head roles
+                                    const defaultSelected = recipients.filter(r => r.role === 'it_head').map(r => r.id);
+                                    setSelectedRecipients(defaultSelected);
                                 } catch (err) {
                                     console.error("Failed to fetch recipients", err);
                                     toast.error("Failed to load recipient list");
@@ -741,24 +751,51 @@ const ActivityLogsPage = () => {
                                 <Modal.Title>Send Activity Report</Modal.Title>
                             </Modal.Header>
                             <Modal.Body>
-                                <p>Are you sure you want to email the <strong>period (pending)</strong> activity report to all accounts with the <strong>Admin</strong> and <strong>Head</strong> roles?</p>
+                                <p>Are you sure you want to <strong>send the Laboratory Activity Report</strong> to the following accounts?</p>
 
                                 <div className="mt-3">
-                                    <h6 className="fw-bold mb-2 text-secondary" style={{ fontSize: '0.85rem' }}>RECIPIENTS:</h6>
-                                    <div className="bg-light p-3 rounded" style={{ maxHeight: '150px', overflowY: 'auto' }}>
+                                    <div className="d-flex justify-content-between align-items-center mb-2">
+                                        <h6 className="fw-bold text-secondary mb-0" style={{ fontSize: '0.85rem' }}>RECIPIENTS:</h6>
+                                        <div className="btn-group btn-group-sm">
+                                            <button className="btn btn-link text-decoration-none py-0 px-1 small" style={{ fontSize: '0.8rem' }} onClick={() => setSelectedRecipients(recipientList.map(r => r.id))}>Select All</button>
+                                            <button className="btn btn-link text-decoration-none py-0 px-1 small" style={{ fontSize: '0.8rem' }} onClick={() => setSelectedRecipients([])}>Clear</button>
+                                        </div>
+                                    </div>
+
+                                    <div className="p-2 rounded" style={{ maxHeight: '200px', overflowY: 'auto' }}>
                                         {recipientList.length > 0 ? (
                                             <ul className="list-unstyled mb-0 small">
-                                                {recipientList.map(u => (
-                                                    <li key={u.id} className="mb-1 d-flex align-items-center">
-                                                        <PersonCircle className="text-secondary me-2" size={14} />
-                                                        <span className="fw-semibold me-2">{u.name}</span>
-                                                        <Badge bg="secondary" style={{ fontSize: '0.65rem' }} className="text-uppercase">{u.role.replace('_', ' ')}</Badge>
-                                                    </li>
-                                                ))}
+                                                {recipientList.map(u => {
+                                                    const isSelected = selectedRecipients.includes(u.id);
+                                                    return (
+                                                        <li key={u.id}
+                                                            className={`d-flex align-items-center p-2 mb-1 rounded cursor-pointer user-select-none ${isSelected ? 'bg-primary-subtle border border-primary-subtle' : 'bg-body-tertiary border'}`}
+                                                            onClick={() => {
+                                                                setSelectedRecipients(prev =>
+                                                                    prev.includes(u.id) ? prev.filter(id => id !== u.id) : [...prev, u.id]
+                                                                );
+                                                            }}
+                                                            style={{ cursor: 'pointer' }}
+                                                        >
+                                                            <Form.Check
+                                                                type="checkbox"
+                                                                checked={isSelected}
+                                                                onChange={() => { }} // Handled by li click
+                                                                className="me-2 pointer-events-none"
+                                                            />
+                                                            <Person className="text-secondary me-2" size={14} />
+                                                            <span className="fw-semibold text-truncate" style={{ maxWidth: '180px' }}>{u.name}</span>
+                                                            <Badge bg={u.role === 'admin' ? 'danger' : u.role === 'it_head' ? 'primary' : 'info'} className="text-uppercase small ms-auto rounded-pill" style={{ fontSize: '0.65rem' }}>{u.role.replace('_', ' ')}</Badge>
+                                                        </li>
+                                                    );
+                                                })}
                                             </ul>
                                         ) : (
-                                            <div className="text-center text-muted small">Loading recipients...</div>
+                                            <div className="text-center text-muted small p-3">Loading recipients...</div>
                                         )}
+                                    </div>
+                                    <div className="text-end mt-1">
+                                        <small className="text-muted">{selectedRecipients.length} selected</small>
                                     </div>
                                 </div>
 
@@ -768,7 +805,7 @@ const ActivityLogsPage = () => {
                                 <Button variant="secondary" onClick={() => setShowSendModal(false)} disabled={sendingReport}>
                                     Cancel
                                 </Button>
-                                <Button variant="primary" onClick={handleSendReport} disabled={sendingReport || recipientList.length === 0}>
+                                <Button variant="primary" onClick={() => handleSendReport(selectedRecipients)} disabled={sendingReport || selectedRecipients.length === 0}>
                                     {sendingReport ? (
                                         <>
                                             <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" />

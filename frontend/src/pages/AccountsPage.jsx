@@ -90,7 +90,7 @@ const AccountsPage = () => {
             password: '',
             role: account.role,
             status: account.status,
-            birth_date: account.birth_date || '',
+            birth_date: account.birth_date ? new Date(account.birth_date).toISOString().split('T')[0] : '',
             gender: account.gender || '',
             department_name: account.department_name || ''
         });
@@ -403,7 +403,7 @@ const AccountsPage = () => {
                             </div >
                         ) : (
                             <div className='text-center'>
-                                        <span>No Users, <span className='btn btn-sm btn-link px-0' onClick={handleCreate}>Add One</span></span>
+                                <span>No Users, <span className='btn btn-sm btn-link px-0' onClick={handleCreate}>Add One</span></span>
                             </div>
                         )
                     )
