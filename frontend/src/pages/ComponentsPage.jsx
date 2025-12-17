@@ -54,7 +54,7 @@ const ComponentsPage = () => {
         component_type: 'other'
     });
 
-    const canManage = ['admin', 'it_head'].includes(user?.role);
+    const canManage = ['admin', 'it_head', 'lab_head'].includes(user?.role);
 
     const fetchLaboratories = async () => {
         try {

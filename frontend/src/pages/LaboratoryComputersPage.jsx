@@ -931,7 +931,6 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                                 >
                                     <option value="active">Active</option>
                                     <option value="maintenance">Maintenance</option>
-                                    <option value="retired">Retired</option>
                                 </select>
                             </div>
                         </div>
@@ -1275,15 +1274,20 @@ const ComputerSetCard = ({ set, components, onView }) => {
                         </span>
 
                         {
-                            totalCount === goodCount ? (
-                                <span className="badge bg-primary rounded-pill mt-2" title={`${goodCount} Good Components`}>{goodCount} Operational</span>
+                            set.status === 'active' ? (
+                                totalCount === goodCount ? (
+                                    <span className="badge bg-primary rounded-pill mt-2" title={`${goodCount} Good Components`}>{goodCount} Operational</span>
+                                ) : (
+                                    <>
+                                        {goodCount > 0 && <span className="badge bg-primary rounded-pill mt-2" title={`${goodCount} Good Components`}>{goodCount}</span>}
+                                        {badCount > 0 && <span className="badge bg-secondary rounded-pill mt-2" title={`${badCount} Bad Components`}>{badCount}</span>}
+                                        {maintCount > 0 && <span className="badge bg-info rounded-pill mt-2" title={`${maintCount} Maintenance Components`}>{maintCount}</span>}
+                                        {missingCount > 0 && <span className="badge bg-danger rounded-pill mt-2" title={`${missingCount} Missing Components`}>{missingCount}</span>}
+                                    </>
+                                )
                             ) : (
-                                <>
-                                    {goodCount > 0 && <span className="badge bg-primary rounded-pill mt-2" title={`${goodCount} Good Components`}>{goodCount}</span>}
-                                    {badCount > 0 && <span className="badge bg-secondary rounded-pill mt-2" title={`${badCount} Bad Components`}>{badCount}</span>}
-                                    {maintCount > 0 && <span className="badge bg-info rounded-pill mt-2" title={`${maintCount} Maintenance Components`}>{maintCount}</span>}
-                                    {missingCount > 0 && <span className="badge bg-danger rounded-pill mt-2" title={`${missingCount} Missing Components`}>{missingCount}</span>}
-                                </>
+                                <span className="badge bg-info rounded-pill mt-2" title="Computer Under Maintenance">Under Maintenance</span>
+
                             )
                         }
                     </div>
