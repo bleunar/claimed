@@ -42,7 +42,6 @@ def send_email(recipients, subject, html_body):
         server.login(sender_email, password)
         server.sendmail(sender_email, recipients, msg.as_string())
         server.quit()
-        print(f"Email sent to {recipients}")
         return True
     except Exception as e:
         print(f"Failed to send email: {e}")

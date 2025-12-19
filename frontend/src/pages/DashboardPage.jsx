@@ -7,6 +7,7 @@ import KPICard from '../components/analytics/KPICard';
 import BarChart from '../components/analytics/BarChart';
 import PieChart from '../components/analytics/PieChart';
 import { useState, useEffect } from 'react';
+import ForceChangePasswordModal from '../components/modals/ForceChangePasswordModal';
 
 const DashboardPage = () => {
     const { user } = useAuth();
@@ -76,6 +77,7 @@ const DashboardPage = () => {
 
     return (
         <div className="container-fluid py-3">
+            <ForceChangePasswordModal show={!!user?.password_reset_required} />
 
             {/* KPI Cards */}
             <div className="row row-cols-2 row-cols-md-4 mb-4">
@@ -110,7 +112,7 @@ const DashboardPage = () => {
                     <PieChart
                         title="Computer Status"
                         apiPath="/analytics/pie/computers-by-status"
-                        colors={['#28a745', '#ffc107', '#dc3545', '#6c757d']}
+                        colors={['#28a745', '#17a2b8', '#6c757d']}
                     />
                 </div>
                 <div className="col-lg-3 mb-4">

@@ -10,7 +10,7 @@ const Navbar = ({ onToggleSidebar, sideBarToggled }) => {
     const { theme, toggleTheme } = useTheme();
 
     return (
-        <nav className={`navbar navbar-expand-lg p-0 sticky-top navbar-frosted shadow`} style={{ height: '7vh' }}>
+        <nav className={`navbar navbar-expand-lg p-0 sticky-top navbar-frosted shadow`} style={{ height: '67px' }}>
             <div className="container-fluid pe-0">
                 <div className="d-flex align-items-center d-md-none">
                     <div className="btn p-0">
@@ -34,7 +34,7 @@ const Navbar = ({ onToggleSidebar, sideBarToggled }) => {
 
                             <ProfileImage
                                 src={user?.profile_picture ? `/api/accounts/${user.id}/picture?t=${user._picTimestamp || ''}` : null}
-                                size="7vh"
+                                size="md"
                                 shape="square"
                             />
                         </a>

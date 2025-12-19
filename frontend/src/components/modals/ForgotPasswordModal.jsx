@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Modal, Button, Form, InputGroup } from 'react-bootstrap';
 import { Eye, EyeSlash } from 'react-bootstrap-icons';
 import toast from 'react-hot-toast';
@@ -11,6 +11,17 @@ const ForgotPasswordModal = ({ show, onHide }) => {
     const [newPassword, setNewPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [timer, setTimer] = useState(0);
+
+    useEffect(() => {
+        let interval;
+        if (timer > 0) {
+            interval = setInterval(() => {
+                setTimer((prev) => prev - 1);
+            }, 1000);
+        }
+        return () => clearInterval(interval);
+    }, [timer]);
 
     const handleSendOtp = async (e) => {
         e.preventDefault();
@@ -18,6 +29,7 @@ const ForgotPasswordModal = ({ show, onHide }) => {
         try {
             await api.post('/auth/forgot-password', { email });
             setStep(2);
+            setTimer(60);
             toast.success('OTP sent to your email.');
         } catch (err) {
             toast.error(err.response?.data?.msg || 'Failed to send OTP.');
@@ -28,6 +40,20 @@ const ForgotPasswordModal = ({ show, onHide }) => {
 
     const handleResetPassword = async (e) => {
         e.preventDefault();
+
+        if (newPassword.length < 8) {
+            toast.error("Password must be at least 8 characters long");
+            return;
+        }
+        if (!/[A-Z]/.test(newPassword)) {
+            toast.error("Password must contain at least one uppercase letter");
+            return;
+        }
+        if (!/\d/.test(newPassword)) {
+            toast.error("Password must contain at least one digit");
+            return;
+        }
+
         setLoading(true);
 
         try {
@@ -40,6 +66,20 @@ const ForgotPasswordModal = ({ show, onHide }) => {
             handleClose();
         } catch (err) {
             toast.error(err.response?.data?.msg || 'Failed to reset password.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleResendOtp = async () => {
+        if (timer > 0) return;
+        setLoading(true);
+        try {
+            await api.post('/auth/forgot-password', { email });
+            setTimer(60);
+            toast.success('OTP resent successfully.');
+        } catch (err) {
+            toast.error(err.response?.data?.msg || 'Failed to resend OTP.');
         } finally {
             setLoading(false);
         }
@@ -95,6 +135,17 @@ const ForgotPasswordModal = ({ show, onHide }) => {
                                 onChange={(e) => setOtp(e.target.value)}
                                 required
                             />
+                            <div className="text-end mt-1">
+                                <Button
+                                    variant="link"
+                                    className="p-0 text-decoration-none"
+                                    onClick={handleResendOtp}
+                                    disabled={timer > 0 || loading}
+                                    style={{ fontSize: '0.875rem' }}
+                                >
+                                    {timer > 0 ? `Resend OTP in ${timer}s` : 'Resend OTP'}
+                                </Button>
+                            </div>
                         </Form.Group>
                         <Form.Group className="mb-3">
                             <Form.Label>New Password</Form.Label>

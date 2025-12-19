@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Button, Collapse, Alert, ToggleButton, ToggleButtonGroup } from 'react-bootstrap';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { Pc, Mouse, Keyboard, Display, Webcam, Hdd, Tools, ThreeDots, PencilSquare, Trash, Plus, Info, Exclamation, ExclamationTriangleFill, ChevronLeft, ArrowReturnLeft, BoxArrowUpRight, Printer, Headphones, CircleFill, Copy, CheckCircle, XCircle, XCircleFill, CheckCircleFill, QuestionCircle, Check, Check2, Question, QuestionLg, XLg, Flag, ArrowDownUp, ArrowUp, ArrowDown } from 'react-bootstrap-icons';
+import { Pc, Mouse, Keyboard, Display, Webcam, Hdd, Tools, PencilSquare, Trash, Plus, ExclamationTriangleFill, Copy, Check2, XLg, QuestionLg, InfoCircle, ListUl, Printer, Headphones, ArrowUp, ArrowDown } from 'react-bootstrap-icons';
+import KeyValueEditor from '../components/common/KeyValueEditor';
 import toast from 'react-hot-toast';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
@@ -129,7 +130,7 @@ const BatchEditSetsModal = ({ show, onHide, computerSets, user, onBatchUpdate, o
 
     const executeUpdate = async () => {
         if (selectedIds.length === 0) return;
-        if (!confirm(`Are you sure you want to update status for ${selectedIds.length} sets?`)) return;
+        if (!confirm(`Are you sure you want to update status for ${selectedIds.length} sets ? `)) return;
 
         setIsSubmitting(true);
         await onBatchUpdate(selectedIds, targetStatus);
@@ -266,7 +267,7 @@ const canDeleteComponent = (user) => ['admin', 'it_head', 'lab_head', 'it_techni
 const canAddComponent = (user) => ['admin', 'it_head', 'lab_head', 'it_technician'].includes(user?.role);
 const canEditComponentStatus = (user) => true;
 
-const ComputerSetForm = ({ mode, editingId, initialData, laboratoryId, laboratoryName, onSubmit, onCancel, existingTopLevelComponents, user }) => {
+const ComputerSetForm = ({ mode, editingId, initialData, laboratoryId, laboratoryName, onSubmit, onCancel, existingTopLevelComponents, user, showConfirm }) => {
     const [creationMode, setCreationMode] = useState('single');
     const [formData, setFormData] = useState({
         set_name: initialData?.set_name || '',
@@ -278,6 +279,7 @@ const ComputerSetForm = ({ mode, editingId, initialData, laboratoryId, laborator
         count: 10
     });
     const [components, setComponents] = useState([]);
+    const [propModal, setPropModal] = useState({ show: false, index: null });
 
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -304,14 +306,6 @@ const ComputerSetForm = ({ mode, editingId, initialData, laboratoryId, laborator
         const end = parseInt(newConfig.count);
 
         if (!isNaN(start) && !isNaN(end) && start > end) {
-            // Auto-correct start number
-            const correctedStart = Math.max(1, end - 1);
-            newConfig.start_number = correctedStart;
-
-            // Only show toast if the invalid state was actually entered/attempted
-            // To prevent spam, we might check if it was valid before? 
-            // But requirement says "triggers a notification".
-            // Since we correct it immediately, the user sees the corrected value.
             toast.error("Start Number must be less than the End Number");
         }
 
@@ -321,6 +315,12 @@ const ComputerSetForm = ({ mode, editingId, initialData, laboratoryId, laborator
     const handleComponentChange = (index, field, value) => {
         const newComponents = [...components];
         newComponents[index][field] = value;
+        setComponents(newComponents);
+    };
+
+    const handleComponentPropertiesChange = (index, newProps) => {
+        const newComponents = [...components];
+        newComponents[index].properties = newProps;
         setComponents(newComponents);
     };
 
@@ -346,6 +346,40 @@ const ComputerSetForm = ({ mode, editingId, initialData, laboratoryId, laborator
         setIsSubmitting(true);
         try {
             let payload = { laboratory_id: laboratoryId };
+            let componentsToMove = [];
+            let finalComponents = [...components];
+
+            // Serial Conflict Check for Single Creation Mode
+            if (!editingId && creationMode === 'single') {
+                for (let i = 0; i < components.length; i++) {
+                    const comp = components[i];
+                    if (comp.serial_number && comp.serial_number.trim()) {
+                        const checkRes = await api.get(`/components/check-serial?serial_number=${encodeURIComponent(comp.serial_number.trim())}`);
+                        if (checkRes.data.exists) {
+                            const existing = checkRes.data.component;
+                            let confirmMsg = '';
+                            if (existing.computer_set_name) {
+                                confirmMsg = `Component "${existing.brand_name}" (${existing.component_type}) with Serial "${existing.serial_number}" is currently assigned to set "${existing.computer_set_name}" in "${existing.laboratory_name}".\n\nDo you want to MOVE it to this new set?`;
+                            } else {
+                                confirmMsg = `Component "${existing.brand_name}" (${existing.component_type}) with Serial "${existing.serial_number}" is currently UNASSIGNED.\n\nDo you want to LINK it to this new set?`;
+                            }
+
+                            if (showConfirm && await showConfirm("Serial Number Conflict", confirmMsg)) {
+                                // User wants to move/link existing component
+                                componentsToMove.push(existing);
+                                // Mark this component to NOT be created as new
+                                finalComponents[i] = { ...comp, _skip_opt: true };
+                            } else {
+                                // User cancelled
+                                setIsSubmitting(false);
+                                return;
+                            }
+                        }
+                    }
+                }
+                // Filter out skipped components
+                finalComponents = finalComponents.filter(c => !c._skip_opt);
+            }
 
             if (editingId) {
                 payload = { ...payload, ...formData };
@@ -353,7 +387,7 @@ const ComputerSetForm = ({ mode, editingId, initialData, laboratoryId, laborator
             } else {
                 if (creationMode === 'batch') {
                     const start = parseInt(batchConfig.start_number);
-                    const endNumber = parseInt(batchConfig.count); // UI field is 'End Number' but state key is 'count'
+                    const endNumber = parseInt(batchConfig.count);
 
                     if (start > endNumber) { toast.error("Start Number cannot be greater than End Number"); setIsSubmitting(false); return; }
                     if (endNumber > 67) { toast.error("End Number cannot be greater than 67"); setIsSubmitting(false); return; }
@@ -363,17 +397,33 @@ const ComputerSetForm = ({ mode, editingId, initialData, laboratoryId, laborator
 
                     payload.batch_config = {
                         ...batchConfig,
-                        count: quantity, // Send calculated quantity, not the end number
+                        count: quantity,
                         components: components
                     };
                 } else {
-                    payload = { ...payload, ...formData, components: components };
+                    payload = { ...payload, ...formData, components: finalComponents };
                 }
-                await api.post('/computer-sets/', payload);
+
+                const res = await api.post('/computer-sets/', payload);
+                const newSetId = res.data.id;
+
+                // Process Moves if any
+                if (componentsToMove.length > 0 && newSetId) {
+                    try {
+                        await Promise.all(componentsToMove.map(existingComp =>
+                            api.put(`/components/${existingComp.id}`, { ...existingComp, computer_set_id: newSetId })
+                        ));
+                        toast.success(`Successfully moved ${componentsToMove.length} existing component(s) to the new set.`);
+                    } catch (moveErr) {
+                        console.error("Failed to move components", moveErr);
+                        toast.error("Computer set created, but failed to move some existing components.");
+                    }
+                }
             }
             toast.success(`Computer set ${editingId ? 'updated' : 'created'} successfully`);
             onSubmit();
         } catch (err) {
+            console.error(err);
             toast.error(err.response?.data?.msg || `Failed to ${editingId ? 'update' : 'create'} computer set`);
         } finally {
             setIsSubmitting(false);
@@ -388,8 +438,8 @@ const ComputerSetForm = ({ mode, editingId, initialData, laboratoryId, laborator
             <div className="p-3">
                 {!editingId && (
                     <ul className="nav nav-tabs mb-3">
-                        <li className="nav-item"><button type="button" className={`nav-link ${creationMode === 'single' ? 'active' : ''}`} onClick={() => setCreationMode('single')}>Single Add</button></li>
-                        <li className="nav-item"><button type="button" className={`nav-link ${creationMode === 'batch' ? 'active' : ''}`} onClick={() => setCreationMode('batch')}>Batch Add</button></li>
+                        <li className="nav-item"><button type="button" className={`nav-link ${creationMode === 'single' ? 'active' : ''} `} onClick={() => setCreationMode('single')}>Single Add</button></li>
+                        <li className="nav-item"><button type="button" className={`nav-link ${creationMode === 'batch' ? 'active' : ''} `} onClick={() => setCreationMode('batch')}>Batch Add</button></li>
                     </ul>
                 )}
 
@@ -427,20 +477,20 @@ const ComputerSetForm = ({ mode, editingId, initialData, laboratoryId, laborator
                                     // List all
                                     const names = [];
                                     for (let i = start; i <= end; i++) {
-                                        names.push(`${prefix}${i}`);
+                                        names.push(`${prefix}${i} `);
                                     }
                                     previewText = names.join(', ');
                                 } else {
                                     // Show first 3 ... last 2
                                     const first3 = [];
                                     for (let i = 0; i < 3; i++) {
-                                        first3.push(`${prefix}${start + i}`);
+                                        first3.push(`${prefix}${start + i} `);
                                     }
                                     const last2 = [];
                                     for (let i = 1; i >= 0; i--) {
-                                        last2.push(`${prefix}${end - i}`);
+                                        last2.push(`${prefix}${end - i} `);
                                     }
-                                    previewText = `${first3.join(', ')}, ..., ${last2.join(', ')}`;
+                                    previewText = `${first3.join(', ')}, ..., ${last2.join(', ')} `;
                                 }
 
                                 return (
@@ -476,8 +526,14 @@ const ComputerSetForm = ({ mode, editingId, initialData, laboratoryId, laborator
                                                     <input type="text" className="form-control flex-fill" placeholder="Brand" value={comp.brand_name} onChange={(e) => handleComponentChange(index, 'brand_name', e.target.value)} required maxLength={36} />
 
                                                     {!comp.is_core && creationMode != 'single' && (
-                                                        <div className="bg-body rounded ms-1 border">
+                                                        <div className="bg-body rounded ms-1 border d-flex">
+                                                            <button type="button" className={`btn btn-outline-secondary border-0 border-end ${comp.properties && Object.keys(comp.properties).length > 0 ? "text-primary" : ""}`} title='Properties' onClick={() => setPropModal({ show: true, index: index })}><ListUl /></button>
                                                             <button type="button" className="btn btn-outline-danger border-0 " title='Remove Component' onClick={() => removeComponent(index)}><Trash /></button>
+                                                        </div>
+                                                    )}
+                                                    {(comp.is_core || creationMode === 'single') && (
+                                                        <div className="bg-body rounded ms-1 border">
+                                                            <button type="button" className={`btn btn-outline-secondary border-0 ${comp.properties && Object.keys(comp.properties).length > 0 ? "text-primary" : ""}`} title='Properties' onClick={() => setPropModal({ show: true, index: index })}><ListUl /></button>
                                                         </div>
                                                     )}
                                                 </div>
@@ -499,12 +555,35 @@ const ComputerSetForm = ({ mode, editingId, initialData, laboratoryId, laborator
                                 </div>
                             ))}
                             <div className="text-end">
-                                <button type="button" className="btn btn-link btn-sm border" onClick={() => addComponent()}>Add New Component</button>
+                                <button type="button" className="btn btn-link btn-sm" onClick={() => addComponent()}>Add New Component</button>
                             </div>
                         </>
                     )
                 }
             </div>
+
+
+
+            {/* Properties Modal for Creation Form */}
+            <Modal show={propModal.show} onHide={() => setPropModal({ show: false, index: null })} centered style={{ zIndex: 1060 }}>
+                <Modal.Header closeButton>
+                    <Modal.Title>{creationMode === 'batch' ? 'Define Batch Properties' : 'Component Properties'}</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    {propModal.index !== null && components[propModal.index] && (
+                        <>
+                            {creationMode === 'batch' && <div className="alert alert-info py-2 small">Properties defined here will be applied on <strong>all</strong> components of this type. Leave values empty to just define fields.</div>}
+                            <KeyValueEditor
+                                properties={components[propModal.index].properties || {}}
+                                onChange={(newProps) => handleComponentPropertiesChange(propModal.index, newProps)}
+                            />
+                        </>
+                    )}
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={() => setPropModal({ show: false, index: null })}>Close</Button>
+                </Modal.Footer>
+            </Modal>
 
             <div className="modal-footer mt-3">
                 <Button variant="secondary" onClick={onCancel} disabled={isSubmitting}>Close</Button>
@@ -531,6 +610,9 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
     // Batched Actions State
     const [pendingDeletes, setPendingDeletes] = useState([]);
     const [pendingUnlinks, setPendingUnlinks] = useState([]);
+
+    // Properties Modal State
+    const [propertiesModal, setPropertiesModal] = useState({ show: false, componentId: null, mode: 'view' }); // mode: 'view' or 'edit'
 
     const { theme } = useTheme();
 
@@ -562,12 +644,20 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
         setOriginalComponents(JSON.parse(JSON.stringify(sorted)));
         setPendingDeletes([]);
         setPendingUnlinks([]);
-    }, [initialComponents]);
-
-    useEffect(() => {
         setSetName(set.set_name);
         setSetStatus(set.status);
-    }, [set]);
+    }, [initialComponents, set]);
+
+    // Handle Local Property Changes (for edit mode)
+    const handlePropertiesChange = (componentId, newProperties) => {
+        const updated = components.map(c => {
+            if (c.id === componentId) {
+                return { ...c, properties: newProperties };
+            }
+            return c;
+        });
+        setComponents(updated);
+    };
 
     const getStatusColor = (status) => {
         switch (status) {
@@ -671,11 +761,11 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
 
             if (existing.computer_set_name) {
                 // Assigned to another set
-                confirmMsg = `Component "${existing.brand_name}" (${existing.component_type}) is currently assigned to set "${existing.computer_set_name}" in "${existing.laboratory_name}".\n\nDo you want to MOVE it to this set?`;
+                confirmMsg = `Component "${existing.brand_name}"(${existing.component_type}) is currently assigned to set "${existing.computer_set_name}" in "${existing.laboratory_name}".\n\nDo you want to MOVE it to this set ? `;
                 isMove = true;
             } else {
                 // Rogue
-                confirmMsg = `Component "${existing.brand_name}" (${existing.component_type}) is currently UNASSIGNED.\n\nDo you want to LINK it to this set?`;
+                confirmMsg = `Component "${existing.brand_name}"(${existing.component_type}) is currently UNASSIGNED.\n\nDo you want to LINK it to this set ? `;
             }
 
             const confirmed = await showConfirm(
@@ -755,7 +845,7 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                             if (existing.computer_set) {
                                 msg += `It is currently assigned to "${existing.computer_set.set_name}" in "${existing.laboratory.name}".\n`;
                             } else {
-                                msg += `It is currently a ROGUE component (Unassigned).\n`;
+                                msg += `It is currently a ROGUE component(Unassigned).\n`;
                             }
                             msg += `\nDo you want to MOVE/UPDATE that component to this computer set?`;
 
@@ -779,6 +869,7 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                             component_type: comp.component_type,
                             brand_name: comp.brand_name,
                             serial_number: comp.serial_number,
+                            properties: comp.properties,
                             is_core: isCore,
                             status: comp.status
                         });
@@ -789,6 +880,7 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                             component_type: comp.component_type,
                             brand_name: comp.brand_name,
                             serial_number: comp.serial_number,
+                            properties: comp.properties,
                             is_core: isCore,
                             laboratory_id: laboratoryId,
                             status: comp.status
@@ -810,8 +902,8 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                                 if (check.data.exists && check.data.component.id !== comp.id) {
                                     const existing = check.data.component;
                                     let msg = `By changing the serial number to "${comp.serial_number}", you are referencing a component that ALREADY EXISTS.\n\n`;
-                                    msg += `Existing: ${existing.component_type} (${existing.brand_name})\n`;
-                                    msg += `Location: ${existing.computer_set ? existing.computer_set.set_name : 'Unassigned'}\n\n`;
+                                    msg += `Existing: ${existing.component_type} (${existing.brand_name}) \n`;
+                                    msg += `Location: ${existing.computer_set ? existing.computer_set.set_name : 'Unassigned'} \n\n`;
                                     msg += `Do you want to MOVE that component here instead (replacing the current one)?`;
 
                                     if (await showConfirm("Confirm Move", msg)) {
@@ -835,6 +927,11 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                             }
 
                             batchPayload.updates.push(comp);
+                        } else {
+                            // Check deep equality for properties if implemented strictly, but for now simple check
+                            if (JSON.stringify(original.properties || {}) !== JSON.stringify(comp.properties || {})) {
+                                batchPayload.updates.push(comp);
+                            }
                         }
                     }
                 }
@@ -870,7 +967,11 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
 
             if (changesCount === 0) {
                 toast("No changes to save");
-                setIsEditMode(false);
+                if (isEditMode) {
+                    setIsEditMode(false);
+                } else {
+                    onClose();
+                }
                 return;
             }
 
@@ -1019,21 +1120,33 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                                         </div>
                                     ) : (
                                         <div className="col-12 col-md-4 p-1 d-flex align-items-center mb-2 mb-md-0 py-0">
-                                            <span className={`me-1 px-1 rounded text-nowrap text-truncate ${comp.serial_number ? "bg-body-secondary cursor-pointer" : "cursor-help"}`} title={comp.serial_number ? comp.serial_number : "No Serial Number is Set"} onClick={() => comp.serial_number && copyToClipboard(comp.serial_number)} >
+                                            <span className={`me-1 px-1 rounded text-nowrap text-truncate ${comp.serial_number ? "bg-body-secondary cursor-pointer" : "cursor-help"} `} title={comp.serial_number ? comp.serial_number : "No Serial Number is Set"} onClick={() => comp.serial_number && copyToClipboard(comp.serial_number)} >
                                                 {comp.serial_number || <span className="text-muted fst-italic">Serial not set</span>}
                                             </span>
-                                            {comp.serial_number && (
-                                                <button className="btn btn-link p-0 text-muted" onClick={() => copyToClipboard(comp.serial_number)} title="Copy Serial">
-                                                    <Copy style={{ fontSize: "0.75rem", marginLeft: '4px' }} />
-                                                </button>
-                                            )}
+                                            <div className={`d-flex justify-content-start flex-fill `}>
+                                                {comp.serial_number && (
+                                                    <button className="btn btn-link p-0 text-muted" onClick={() => copyToClipboard(comp.serial_number)} title="Copy Serial">
+                                                        <Copy style={{ fontSize: "0.75rem", marginLeft: '4px' }} />
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                     )
                                 }
 
-                                {/* Status */}
+                                {/* Properties and Status */}
                                 <div className="col p-1">
                                     <div className="d-flex justify-content-between gap-2">
+
+                                        <div className={`bg-body-secondary rounded ${isEditMode ? "border" : ""}`}>
+                                            <button
+                                                className={`btn btn-sm border-0 h-100 ${comp.properties && Object.keys(comp.properties).length > 0 ? '' : ''}`}
+                                                title='Edit Properties'
+                                                onClick={() => setPropertiesModal({ show: true, componentId: comp.id, mode: isEditMode ? 'edit' : 'view' })}
+                                            >
+                                                <ListUl />
+                                            </button>
+                                        </div>
 
                                         {
                                             isEditMode && canEditComponentStatus(user) ? (
@@ -1232,6 +1345,34 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                     style={{ opacity: 0.5, zIndex: 1050 }}
                 ></div>
             )}
+
+            {/* Properties Modal */}
+            <Modal show={propertiesModal.show} onHide={() => setPropertiesModal({ ...propertiesModal, show: false })} centered style={{ zIndex: 1060 }}>
+                <Modal.Header closeButton>
+                    <Modal.Title>{propertiesModal.mode === 'edit' ? 'Edit Properties' : 'Component Properties'}</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    {(() => {
+                        const comp = components.find(c => c.id === propertiesModal.componentId);
+                        if (!comp) return <div>Component not found</div>;
+                        return (
+                            <KeyValueEditor
+                                properties={comp.properties || {}}
+                                onChange={(newProps) => handlePropertiesChange(comp.id, newProps)}
+                                readOnly={propertiesModal.mode === 'view'}
+                            />
+                        );
+                    })()}
+                </Modal.Body>
+                <Modal.Footer className='justify-content-between'>
+                    {propertiesModal.mode === 'view' && canEditComponentDetails(user) ? (
+                        <Button variant="primary" size='sm' onClick={() => setPropertiesModal({ ...propertiesModal, mode: 'edit' })}>
+                            Edit
+                        </Button>
+                    ) : <div></div>}
+                    <Button variant="secondary" onClick={() => setPropertiesModal({ ...propertiesModal, show: false })}>Close</Button>
+                </Modal.Footer>
+            </Modal>
         </>
     );
 };
@@ -1255,7 +1396,7 @@ const ComputerSetCard = ({ set, components, onView }) => {
     const badCount = components.filter(c => c.status === 'bad').length;
     const maintCount = components.filter(c => c.status === 'maintenance').length;
     const missingCount = components.filter(c => c.status === 'missing').length;
-    const totalCount = goodCount + badCount + maintCount
+    const totalCount = goodCount + badCount + maintCount + missingCount
 
     return (
         <div className="col p-0 border">
@@ -1340,6 +1481,22 @@ const LaboratoryComputersPage = () => {
     // Reporting State
     const [reportModal, setReportModal] = useState({ show: false, target: null, type: 'set' }); // type: 'set' or 'component'
 
+    // Confirm Modal State
+    const [confirmModal, setConfirmModal] = useState({ show: false, title: '', message: '', resolve: null });
+
+    const showConfirm = (title, message) => {
+        return new Promise((resolve) => {
+            setConfirmModal({ show: true, title, message, resolve });
+        });
+    };
+
+    const handleConfirmResult = (result) => {
+        if (confirmModal.resolve) {
+            confirmModal.resolve(result);
+        }
+        setConfirmModal({ ...confirmModal, show: false, resolve: null });
+    };
+
     const canManage = ['admin', 'it_head', 'lab_head'].includes(user?.role);
 
     useEffect(() => {
@@ -1420,7 +1577,7 @@ const LaboratoryComputersPage = () => {
     };
 
     const handleDeleteSet = async (id) => {
-        if (!window.confirm("Are you sure you want to delete this computer set? (All components will be PERMANENTLY DELETED)")) return;
+        if (!window.confirm("Are you sure you want to delete this computer set?\n\nWARNING! All components will be PERMANENTLY DELETED!")) return;
         try {
             await api.delete(`/computer-sets/${id}`);
             toast.success("Computer set deleted");
@@ -1588,8 +1745,9 @@ const LaboratoryComputersPage = () => {
                         laboratoryId={laboratoryId}
                         laboratoryName={laboratory?.name}
                         onSubmit={handleFormSubmit}
-                        onCancel={handleCloseSetModal}
+                        existingTopLevelComponents={allComponents}
                         user={user}
+                        showConfirm={showConfirm}
                     />
                 </Modal.Body>
             </Modal>
@@ -1639,6 +1797,18 @@ const LaboratoryComputersPage = () => {
                 user={user}
                 onSubmit={handleReportSubmit}
             />
+
+            {/* Confirmation Modal (Generic) */}
+            <Modal show={confirmModal.show} onHide={() => handleConfirmResult(false)} centered size="sm" style={{ zIndex: 1060 }}>
+                <Modal.Header closeButton>
+                    <Modal.Title>{confirmModal.title}</Modal.Title>
+                </Modal.Header>
+                <Modal.Body style={{ whiteSpace: 'pre-line' }}>{confirmModal.message}</Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={() => handleConfirmResult(false)}>Cancel</Button>
+                    <Button variant="primary" onClick={() => handleConfirmResult(true)}>Confirm</Button>
+                </Modal.Footer>
+            </Modal>
         </div>
     );
 };

@@ -1,131 +1,61 @@
 import uuid
 import json
-from datetime import datetime
 
-def log_activity(db, account_id, laboratory_id, target_type, target_id, action_type, summary, changes=None, snapshot_context=None):
-    try:
-        cursor = db.cursor(dictionary=True)
-        
-        log_id = uuid.uuid4().hex[:16]
-        
-        # Map target_type/id to specific columns
-        lab_target_id = None
-        set_target_id = None
-        comp_target_id = None
-        
-        # Snapshot Data Collection
-        snapshot = {
-            "account": {"id": account_id, "name": "Unknown"},
-            "target": {}
-        }
-
-        # 1. Fetch Account Info
-        try:
-            cursor.execute("SELECT first_name, last_name, role FROM accounts WHERE id = %s", (account_id,))
-            account = cursor.fetchone()
-            if account:
-                snapshot['account'] = {
-                    "id": account_id,
-                    "name": f"{account['first_name']} {account['last_name']}",
-                    "role": account['role']
-                }
-        except Exception as e:
-            print(f"Error fetching account snapshot: {e}")
-
-        # 2. Fetch Target Info based on type
-        # laboratory_id is passed for context, but might also be the target
-        if target_type == 'laboratory':
-            lab_target_id = target_id
-            try:
-                cursor.execute("SELECT name FROM laboratories WHERE id = %s", (target_id,))
-                lab = cursor.fetchone()
-                if lab:
-                    snapshot['target']['laboratory'] = {"id": target_id, "name": lab['name']}
-            except Exception:
-                pass
-
-        elif target_type == 'computer_set':
+def log_activity(db, account_id, lab_id, target_type, target_id, action_type, summary, changes=None, snapshot_context=None):
+    """
+    Logs an activity to the laboratory_activity table.
+    
+    Args:
+        db: Database connection object
+        account_id: ID of the user performing the action
+        lab_id: ID of the laboratory involved (can be None)
+        target_type: 'laboratory', 'computer_set', 'component'
+        target_id: ID of the specific target
+        action_type: 'create', 'update', 'delete', 'status_change'
+        summary: Human-readable summary string
+        changes: Dictionary of changes (optional)
+        snapshot_context: Dictionary of context snapshot (optional)
+    """
+    cursor = db.cursor()
+    
+    activity_id = uuid.uuid4().hex[:16]
+    
+    # Map target types to columns
+    lab_target_id = None
+    set_target_id = None
+    comp_target_id = None
+    
+    if target_type == 'laboratory':
+        lab_target_id = target_id
+    elif target_type == 'computer_set':
+        # Only set FK if not deleting, as the row will be gone
+        if action_type != 'delete':
             set_target_id = target_id
-            lab_target_id = laboratory_id 
-            try:
-                cursor.execute("""
-                    SELECT cs.set_name, l.name as lab_name, l.id as lab_id 
-                    FROM computer_sets cs 
-                    LEFT JOIN laboratories l ON cs.laboratory_id = l.id 
-                    WHERE cs.id = %s
-                """, (target_id,))
-                cset = cursor.fetchone()
-                if cset:
-                    snapshot['target']['computer_set'] = {"id": target_id, "name": cset['set_name']}
-                    # Capture lab if implicated
-                    if cset['lab_id']:
-                         snapshot['target']['laboratory'] = {"id": cset['lab_id'], "name": cset['lab_name']}
-            except Exception:
-                pass
-            
-        elif target_type == 'component':
-             comp_target_id = target_id
-             lab_target_id = laboratory_id
-             try:
-                cursor.execute("""
-                    SELECT c.brand_name, c.component_type, cs.set_name, cs.id as set_id, l.name as lab_name, l.id as lab_id
-                    FROM computer_set_components c
-                    LEFT JOIN computer_sets cs ON c.computer_set_id = cs.id
-                    LEFT JOIN laboratories l ON cs.laboratory_id = l.id
-                    WHERE c.id = %s
-                """, (target_id,))
-                comp = cursor.fetchone()
-                if comp:
-                    snapshot['target']['component'] = {
-                        "id": target_id, 
-                        "brand_name": comp['brand_name'], 
-                        "type": comp['component_type']
-                    }
-                    if comp['set_id']:
-                        snapshot['target']['computer_set'] = {"id": comp['set_id'], "name": comp['set_name']}
-                    if comp['lab_id']:
-                        snapshot['target']['laboratory'] = {"id": comp['lab_id'], "name": comp['lab_name']}
-             except Exception:
-                 pass
+        lab_target_id = lab_id 
+    elif target_type == 'component':
+        # Only set FK if not deleting
+        if action_type != 'delete':
+            comp_target_id = target_id
+        lab_target_id = lab_id
 
-        # If strict mapping is preferred:
-        if target_type == 'laboratory' and not lab_target_id:
-            lab_target_id = target_id
-            
-        # Merge manual snapshot context if provided (e.g. for deleted items)
-        if snapshot_context:
-            if 'target' in snapshot_context:
-                snapshot['target'].update(snapshot_context['target'])
-            # Can also support overriding account, though unlikely needed
-            
+    # Construct Metadata
+    metadata = {}
+    if changes:
+        metadata['changes'] = changes
+    if snapshot_context:
+        metadata['snapshot'] = snapshot_context
+        
+    metadata_json = json.dumps(metadata)
+    
+    try:
         query = """
             INSERT INTO laboratory_activity 
-            (id, account_id, lab_target_id, set_target_id, comp_target_id, action_type, summary, metadata, created_at)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            (id, account_id, lab_target_id, set_target_id, comp_target_id, action_type, summary, metadata, email_notification_status)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'pending')
         """
-        
-        # Merge Snapshot with Changes
-        metadata_payload = {
-            "snapshot": snapshot,
-            "changes": changes if changes else {}
-        }
-        
-        metadata_json = json.dumps(metadata_payload)
-        
-        cursor.execute(query, (
-            log_id,
-            account_id,
-            lab_target_id,
-            set_target_id,
-            comp_target_id,
-            action_type,
-            summary,
-            metadata_json,
-            datetime.now()
-        ))
-        
-        # Assume caller commits
-        cursor.close()
-        
+        cursor.execute(query, (activity_id, account_id, lab_target_id, set_target_id, comp_target_id, action_type, summary, metadata_json))
+        # Note: Commit is expected to be handled by the caller/transaction wrapper
     except Exception as e:
+        # Fallback logging? For now just re-raise or print so we don't silence DB errors silently
         print(f"Failed to log activity: {e}")
+        raise e

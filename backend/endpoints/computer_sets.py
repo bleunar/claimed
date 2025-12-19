@@ -107,9 +107,13 @@ def create_computer_set():
                 # Create Components
                 for comp in components:
                     comp_id = uuid.uuid4().hex[:16]
+                    props = comp.get('properties')
+                    import json
+                    props_val = json.dumps(props) if props else None
+
                     cursor.execute(
-                        "INSERT INTO computer_set_components (id, computer_set_id, component_type, is_core, brand_name, serial_number, status) VALUES (%s, %s, %s, %s, %s, %s, %s)",
-                        (comp_id, set_id, comp.get('component_type'), comp.get('is_core', False), comp.get('brand_name'), comp.get('serial_number'), 'good')
+                        "INSERT INTO computer_set_components (id, computer_set_id, component_type, is_core, brand_name, serial_number, properties, status) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+                        (comp_id, set_id, comp.get('component_type'), comp.get('is_core', False), comp.get('brand_name'), comp.get('serial_number'), props_val, 'good')
                     )
             
             # Log single batch activity
@@ -156,9 +160,13 @@ def create_computer_set():
             # Create Components
             for comp in components:
                 comp_id = uuid.uuid4().hex[:16]
+                props = comp.get('properties')
+                import json
+                props_val = json.dumps(props) if props else None
+
                 cursor.execute(
-                    "INSERT INTO computer_set_components (id, computer_set_id, component_type, is_core, brand_name, serial_number, status) VALUES (%s, %s, %s, %s, %s, %s, %s)",
-                    (comp_id, set_id, comp.get('component_type'), comp.get('is_core', False), comp.get('brand_name'), comp.get('serial_number'), 'good')
+                    "INSERT INTO computer_set_components (id, computer_set_id, component_type, is_core, brand_name, serial_number, properties, status) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+                    (comp_id, set_id, comp.get('component_type'), comp.get('is_core', False), comp.get('brand_name'), comp.get('serial_number'), props_val, 'good')
                 )
             
             log_activity(db, get_jwt_identity(), laboratory_id, 'computer_set', set_id, 'create', f"Created computer set {set_name} in {lab_data['name']}", changes=data)
@@ -260,6 +268,14 @@ def delete_computer_set(id):
         return jsonify({"msg": "Computer set not found"}), 404
 
     try:
+        # Fetch components to log them as deleted
+        cursor.execute("""
+            SELECT id, component_type, brand_name, serial_number 
+            FROM computer_set_components 
+            WHERE computer_set_id = %s
+        """, (id,))
+        deleted_components = cursor.fetchall()
+
         cursor.execute("DELETE FROM computer_sets WHERE id = %s", (id,))
         
         ctx = {
@@ -269,6 +285,10 @@ def delete_computer_set(id):
             }
         }
         
+        changes = {}
+        if deleted_components:
+            changes['deleted_components'] = deleted_components
+
         log_activity(
             db, 
             get_jwt_identity(), 
@@ -276,8 +296,9 @@ def delete_computer_set(id):
             'computer_set', 
             id, 
             'delete', 
-            f"Deleted computer set {computer_set['set_name']} from {computer_set['lab_name']}",
-            snapshot_context=ctx
+            f"Deleted {computer_set['set_name']} and components on {computer_set['lab_name']}",
+            snapshot_context=ctx,
+            changes=changes
         )
         db.commit()
         cursor.close()
@@ -313,27 +334,65 @@ def batch_delete_computer_sets():
         # Group by laboratory (should technically all be in same lab if UI enforces it, but handle robustly)
         # We'll log one activity per laboratory involved
         
-        from itertools import groupby
-        sets_to_delete.sort(key=lambda x: x['laboratory_id'])
+        # Iterate and process individually to ensure granular logging
+        deleted_count = 0
         
-        for lab_id, group in groupby(sets_to_delete, key=lambda x: x['laboratory_id']):
-            group_list = list(group)
-            group_ids = [s['id'] for s in group_list]
-            group_names = [s['set_name'] for s in group_list]
+        for set_id in ids:
+            # Fetch details for this specific set
+            cursor.execute("""
+                SELECT cs.id, cs.set_name, cs.laboratory_id, l.name as lab_name 
+                FROM computer_sets cs 
+                JOIN laboratories l ON cs.laboratory_id = l.id 
+                WHERE cs.id = %s
+            """, (set_id,))
+            target_set = cursor.fetchone()
             
-            # Delete query for this group
-            del_placeholders = ', '.join(['%s'] * len(group_ids))
-            curr = db.cursor() # specific cursor for delete? No, reuse existing is fine if we consume results
-            cursor.execute(f"DELETE FROM computer_sets WHERE id IN ({del_placeholders})", tuple(group_ids))
-            
-            # Log Activity
-            summary = f"Batch deleted {len(group_list)} computer sets"
+            if not target_set:
+                continue # Skip if already gone or invalid
                 
-            log_activity(db, get_jwt_identity(), lab_id, 'computer_set', group_ids[0], 'delete', summary, changes={'deleted_ids': group_ids, 'deleted_names': group_names})
+            # Fetch components for this set
+            cursor.execute("""
+                SELECT id, component_type, brand_name, serial_number 
+                FROM computer_set_components 
+                WHERE computer_set_id = %s
+            """, (set_id,))
+            deleted_components = cursor.fetchall()
+            
+            # Delete the set
+            cursor.execute("DELETE FROM computer_sets WHERE id = %s", (set_id,))
+            
+            # Log Activity individually
+            ctx = {
+                "target": {
+                    "computer_set": {"id": set_id, "name": target_set['set_name']},
+                    "laboratory": {"id": target_set['laboratory_id'], "name": target_set['lab_name']}
+                }
+            }
+            
+            changes = {}
+            if deleted_components:
+                changes['deleted_components'] = deleted_components
+            
+            log_activity(
+                db, 
+                get_jwt_identity(), 
+                target_set['laboratory_id'], 
+                'computer_set', 
+                set_id, 
+                'delete', 
+                f"Deleted {target_set['set_name']} and components on {target_set['lab_name']}",
+                snapshot_context=ctx,
+                changes=changes
+            )
+            deleted_count += 1
+
+        if deleted_count == 0:
+             cursor.close()
+             return jsonify({"msg": "No computer sets were deleted (already deleted or invalid)"}), 404
 
         db.commit()
         cursor.close()
-        return jsonify({"msg": f"Successfully deleted {len(sets_to_delete)} computer sets"}), 200
+        return jsonify({"msg": f"Successfully deleted {deleted_count} computer sets"}), 200
         
     except Exception as e:
         db.rollback()

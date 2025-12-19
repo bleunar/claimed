@@ -30,7 +30,7 @@ def profile():
     
     db = get_db()
     cursor = db.cursor(dictionary=True)
-    cursor.execute("SELECT id, name, email, role, status, profile_picture, birth_date, gender, department_name FROM accounts WHERE id = %s", (current_user_id,))
+    cursor.execute("SELECT id, name, email, role, status, profile_picture, birth_date, gender, department_name, password_reset_required FROM accounts WHERE id = %s", (current_user_id,))
     user = cursor.fetchone()
     cursor.close()
     
@@ -175,9 +175,19 @@ def update_profile():
             values.append(name)
             
         if password:
+            from utilities.user_validators import validate_password
+            is_valid, error = validate_password(password)
+            if not is_valid:
+                 cursor.close()
+                 return jsonify({"msg": error}), 400
+
             hashed_pw = hash_password(password)
             fields.append("password_hash = %s")
             values.append(hashed_pw)
+            
+            # Clear the reset flag
+            fields.append("password_reset_required = %s")
+            values.append(0)
             
         values.append(current_user_id)
         
@@ -274,13 +284,14 @@ def create_account():
     data = request.json
     name = data.get('name')
     email = data.get('email')
+    school_id = data.get('school_id')
     password = data.get('password')
     role = data.get('role')
     birth_date = data.get('birth_date') or None
     gender = data.get('gender') or None
     department_name = data.get('department_name') or None
 
-    if not all([name, email, password, role]):
+    if not all([name, email, school_id, password, role]):
         return jsonify({"msg": "Missing required fields"}), 400
         
     # validation based on Hierarchy
@@ -309,14 +320,20 @@ def create_account():
     if cursor.fetchone():
         cursor.close()
         return jsonify({"msg": "Email already exists"}), 409
+    
+    # check if school_id exists
+    cursor.execute("SELECT id FROM accounts WHERE school_id = %s", (school_id,))
+    if cursor.fetchone():
+        cursor.close()
+        return jsonify({"msg": "School ID already exists"}), 409
 
     account_id = uuid.uuid4().hex[:16]
     hashed_pw = hash_password(password)
     
     try:
         cursor.execute(
-            "INSERT INTO accounts (id, name, email, password_hash, role, birth_date, gender, department_name) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
-            (account_id, name, email, hashed_pw, role, birth_date, gender, department_name)
+            "INSERT INTO accounts (id, name, email, school_id, password_hash, role, birth_date, gender, department_name) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+            (account_id, name, email, school_id, hashed_pw, role, birth_date, gender, department_name)
         )
         db.commit()
         cursor.close()
@@ -339,7 +356,7 @@ def list_accounts():
     status = request.args.get('status', '')
     include_deleted = request.args.get('include_deleted', 'false').lower() == 'true'
 
-    query = "SELECT id, name, email, role, status, created_at, profile_picture, birth_date, gender, department_name FROM accounts WHERE id != %s"
+    query = "SELECT id, name, email, school_id, role, status, created_at, profile_picture, birth_date, gender, department_name FROM accounts WHERE id != %s"
     params = [current_user_id]
 
     if not include_deleted or current_role != 'admin':
@@ -437,41 +454,84 @@ def update_account(id):
              return jsonify({"msg": "Access Denied: You can only manage Lab Assistants"}), 403
              
     data = request.json
-    name = data.get('name')
-    email = data.get('email')
-    password = data.get('password')
-    role = data.get('role')
-    status = data.get('status')
-    birth_date = data.get('birth_date') or None
-    gender = data.get('gender') or None
-    department_name = data.get('department_name') or None
     
-    # Sanitise birth_date if it comes in RFC 1123 format (Tue, 16 Dec...)
-    if birth_date and ',' in str(birth_date):
-        try:
-             dt = parsedate_to_datetime(birth_date)
-             birth_date = dt.strftime('%Y-%m-%d')
-        except:
-             pass 
-             
-    # check if email exists
-    cursor.execute("SELECT id FROM accounts WHERE email = %s AND id != %s", (email, id))
-    if cursor.fetchone():
+    # Build dynamic update query based on provided fields
+    update_fields = []
+    params = []
+    
+    if 'name' in data and data['name'] is not None:
+        update_fields.append("name = %s")
+        params.append(data['name'])
+    
+    if 'email' in data and data['email'] is not None:
+        # check if email exists
+        cursor.execute("SELECT id FROM accounts WHERE email = %s AND id != %s", (data['email'], id))
+        if cursor.fetchone():
+            cursor.close()
+            return jsonify({"msg": "Email already exists"}), 409
+        update_fields.append("email = %s")
+        params.append(data['email'])
+    
+    if 'school_id' in data and data['school_id'] is not None:
+        # check if school_id exists
+        cursor.execute("SELECT id FROM accounts WHERE school_id = %s AND id != %s", (data['school_id'], id))
+        if cursor.fetchone():
+            cursor.close()
+            return jsonify({"msg": "School ID already exists"}), 409
+        update_fields.append("school_id = %s")
+        params.append(data['school_id'])
+    
+    if 'password' in data and data['password']:
+        from utilities.user_validators import validate_password
+        is_valid, error = validate_password(data['password'])
+        if not is_valid:
+             cursor.close()
+             return jsonify({"msg": error}), 400
+        hashed_pw = hash_password(data['password'])
+        update_fields.append("password_hash = %s")
+        params.append(hashed_pw)
+    
+    if 'role' in data and data['role'] is not None:
+        update_fields.append("role = %s")
+        params.append(data['role'])
+    
+    if 'status' in data and data['status'] is not None:
+        update_fields.append("status = %s")
+        params.append(data['status'])
+    
+    if 'birth_date' in data:
+        birth_date = data['birth_date'] or None
+        # Sanitise birth_date if it comes in RFC 1123 format (Tue, 16 Dec...)
+        if birth_date and ',' in str(birth_date):
+            try:
+                 dt = parsedate_to_datetime(birth_date)
+                 birth_date = dt.strftime('%Y-%m-%d')
+            except:
+                 pass
+        update_fields.append("birth_date = %s")
+        params.append(birth_date)
+    
+    if 'gender' in data:
+        update_fields.append("gender = %s")
+        params.append(data['gender'] or None)
+    
+    if 'department_name' in data:
+        update_fields.append("department_name = %s")
+        params.append(data['department_name'] or None)
+    
+    if 'password_reset_required' in data:
+        password_reset_required = 1 if data['password_reset_required'] else 0
+        update_fields.append("password_reset_required = %s")
+        params.append(password_reset_required)
+
+    if not update_fields:
         cursor.close()
-        return jsonify({"msg": "Email already exists"}), 409
+        return jsonify({"msg": "No fields to update"}), 400
 
     try:
-        if password:
-            hashed_pw = hash_password(password)
-            cursor.execute(
-                "UPDATE accounts SET name = %s, email = %s, password_hash = %s, role = %s, status = %s, birth_date = %s, gender = %s, department_name = %s WHERE id = %s",
-                (name, email, hashed_pw, role, status, birth_date, gender, department_name, id)
-            )
-        else:
-            cursor.execute(
-                "UPDATE accounts SET name = %s, email = %s, role = %s, status = %s, birth_date = %s, gender = %s, department_name = %s WHERE id = %s",
-                (name, email, role, status, birth_date, gender, department_name, id)
-            )
+        query = f"UPDATE accounts SET {', '.join(update_fields)} WHERE id = %s"
+        params.append(id)
+        cursor.execute(query, tuple(params))
         db.commit()
         cursor.close()
         return jsonify({"msg": "Account updated successfully"}), 200

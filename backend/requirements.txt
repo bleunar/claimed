@@ -5,3 +5,4 @@ python-dotenv
 gunicorn
 mysql-connector-python
 flask-jwt-extended
+Flask-Limiter

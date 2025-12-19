@@ -17,4 +17,7 @@ def create_app():
     # Initialize extensions here
     jwt = JWTManager(app)
     
+    from core.extensions import limiter
+    limiter.init_app(app)
+    
     return app

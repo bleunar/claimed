@@ -21,10 +21,12 @@ def list_activities():
     query = """
         SELECT l.id, l.lab_target_id, l.account_id, l.action_type, l.summary, l.metadata, l.created_at,
                l.set_target_id, l.comp_target_id, l.email_notification_status,
-               a.name as user_name, lab.name as laboratory_name
+               a.name as user_name, lab.name as laboratory_name,
+               cs.set_name as computer_set_name
         FROM laboratory_activity l
         JOIN accounts a ON l.account_id = a.id
         LEFT JOIN laboratories lab ON l.lab_target_id = lab.id
+        LEFT JOIN computer_sets cs ON l.set_target_id = cs.id
         WHERE 1=1
     """
     params = []
@@ -71,6 +73,9 @@ def list_activities():
         query += " AND l.action_type = %s"
         params.append(action_type)
 
+    set_target_id = request.args.get('set_target_id')
+    comp_target_id = request.args.get('comp_target_id')
+
     if target_type:
         if target_type == 'component':
             query += " AND l.comp_target_id IS NOT NULL"
@@ -79,6 +84,14 @@ def list_activities():
         elif target_type == 'laboratory':
              # Assuming lab level logs don't have set/comp target
             query += " AND l.set_target_id IS NULL AND l.comp_target_id IS NULL"
+            
+    if set_target_id:
+        query += " AND l.set_target_id = %s"
+        params.append(set_target_id)
+        
+    if comp_target_id:
+        query += " AND l.comp_target_id = %s"
+        params.append(comp_target_id)
         
     query += " ORDER BY l.created_at DESC LIMIT 100"
     

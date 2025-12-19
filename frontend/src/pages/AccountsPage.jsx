@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Modal, Button, Form, InputGroup } from 'react-bootstrap';
-import { Funnel, Search, Tools, CheckCircle, XCircle, Trash, Plus, ArrowClockwise, Backspace, PersonCircle, PersonCheck, Eye, EyeSlash, PencilSquare, PersonX } from 'react-bootstrap-icons';
+import { Funnel, Search, Tools, CheckCircle, XCircle, Trash, Plus, ArrowClockwise, Backspace, PersonCircle, PersonCheck, Eye, EyeSlash, PencilSquare, PersonX, Key } from 'react-bootstrap-icons';
 import toast from 'react-hot-toast';
 import api from '../api/axios';
 import Pagination from '../components/Pagination';
@@ -21,6 +21,7 @@ const AccountsPage = () => {
     const [formData, setFormData] = useState({
         name: '',
         email: '',
+        school_id: '',
         password: '',
         role: 'lab_assistant',
         status: 'active',
@@ -29,7 +30,17 @@ const AccountsPage = () => {
         department_name: ''
     });
     const [error, setError] = useState('');
-    const [showPassword, setShowPassword] = useState(false);
+
+    // Password Modal State
+    const [showPasswordModal, setShowPasswordModal] = useState(false);
+    const [passwordFormData, setPasswordFormData] = useState({
+        id: null,
+        name: '',
+        newPassword: '',
+        forceReset: false
+    });
+    const [passwordLoading, setPasswordLoading] = useState(false);
+    const [showNewPassword, setShowNewPassword] = useState(false);
 
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
@@ -87,7 +98,7 @@ const AccountsPage = () => {
         setFormData({
             name: account.name,
             email: account.email,
-            password: '',
+            school_id: account.school_id || '',
             role: account.role,
             status: account.status,
             birth_date: account.birth_date ? new Date(account.birth_date).toISOString().split('T')[0] : '',
@@ -106,6 +117,7 @@ const AccountsPage = () => {
         setFormData({
             name: '',
             email: '',
+            school_id: '',
             password: '',
             role: defaultRole,
             status: 'active',
@@ -140,6 +152,48 @@ const AccountsPage = () => {
         }
     };
 
+    // Password Management Handlers
+    const handleOpenPasswordModal = (account) => {
+        setPasswordFormData({
+            id: account.id,
+            name: account.name,
+            newPassword: '',
+            forceReset: false
+        });
+        setShowPasswordModal(true);
+    };
+
+    const handlePasswordSubmit = async (e) => {
+        e.preventDefault();
+
+        if (passwordFormData.newPassword.length < 8) {
+            toast.error("Password must be at least 8 characters long");
+            return;
+        }
+        if (!/[A-Z]/.test(passwordFormData.newPassword)) {
+            toast.error("Password must contain at least one uppercase letter");
+            return;
+        }
+        if (!/\d/.test(passwordFormData.newPassword)) {
+            toast.error("Password must contain at least one digit");
+            return;
+        }
+
+        setPasswordLoading(true);
+        try {
+            await api.put(`/accounts/${passwordFormData.id}`, {
+                password: passwordFormData.newPassword,
+                password_reset_required: passwordFormData.forceReset
+            });
+            toast.success(`Password set for ${passwordFormData.name}`);
+            setShowPasswordModal(false);
+        } catch (err) {
+            toast.error(err.response?.data?.msg || "Failed to set password");
+        } finally {
+            setPasswordLoading(false);
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
@@ -148,6 +202,15 @@ const AccountsPage = () => {
                 await api.put(`/accounts/${editingId}`, formData);
                 toast.success("Account updated successfully");
             } else {
+                // For new accounts, backend skips password validation, so we can send empty/default if needed
+                // But wait, user might want to set initial password? 
+                // The current flow allowed setting password on create.
+                // If we remove password field, how do we set initial password?
+                // The requirements said removing password field from account UPDATE form. 
+                // Checking task: "Remove password field from account update form".
+                // Be careful. If I remove it from Create too, then newly created accounts have no password?
+                // Or I can keep it for Create, but remove for Edit.
+                // Let's keep it for Create but remove for Edit.
                 await api.post('/accounts/', formData);
                 toast.success("Account created successfully");
             }
@@ -378,6 +441,9 @@ const AccountsPage = () => {
                                                         <button className="btn btn-outline-primary btn-sm border-0" onClick={() => handleEdit(account)} title="Edit Account">
                                                             <PencilSquare />
                                                         </button>
+                                                        <button className="btn btn-outline-primary btn-sm border-0" onClick={() => handleOpenPasswordModal(account)} title="Set Password">
+                                                            <Key />
+                                                        </button>
                                                         <button className="btn btn-outline-primary btn-sm border-0" onClick={() => handleSuspend(account)} title={account.status === 'active' ? "Suspend Account" : "Activate Account"}>
                                                             {account.status === 'active' ? (
                                                                 <>
@@ -435,25 +501,34 @@ const AccountsPage = () => {
                                 <input type="email" className="form-control" name="email" value={formData.email} onChange={handleInputChange} required />
                             </div>
                             <div className="mb-3">
-                                <label className="form-label">Password {editingId && '(Leave blank to keep current)'}</label>
-                                <div className="input-group">
-                                    <input
-                                        type={showPassword ? "text" : "password"}
-                                        className="form-control"
-                                        name="password"
-                                        value={formData.password}
-                                        onChange={handleInputChange}
-                                        required={!editingId}
-                                    />
-                                    <button
-                                        className="btn btn-primary"
-                                        type="button"
-                                        onClick={() => setShowPassword(!showPassword)}
-                                    >
-                                        {showPassword ? <EyeSlash /> : <Eye />}
-                                    </button>
-                                </div>
+                                <label className="form-label">School ID</label>
+                                <input type="text" className="form-control" name="school_id" value={formData.school_id} onChange={handleInputChange} required />
                             </div>
+                            {!editingId && (
+                                <div className="mb-3">
+                                    <label className="form-label">Initial Password</label>
+                                    <div className="input-group">
+                                        <input
+                                            type={showNewPassword ? "text" : "password"}
+                                            className="form-control"
+                                            name="password"
+                                            value={formData.password}
+                                            onChange={handleInputChange}
+                                            required
+                                        />
+                                        <button
+                                            className="btn btn-primary"
+                                            type="button"
+                                            onClick={() => setShowNewPassword(!showNewPassword)}
+                                        >
+                                            {showNewPassword ? <EyeSlash /> : <Eye />}
+                                        </button>
+                                    </div>
+                                    <Form.Text className="text-muted">
+                                        Note: Password complexity is NOT enforced for admins creating accounts.
+                                    </Form.Text>
+                                </div>
+                            )}
                             <div className="mb-3">
                                 <label className="form-label">Role</label>
                                 <select className="form-select" name="role" value={formData.role} onChange={handleInputChange}>
@@ -582,6 +657,50 @@ const AccountsPage = () => {
                 <Modal.Footer>
                     <Button variant="secondary" onClick={() => setShowPreviewModal(false)}>Close</Button>
                 </Modal.Footer>
+            </Modal>
+
+            {/* Set Password Modal */}
+            <Modal show={showPasswordModal} onHide={() => setShowPasswordModal(false)} centered>
+                <Modal.Header closeButton>
+                    <Modal.Title>Set Password for {passwordFormData.name}</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <Form onSubmit={handlePasswordSubmit}>
+                        <Form.Group className="mb-3">
+                            <Form.Label>New Password</Form.Label>
+                            <InputGroup className='border shadow-sm rounded overflow-hidden'>
+                                <Form.Control
+                                    type={showNewPassword ? "text" : "password"}
+                                    placeholder="Enter new password"
+                                    value={passwordFormData.newPassword}
+                                    className='border-0'
+                                    onChange={(e) => setPasswordFormData({ ...passwordFormData, newPassword: e.target.value })}
+                                    required
+                                />
+                                <Button variant='outline-primary' tabIndex={-1} className='border-0' onClick={() => setShowNewPassword(!showNewPassword)}>
+                                    {showNewPassword ? <EyeSlash /> : <Eye />}
+                                </Button>
+                            </InputGroup>
+                            <Form.Text className="text-muted">
+                                Min 8 chars, 1 Uppercase, 1 Digit.
+                            </Form.Text>
+                        </Form.Group>
+                        <Form.Group className="mb-3">
+                            <Form.Check
+                                type="checkbox"
+                                label="Force user to change password on next login"
+                                checked={passwordFormData.forceReset}
+                                onChange={(e) => setPasswordFormData({ ...passwordFormData, forceReset: e.target.checked })}
+                            />
+                        </Form.Group>
+                        <div className="d-flex justify-content-end gap-2">
+                            <Button variant="secondary" onClick={() => setShowPasswordModal(false)}>Cancel</Button>
+                            <Button variant="primary" type="submit" disabled={passwordLoading}>
+                                {passwordLoading ? 'Saving...' : 'Set Password'}
+                            </Button>
+                        </div>
+                    </Form>
+                </Modal.Body>
             </Modal>
 
         </div >

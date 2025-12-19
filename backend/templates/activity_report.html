@@ -9,8 +9,8 @@
     <div
         style="width: 95%; max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 8px; overflow: hidden; background-color: #fff;">
         <div style="background-color: #f8f9fa; padding: 15px 20px; border-bottom: 1px solid #eee;">
-            <h2 style="margin: 0; color: #333; font-size: 18px;">Activity Report</h2>
-            <div style="color: #888; font-size: 12px; margin-top: 5px;">Generated on {{ generation_time }}</div>
+            <h2 style="margin: 0; color: #333; font-size: 18px;">Computer Laboratory - Activity Report</h2>
+            <div style="color: #888; font-size: 12px; margin-top: 5px;">Generated at {{ generation_time }}</div>
         </div>
 
         {% for date, labs in grouped_data.items() %}
@@ -55,11 +55,8 @@
 
         <div
             style="padding: 15px; text-align: center; color: #999; font-size: 11px; background-color: #f8f9fa; border-top: 1px solid #eee;">
-            <p style="margin: 0;">Computer Laboratory Management System</p>
-        </div>
-        <div
-            style="padding: 15px; text-align: center; color: #999; font-size: 11px; background-color: #f8f9fa; border-top: 1px solid #eee;">
             <a href="https://claims.occulant.com" style="margin: 0;">Visit the website for more information</a>
+            <p style="margin: 0;">Computer Laboratory Management System</p>
         </div>
     </div>
 </body>

@@ -85,8 +85,8 @@ const Sidebar = ({ isOpen, isMobile, options, onClose, onToggle }) => {
 
     return (
         <div style={sidebarStyle} className="d-flex flex-column flex-shrink-0 bg-primary">
-            <div onClick={() => navigate("/dashboard")} className={`d-flex align-items-center justify-content-center w-100 mb-md-0 text-decoration-none bg-primary ${!isOpen ? 'justify-content-center' : 'me-md-auto'}`} style={{ height: '7vh' }}>
-                <img className="fs-4" style={{ height: '5vh' }} src={isOpen ? Logo : LogoShrinked} />
+            <div onClick={() => navigate("/dashboard")} className={`d-flex align-items-center justify-content-center w-100 mb-md-0 text-decoration-none bg-primary ${!isOpen ? 'justify-content-center' : 'me-md-auto'}`} style={{ height: '67px' }}>
+                <img className="fs-4" style={{ height: '36px' }} src={isOpen ? Logo : LogoShrinked} />
             </div>
             <NavItems />
             <div className="mt-auto">

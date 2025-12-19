@@ -48,6 +48,21 @@ const ProfilePage = () => {
             return;
         }
 
+        if (password.length < 8) {
+            toast.error("Password must be at least 8 characters long");
+            return;
+        }
+
+        if (!/[A-Z]/.test(password)) {
+            toast.error("Password must contain at least one uppercase letter");
+            return;
+        }
+
+        if (!/\d/.test(password)) {
+            toast.error("Password must contain at least one digit");
+            return;
+        }
+
         if (password !== confirmPassword) {
             toast.error("Passwords do not match");
             return;
@@ -335,5 +350,6 @@ const ProfilePage = () => {
         </div>
     );
 };
+
 
 export default ProfilePage;

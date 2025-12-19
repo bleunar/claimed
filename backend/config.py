@@ -44,4 +44,5 @@ class Config:
 
     # Default Admin Credentials (if wala pa admin account)
     DEFAULT_ADMIN_EMAIL = get_config('DEFAULT_ADMIN_EMAIL', 'default_admin_email', 'admin@example.com')
+    DEFAULT_ADMIN_SID = get_config('DEFAULT_ADMIN_SID', 'default_admin_sid', 'ADMIN01')
     DEFAULT_ADMIN_PASSWORD = get_config('DEFAULT_ADMIN_PASSWORD', 'default_admin_password', 'changeme')

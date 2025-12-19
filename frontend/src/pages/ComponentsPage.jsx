@@ -5,7 +5,8 @@ import toast from 'react-hot-toast';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import Pagination from '../components/Pagination';
-import { Funnel, Search, Tools, Hdd, Cpu, Display, Keyboard, Mouse, Webcam, Backspace, EnvelopePaper, PencilSquare, Trash, Plus, Printer, ArrowClockwise, CheckCircleFill } from 'react-bootstrap-icons';
+import { Funnel, Plus, Search, Trash, PencilSquare, CheckCircle, CheckCircleFill, ExclamationTriangle, ExclamationTriangleFill, InfoCircle, XCircle, Tools, Hdd, Cpu, Display, Keyboard, Mouse, Webcam, Printer } from 'react-bootstrap-icons';
+import KeyValueEditor from '../components/common/KeyValueEditor';
 
 const COMPONENT_TYPES = [
     { label: 'System Unit', value: 'system_unit' },
@@ -51,10 +52,22 @@ const ComponentsPage = () => {
         brand_name: '',
         serial_number: '',
         status: 'good',
-        component_type: 'other'
+        component_type: 'other',
+        properties: {}
     });
 
     const canManage = ['admin', 'it_head', 'lab_head'].includes(user?.role);
+
+    // State for Flag Issue Modal
+    const [showFlagModal, setShowFlagModal] = useState(false);
+    const [flaggingComponent, setFlaggingComponent] = useState(null);
+    const [flagFormData, setFlagFormData] = useState({
+        title: '',
+        description: '',
+        priority: 'medium'
+    });
+
+    const [viewPropsModal, setViewPropsModal] = useState({ show: false, component: null });
 
     const fetchLaboratories = async () => {
         try {
@@ -89,7 +102,7 @@ const ComponentsPage = () => {
 
             const res = await api.get(query);
             setComponents(res.data);
-            setComponents(res.data);
+
         } catch (err) {
             console.error("Failed to fetch components", err);
             toast.error("Failed to load components");
@@ -118,7 +131,7 @@ const ComponentsPage = () => {
         }, 500);
 
         return () => clearTimeout(timer);
-        return () => clearTimeout(timer);
+
     }, [search, statusFilter, assignmentFilter, labFilter, setFilter, typeFilter]);
 
     const handleSearch = (e) => {
@@ -157,9 +170,10 @@ const ComponentsPage = () => {
             serial_number: comp.serial_number || '',
             status: comp.status,
             component_type: comp.component_type,
+            properties: comp.properties || {},
+            isAssigning: false, // Don't allow re-assigning via edit modal usually, or keep as is
             laboratory_id: comp.laboratory_id || '',
-            computer_set_id: comp.computer_set_id || '',
-            isAssigning: !!comp.computer_set_id
+            computer_set_id: comp.computer_set_id || ''
         });
         if (comp.laboratory_id) {
             fetchModalComputerSets(comp.laboratory_id);
@@ -321,6 +335,36 @@ const ComponentsPage = () => {
         }
     };
 
+    const handleFlag = (comp) => {
+        setFlaggingComponent(comp);
+        setFlagFormData({
+            title: `Issue with ${comp.brand_name}`,
+            description: '',
+            priority: 'medium'
+        });
+        setShowFlagModal(true);
+    };
+
+    const handleFlagSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            const payload = {
+                title: flagFormData.title,
+                description: flagFormData.description,
+                priority: flagFormData.priority,
+                laboratory_id: flaggingComponent.laboratory_id || null,
+                computer_set_id: flaggingComponent.computer_set_id || null,
+                component_id: flaggingComponent.id
+            };
+
+            await api.post('/issues/', payload);
+            toast.success("Issue reported successfully");
+            setShowFlagModal(false);
+        } catch (err) {
+            toast.error(err.response?.data?.msg || "Failed to report issue");
+        }
+    };
+
     const handleCreate = () => {
         setEditingComponent(null);
         setFormData({
@@ -328,6 +372,7 @@ const ComponentsPage = () => {
             serial_number: '',
             status: 'good',
             component_type: 'other',
+            properties: {},
             isAssigning: false,
             laboratory_id: '',
             computer_set_id: ''
@@ -352,6 +397,16 @@ const ComponentsPage = () => {
         setAssignmentFilter('false');
         setCurrentPage(1);
         // fetchComponents will be triggered by useEffect dependency changes
+    };
+
+    const getStatusBadgeClass = (status) => {
+        switch (status) {
+            case 'good': return 'badge bg-primary';
+            case 'bad': return 'badge bg-warning text-dark';
+            case 'maintenance': return 'badge bg-info text-dark';
+            case 'missing': return 'badge bg-danger';
+            default: return 'badge bg-secondary';
+        }
     };
 
     return (
@@ -553,8 +608,8 @@ const ComponentsPage = () => {
                                 <th>Type</th>
                                 <th className='text-start'>Brand</th>
                                 <th className='text-start'>Serial</th>
-                                <th className='text-start'>Assigned at</th>
                                 <th>Status</th>
+                                <th className='text-start'>Assigned at</th>
                                 {canManage && <th>Actions</th>}
                             </tr>
                         </thead>
@@ -582,14 +637,19 @@ const ComponentsPage = () => {
                                         <td className='text-truncate'>{comp.brand_name}</td>
                                         <td className='text-truncate'>{comp.serial_number || '-'}</td>
                                         <td>
+                                            <div className="d-flex align-items-center justify-content-center">
+                                                <span className={`${getStatusBadgeClass(comp.status)} me-2 text-capitalize`}>{comp.status}</span>
+                                            </div>
+                                        </td>
+                                        <td>
                                             <div className="d-flex justify-content-start">
                                                 {
                                                     comp.computer_set_name ? (
                                                         <>
-                                                            <Link to={`/dashboard/laboratories/${comp.laboratory_id}`} className="badge fw-normal bg-primary text-decoration-none me-1" title="Go to Laboratory">
+                                                            <Link to={`/dashboard/laboratories/${comp.laboratory_id}`} className="badge fw-semibold bg-primary text-decoration-none me-1" title="Go to Laboratory">
                                                                 {comp?.laboratory_name}
                                                             </Link>
-                                                            <Link to={`/dashboard/laboratories/${comp.laboratory_id}?set=${comp.computer_set_id}&components=true`} className="badge fw-normal bg-primary text-decoration-none" title="View in Computer Set">
+                                                            <Link to={`/dashboard/laboratories/${comp.laboratory_id}?set=${comp.computer_set_id}&components=true`} className="badge fw-semibold bg-primary text-decoration-none" title="View in Computer Set">
                                                                 {comp?.computer_set_name}
                                                             </Link>
                                                         </>
@@ -599,21 +659,19 @@ const ComponentsPage = () => {
                                                 }
                                             </div>
                                         </td>
-                                        <td>
-                                            <div className="d-flex justify-content-center">
-                                                <span className={`badge text-capitalize ${comp.status === 'good' ? 'bg-primary' :
-                                                    comp.status === 'bad' ? 'bg-warning' :
-                                                        comp.status === 'maintenance' ? 'bg-info' : 'bg-danger'
-                                                    }`}>
-                                                    {comp.status}
-                                                </span>
-                                            </div>
-                                        </td>
                                         {canManage && (
                                             <td>
-                                                <div className='d-flex flex-wrap gap-1 justify-content-center'>
-                                                    <button className="btn btn-sm border-0 btn-outline-primary me-2" onClick={() => handleEdit(comp)}><PencilSquare /></button>
-                                                    <button className="btn btn-sm border-0 btn-outline-danger" onClick={() => handleDelete(comp.id)}><Trash /></button>
+                                                <div className='d-flex flex-wrap gap-1 justify-content-end'>
+                                                    {
+                                                        comp.properties && Object.keys(comp.properties).length > 0 && (
+                                                            <button className="btn btn-sm border-0 btn-outline-primary" onClick={() => setViewPropsModal({ show: true, component: comp })}>
+                                                                <InfoCircle title="View Properties" />
+                                                            </button>
+                                                        )
+                                                    }
+                                                    <button className="btn btn-sm border-0 btn-outline-primary" onClick={() => handleFlag(comp)} title="Report Issue"><ExclamationTriangleFill /></button>
+                                                    <button className="btn btn-sm border-0 btn-outline-primary" onClick={() => handleEdit(comp)} title="Edit Component"><PencilSquare /></button>
+                                                    <button className="btn btn-sm border-0 btn-outline-danger" onClick={() => handleDelete(comp.id)} title="Delete Component"><Trash /></button>
                                                 </div>
                                             </td>
                                         )}
@@ -687,6 +745,14 @@ const ComponentsPage = () => {
                             </select>
                         </div>
 
+                        <div className="mb-3">
+                            <label className="form-label">Properties</label>
+                                <KeyValueEditor
+                                    properties={formData.properties}
+                                    onChange={(newProps) => setFormData({ ...formData, properties: newProps })}
+                                />
+                        </div>
+
                         {!editingComponent && (
                             <>
                                 <hr />
@@ -758,7 +824,7 @@ const ComponentsPage = () => {
                             <div className="px-3 overflow-auto" style={{ maxHeight: "50vh" }}>
                                 <div className="table-responsive">
                                     <table className="table table-hover align-middle mb-0">
-                                        <thead className="table-light sticky-top">
+                                        <thead className="sticky-top">
                                             <tr>
                                                 <th>Brand</th>
                                                 <th>Serial</th>
@@ -794,6 +860,83 @@ const ComponentsPage = () => {
                 </Modal.Body>
                 <Modal.Footer>
                     <Button variant="secondary" onClick={() => setShowSelectedModal(false)}>Close</Button>
+                </Modal.Footer>
+            </Modal>
+
+            {/* Flag Issue Modal */}
+            <Modal show={showFlagModal} onHide={() => setShowFlagModal(false)}>
+                <Modal.Header closeButton>
+                    <Modal.Title>Report Issue</Modal.Title>
+                </Modal.Header>
+                <form onSubmit={handleFlagSubmit}>
+                    <Modal.Body>
+                        <div className="mb-3">
+                            <label className="form-label">Component</label>
+                            <input type="text" className="form-control" value={`${flaggingComponent?.brand_name} (${flaggingComponent?.component_type})`} disabled />
+                        </div>
+                        <div className="mb-3">
+                            <label className="form-label">Title</label>
+                            <input
+                                type="text"
+                                className="form-control"
+                                value={flagFormData.title}
+                                onChange={e => setFlagFormData({ ...flagFormData, title: e.target.value })}
+                                required
+                            />
+                        </div>
+                        <div className="mb-3">
+                            <label className="form-label">Priority</label>
+                            <select
+                                className="form-select"
+                                value={flagFormData.priority}
+                                onChange={e => setFlagFormData({ ...flagFormData, priority: e.target.value })}
+                            >
+                                <option value="low">Low</option>
+                                <option value="medium">Medium</option>
+                                <option value="high">High</option>
+                                <option value="critical">Critical</option>
+                            </select>
+                        </div>
+                        <div className="mb-3">
+                            <label className="form-label">Description</label>
+                            <textarea
+                                className="form-control"
+                                rows="3"
+                                value={flagFormData.description}
+                                onChange={e => setFlagFormData({ ...flagFormData, description: e.target.value })}
+                                required
+                            ></textarea>
+                        </div>
+                    </Modal.Body>
+                    <Modal.Footer>
+                        <Button variant="secondary" onClick={() => setShowFlagModal(false)}>Cancel</Button>
+                        <Button variant="warning" type="submit">Report Issue</Button>
+                    </Modal.Footer>
+                </form>
+            </Modal>
+
+            {/* View Properties Modal */}
+            <Modal show={viewPropsModal.show} onHide={() => setViewPropsModal({ show: false, component: null })} centered>
+                <Modal.Header closeButton>
+                    <Modal.Title>Component Properties</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <KeyValueEditor
+                        properties={viewPropsModal.component?.properties}
+                        readOnly={true}
+                        onChange={() => { }}
+                    />
+                </Modal.Body>
+                <Modal.Footer className=' justify-content-between align-items-end'>
+                    {canManage && (
+                        <Button variant="primary" size='sm' onClick={() => {
+                            setViewPropsModal({ show: false, component: null });
+                            handleEdit(viewPropsModal.component);
+                        }}>
+                            Edit
+                        </Button>
+                    )}
+                    <Button variant="secondary" onClick={() => setViewPropsModal({ show: false, component: null })}>Close</Button>
                 </Modal.Footer>
             </Modal>
         </div>

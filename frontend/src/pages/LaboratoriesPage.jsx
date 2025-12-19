@@ -59,7 +59,7 @@ const LaboratoryCard = ({ lab, canManage, onEdit, onDelete, onNavigate }) => {
             >
                 <div className="card-body">
                     <div className="d-flex justify-content-between align-items-start">
-                        <h5 className="card-title mb-1">{lab.name}</h5>
+                        <h4 className="card-title mb-1">{lab.name}</h4>
 
                         {/* Collapsible Action Bar */}
                         {canManage && (
@@ -264,7 +264,7 @@ const LaboratoriesPage = () => {
                             </div>
                             <div className="mb-3">
                                 <label className="form-label">Description</label>
-                                <textarea className="form-control" name="description" value={formData.description} onChange={handleInputChange} rows="2" placeholder='Computer Laboratory X'></textarea>
+                                <input className="form-control" name="description" value={formData.description} onChange={handleInputChange} placeholder='Computer Laboratory X'></input>
                             </div>
                         </div>
                         <div className="modal-footer">

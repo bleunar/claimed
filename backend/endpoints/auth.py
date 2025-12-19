@@ -9,15 +9,17 @@ from utilities.otp_store import otp_store
 from core.email import email_service
 import random
 import string
+from core.extensions import limiter
 
 @auth_bp.route('/login', methods=['POST'])
+@limiter.limit("30 per minute")
 def login():
     email = request.json.get('email', None)
     password = request.json.get('password', None)
     
     db = get_db()
     cursor = db.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM accounts WHERE email = %s", (email,))
+    cursor.execute("SELECT * FROM accounts WHERE email = %s OR school_id = %s", (email, email))
     user = cursor.fetchone()
     cursor.close()
 
@@ -69,6 +71,7 @@ def register():
     return jsonify({"message": "Register endpoint"}), 200
 
 @auth_bp.route('/forgot-password', methods=['POST'])
+@limiter.limit("30 per minute")
 def forgot_password():
     email = request.json.get('email')
     if not email:
@@ -97,6 +100,7 @@ def forgot_password():
     return jsonify({"msg": "OTP has been sent to your email"}), 200
 
 @auth_bp.route('/reset-password', methods=['POST'])
+@limiter.limit("30 per minute")
 def reset_password():
     email = request.json.get('email')
     otp = request.json.get('otp')
@@ -104,6 +108,11 @@ def reset_password():
 
     if not email or not otp or not new_password:
         return jsonify({"msg": "Email, OTP, and new password are required"}), 400
+
+    from utilities.user_validators import validate_password
+    is_valid, error = validate_password(new_password)
+    if not is_valid:
+        return jsonify({"msg": error}), 400
 
     # verify OTP
     success, data = otp_store.verify_otp(email, otp)

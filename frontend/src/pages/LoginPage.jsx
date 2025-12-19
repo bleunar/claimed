@@ -94,9 +94,9 @@ const LoginPage = () => {
                         <div className="card-body p-4">
                             <form onSubmit={handleSubmit}>
                                 <div className="mb-3">
-                                    <label className="form-label">Email</label>
+                                    <label className="form-label">Email or School ID</label>
                                     <input
-                                        type="email"
+                                        type="text"
                                         className="form-control bg-body-secondary rounded bg-primary-subtle border border-primary"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}

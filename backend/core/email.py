@@ -40,7 +40,6 @@ class EmailService:
             server.login(username, password)
             server.send_message(msg)
             server.quit()
-            print(f" [INFO] Email sent to {to}")
         except Exception as e:
             print(f" [ERROR] Failed to send email to {to}: {str(e)}")
             # Fallback to print so OTP is not lost in case of transient error

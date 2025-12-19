@@ -8,7 +8,7 @@ const ProfileImage = ({ src, size = 'md', shape = 'square', className = '' }) =>
     // Size presets
     const sizes = {
         sm: '32px',
-        md: '48px',
+        md: '67px',
         lg: '96px',
         xl: '128px'
     };
