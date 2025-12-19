@@ -17,10 +17,6 @@ const LabResourcesPage = () => {
 
     useEffect(() => {
         setCurrentPage(1);
-        // The fetchData() function is not defined.
-        // The existing debounced useEffect already handles fetching data based on activeTab and selectedLab.
-        // So, this useEffect primarily ensures the page resets when these filters change.
-        // The data fetch will be triggered by the debounced useEffect if selectedLab or activeTab changes.
     }, [activeTab, selectedLab]); // Using selectedLab as it's the actual state for lab filtering
 
     useEffect(() => {
