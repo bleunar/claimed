@@ -52,7 +52,7 @@ def initialize_admin(app):
             
             query = """
                 INSERT INTO accounts (id, role, name, email, school_id, password_hash, status)
-                VALUES (%s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
             """
             values = (account_id, 'admin', 'System Admin', email, school_id, hashed_password, 'active')
             
