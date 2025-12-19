@@ -30,7 +30,7 @@ def profile():
     
     db = get_db()
     cursor = db.cursor(dictionary=True)
-    cursor.execute("SELECT id, name, email, role, status, profile_picture, birth_date, gender, department_name, password_reset_required FROM accounts WHERE id = %s", (current_user_id,))
+    cursor.execute("SELECT id, name, email, school_id, role, status, profile_picture, birth_date, gender, department_name, password_reset_required FROM accounts WHERE id = %s", (current_user_id,))
     user = cursor.fetchone()
     cursor.close()
     
@@ -156,15 +156,19 @@ def upload_profile_picture():
 @jwt_required()
 def update_profile():
     current_user_id = get_jwt_identity()
+    current_claims = get_jwt()
+    current_role = current_claims.get("role")
+    
     data = request.json
     name = data.get('name')
     password = data.get('password')
+    school_id = data.get('school_id')
     
-    if not name and not password:
+    if not name and not password and not school_id:
         return jsonify({"msg": "Nothing to update"}), 400
         
     db = get_db()
-    cursor = db.cursor()
+    cursor = db.cursor(dictionary=True)
     
     try:
         fields = []
@@ -173,6 +177,21 @@ def update_profile():
         if name:
             fields.append("name = %s")
             values.append(name)
+        
+        # Only admin and head roles can update their own school_id
+        if school_id is not None:
+            if current_role not in ['admin', 'it_head', 'lab_head']:
+                cursor.close()
+                return jsonify({"msg": "Only administrators and head roles can update school ID"}), 403
+            
+            # Check if school_id already exists for another account
+            cursor.execute("SELECT id FROM accounts WHERE school_id = %s AND id != %s", (school_id, current_user_id))
+            if cursor.fetchone():
+                cursor.close()
+                return jsonify({"msg": "School ID already exists"}), 409
+            
+            fields.append("school_id = %s")
+            values.append(school_id)
             
         if password:
             from utilities.user_validators import validate_password

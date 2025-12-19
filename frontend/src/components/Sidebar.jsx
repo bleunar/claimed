@@ -58,7 +58,7 @@ const Sidebar = ({ isOpen, isMobile, options, onClose, onToggle }) => {
 
     if (isMobile) {
         return (
-            <Offcanvas show={isOpen} onHide={onClose} className="text-white" style={{ backgroundColor: "#006633" }}>
+            <Offcanvas show={isOpen} onHide={onClose} className="text-white" style={{ backgroundColor: "#006633", maxWidth: "250px" }}>
                 <Offcanvas.Header closeButton closeVariant="white">
                     <Offcanvas.Title>Menu</Offcanvas.Title>
                 </Offcanvas.Header>

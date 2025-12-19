@@ -5,6 +5,7 @@ import RoleBasedContent from '../components/ComponentProtector';
 import api from '../api/axios';
 import KPICard from '../components/analytics/KPICard';
 import BarChart from '../components/analytics/BarChart';
+import StackedBarChart from '../components/analytics/StackedBarChart';
 import PieChart from '../components/analytics/PieChart';
 import { useState, useEffect } from 'react';
 import ForceChangePasswordModal from '../components/modals/ForceChangePasswordModal';
@@ -102,10 +103,10 @@ const DashboardPage = () => {
             {/* Charts */}
             <div className="row">
                 <div className="col-lg-6 mb-4">
-                    <BarChart
+                    <StackedBarChart
                         title="Computer Sets per Laboratory"
                         apiPath="/analytics/bar/computers-by-lab"
-                        label="Computers"
+                        colors={['#28a745', '#17a2b8']}
                     />
                 </div>
                 <div className="col-lg-3 mb-4">

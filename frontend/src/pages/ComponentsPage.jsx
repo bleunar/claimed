@@ -836,7 +836,7 @@ const ComponentsPage = () => {
                                             {selectedItems.map(item => (
                                                 <tr key={item.id}>
                                                     <td>{item.brand_name}</td>
-                                                    <td>{item.serial_number || '-'}</td>
+                                                    <td>{item.serial_number || <span className='small text-muted'>n/a</span>}</td>
                                                     <td>{item.component_type}</td>
                                                     <td className="text-end">
                                                         <button

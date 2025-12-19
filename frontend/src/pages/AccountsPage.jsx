@@ -384,7 +384,7 @@ const AccountsPage = () => {
                 </div>
             </div>
 
-            <div className="container">
+            <div className="container-fluid">
                 {
                     loading ? (
                         <div className="text-center p-5">
@@ -524,9 +524,18 @@ const AccountsPage = () => {
                                             {showNewPassword ? <EyeSlash /> : <Eye />}
                                         </button>
                                     </div>
-                                    <Form.Text className="text-muted">
-                                        Note: Password complexity is NOT enforced for admins creating accounts.
-                                    </Form.Text>
+                                    {
+                                        user.role == "admin" ? (
+                                            <Form.Text className="text-muted small">
+                                                Note: Password complexity is NOT enforced for administrators
+                                            </Form.Text>
+                                        ) : (
+
+                                            <Form.Text className="text-muted small">
+                                                Note: Minimum of 8 Characters, At least one number and Capital Letter
+                                            </Form.Text>
+                                        )
+                                    }
                                 </div>
                             )}
                             <div className="mb-3">
@@ -534,11 +543,10 @@ const AccountsPage = () => {
                                 <select className="form-select" name="role" value={formData.role} onChange={handleInputChange}>
                                     {user?.role === 'admin' && (
                                         <>
-                                            <option value="admin">Admin</option>
-                                            <option value="it_head">IT Head</option>
-                                            <option value="it_technician">IT Technician</option>
-                                            <option value="lab_head">Lab Head</option>
-                                            <option value="lab_assistant">Lab Assistant</option>
+                                            <option value="it_head">ITSD Head</option>
+                                            <option value="it_technician">ITSD Technician</option>
+                                            <option value="lab_head">Laboratory Head</option>
+                                            <option value="lab_assistant">Laboratory Assistant</option>
                                         </>
                                     )}
                                     {user?.role === 'it_head' && (
@@ -578,7 +586,7 @@ const AccountsPage = () => {
 
                             <div className="mb-3">
                                 <label className="form-label">Department</label>
-                                <input type="text" className="form-control" name="department_name" value={formData.department_name} onChange={handleInputChange} placeholder="e.g. CCS" />
+                                <input type="text" className="form-control" name="department_name" value={formData.department_name} onChange={handleInputChange} placeholder="e.g. CITE" />
                             </div>
                         </div>
                         <div className="modal-footer">

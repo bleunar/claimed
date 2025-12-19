@@ -41,7 +41,7 @@ const Navbar = ({ onToggleSidebar, sideBarToggled }) => {
                         <ul className={`dropdown-menu dropdown-menu-end dropdown-menu-${theme}`} aria-labelledby="dropdownUser1">
                             <li><Link className="dropdown-item" to="/dashboard/profile">Profile</Link></li>
                             <li><hr className="dropdown-divider" /></li>
-                            <li><button className="dropdown-item" onClick={logout}>Sign out</button></li>
+                            <li><button className="dropdown-item" onClick={logout}>Logout</button></li>
                         </ul>
                     </div>
                 </div>

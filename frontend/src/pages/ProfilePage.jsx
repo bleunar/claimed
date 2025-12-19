@@ -22,10 +22,12 @@ const ProfilePage = () => {
     const [previewImage, setPreviewImage] = useState(null);
     const [showNewPassword, setShowNewPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [schoolId, setSchoolId] = useState('');
 
     useEffect(() => {
         if (user) {
             setName(user.name);
+            setSchoolId(user.school_id || '');
         }
     }, [user]);
 
@@ -37,6 +39,20 @@ const ProfilePage = () => {
             refreshUser();
         } catch (err) {
             toast.error(err.response?.data?.msg || "Failed to update name");
+        }
+    };
+
+    const handleUpdateSchoolId = async () => {
+        if (!schoolId.trim()) {
+            toast.error("School ID cannot be empty");
+            return;
+        }
+        try {
+            await api.put('/accounts/profile', { school_id: schoolId });
+            toast.success("School ID updated successfully");
+            refreshUser();
+        } catch (err) {
+            toast.error(err.response?.data?.msg || "Failed to update School ID");
         }
     };
 
@@ -194,15 +210,37 @@ const ProfilePage = () => {
                         <Card.Body className='bg-body-tertiary'>
                             <Form onSubmit={handleUpdateName}>
                                 <Form.Group className="mb-3">
+                                    <Form.Label>School ID</Form.Label>
+                                    {['admin', 'it_head', 'lab_head'].includes(user?.role) ? (
+                                        <div className="d-flex gap-2">
+                                            <Form.Control
+                                                type="text"
+                                                value={schoolId}
+                                                onChange={(e) => setSchoolId(e.target.value)}
+                                            />
+                                            <Button
+                                                variant="link"
+                                                className='text-body-primary text-nowrap'
+                                                onClick={handleUpdateSchoolId}
+                                            >
+                                                Update School ID
+                                            </Button>
+                                        </div>
+                                    ) : (
+                                        <Form.Control type="text" value={user?.school_id || ''} disabled />
+                                    )}
+                                </Form.Group>
+
+                                <Form.Group className="mb-3">
                                     <Form.Label>Email</Form.Label>
                                     <div className="d-flex gap-2">
                                         <Form.Control type="email" value={user?.email || ''} disabled />
                                         <Button
                                             variant="link"
-                                            className='text-body-primary'
+                                            className='text-nowrap'
                                             onClick={() => setShowEmailModal(true)}
                                         >
-                                            Update
+                                            Update Email
                                         </Button>
                                     </div>
                                 </Form.Group>

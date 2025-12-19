@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Button, Collapse, Alert, ToggleButton, ToggleButtonGroup } from 'react-bootstrap';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { Pc, Mouse, Keyboard, Display, Webcam, Hdd, Tools, PencilSquare, Trash, Plus, ExclamationTriangleFill, Copy, Check2, XLg, QuestionLg, InfoCircle, ListUl, Printer, Headphones, ArrowUp, ArrowDown } from 'react-bootstrap-icons';
+import { Pc, Mouse, Keyboard, Display, Webcam, Hdd, Tools, PencilSquare, Trash, Plus, ExclamationTriangleFill, Copy, Check2, XLg, QuestionLg, InfoCircle, ListUl, Printer, Headphones, ArrowUp, ArrowDown, Mouse2Fill, KeyboardFill, WebcamFill, DisplayFill, PrinterFill } from 'react-bootstrap-icons';
 import KeyValueEditor from '../components/common/KeyValueEditor';
 import toast from 'react-hot-toast';
 import api from '../api/axios';
@@ -35,15 +35,15 @@ const getLabelByValue = (value) => {
 
 const getComponentIcon = (type) => {
     switch (type) {
-        case 'system_unit': return <Pc />;
-        case 'monitor': return <Display />;
-        case 'keyboard': return <Keyboard />;
-        case 'mouse': return <Mouse />;
-        case 'web_camera': return <Webcam />;
-        case 'printer': return <Printer />;
-        case 'headset': return <Headphones />;
-        case 'avr': return <Tools />;
-        default: return <Tools />;
+        case 'system_unit': return <Pc size='20px' />;
+        case 'monitor': return <DisplayFill size='20px' />;
+        case 'keyboard': return <KeyboardFill size='20px' />;
+        case 'mouse': return <Mouse2Fill size='20px' />;
+        case 'web_camera': return <WebcamFill size='20px' />;
+        case 'printer': return <PrinterFill size='20px' />;
+        case 'headset': return <Headphones size='20px' />;
+        case 'avr': return <Tools size='20px' />;
+        default: return <Tools size='20px' />;
     }
 }
 
@@ -665,6 +665,8 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
             case 'bad': return 'text-secondary';
             case 'maintenance': return 'text-info';
             case 'missing': return 'text-danger';
+            case 'active': return 'text-success';
+            case 'good': return 'text-success';
             default: return 'text-secondary';
         }
     };
@@ -774,11 +776,6 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
             );
 
             if (confirmed) {
-                // Perform the move/link immediately via API
-                // Note: We are bypassing the "save" button here because this is a specific action on an existing component
-                // But typically ComponentsManager uses local state 'components'. 
-                // However, moving an existing component involves changing its ID in the DB.
-                // If we want consistency, we should probably call the API here.
 
                 await api.put(`/components/${existing.id}`, { ...existing, computer_set_id: set.id });
                 toast.success(isMove ? "Component moved successfully" : "Component linked successfully");
@@ -941,14 +938,7 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                 toast("Save cancelled.");
                 return;
             }
-
-            // 4. Update Set Info separate call (simple) OR bundle it?
-            // Since backend batch endpoint is for components only, let's keep set update separate or add it?
-            // The existing flow put it in promises. We can keep it separate. 
-            // BUT wait, we want "one log" if possible. 
-            // If we update Set Info + Components, we get two logs: "Updated Set" and "Batch Components".
-            // That is acceptable. The User asked for "adding/deleting computer sets and computer components by batch".
-
+            
             const promises = [];
 
             if (batchPayload.creates.length > 0 || batchPayload.updates.length > 0 || batchPayload.deletes.length > 0) {
@@ -1039,7 +1029,7 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                         <>
                             <h5 className="mb-0 text-center fw-bold">{set.set_name}</h5>
                             <div className="d-flex align-items-center gap-2">
-                                {canManage ? (
+                                {(canManage || user?.role === 'it_technician') ? (
                                     <ToggleButtonGroup type="radio" name="set-status-toggle" value={setStatus} onChange={setSetStatus} size="sm" className='bg-body-secondary'>
                                         <ToggleButton id="tbg-set-active" value="active" variant={setStatus === 'active' ? 'success' : 'outline-success'} title="Active" className='border-0'>
                                             <span className='ms-1'>Active</span>
@@ -1049,7 +1039,7 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                                         </ToggleButton>
                                     </ToggleButtonGroup>
                                 ) : (
-                                    <span className={`badge text-capitalize ${getStatusColor(set.status)} border`}>
+                                    <span className={`badge bg-body-secondary text-capitalize ${getStatusColor(set.status)}`}>
                                         {set.status}
                                     </span>
                                 )}
@@ -1066,7 +1056,6 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                     )}
                 </div>
 
-                {/* <div className="h4 mb-3">Components</div> */}
 
                 {
                     components.length > 0 && components.map((comp) => (
@@ -1103,7 +1092,7 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                                         </div>
                                     ) : (
                                         <div className="col-12 col-md-4 p-1 d-flex align-items-center py-0">
-                                            <span title={getLabelByValue(comp.component_type)} className='me-2'>{getComponentIcon(comp.component_type)}</span>
+                                            <span title={getLabelByValue(comp.component_type)} className='me-3 bg-body-secondary p-2 rounded'>{getComponentIcon(comp.component_type)}</span>
                                             <span className="cursor-pointer me-1 text-nowrap text-truncate text-uppercase" title={comp.brand_name} onClick={() => copyToClipboard(comp.brand_name)} >{comp.brand_name}</span>
                                             <button className="btn btn-link p-0 text-muted" onClick={() => copyToClipboard(comp.brand_name)} title="Copy Name/Brand">
                                                 <Copy style={{ fontSize: "0.75rem", marginLeft: '4px' }} />
@@ -1327,11 +1316,11 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                     {(canEditComponentDetails(user) || canEditComponentStatus(user)) && (
                         isEditMode ? (
                             <Button variant="primary" onClick={handleSave} disabled={isSaving}>
-                                {isSaving ? <><span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Saving...</> : 'Save Changes'}
+                                {isSaving ? <><span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Updating...</> : 'Update'}
                             </Button>
                         ) : (
                             <Button variant="primary" onClick={handleSave} disabled={isSaving}>
-                                {isSaving ? <><span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Updating...</> : 'Update'}
+                                {isSaving ? <><span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Saving...</> : 'Save'}
                             </Button>
                         )
                     )}
@@ -1399,9 +1388,9 @@ const ComputerSetCard = ({ set, components, onView }) => {
     const totalCount = goodCount + badCount + maintCount + missingCount
 
     return (
-        <div className="col p-0 border">
+        <div className="col p-0">
             <div
-                className={`card h-100 position-relative border-0 rounded-0 overflow-hidden shadow-sm hover-shadow ${set.status === 'active' ? 'bg-body-secondary' : 'bg-info-subtle'}`}
+                className={`card h-100 position-relative border-0 rounded-0 overflow-hidden shadow-sm hover-shadow ${set.status === 'active' ? 'bg-gradient-primary' : 'bg-gradient-maintenance'}`}
                 style={{ cursor: 'pointer', transition: 'transform 0.2s' }}
                 onClick={() => onView(set)}
                 onMouseEnter={() => setIsHovered(true)}
@@ -1433,12 +1422,11 @@ const ComputerSetCard = ({ set, components, onView }) => {
                         }
                     </div>
 
-                    { }
                     <div
-                        className="position-absolute top-0 start-0 w-100 h-100 p-3 d-none d-md-flex flex-wrap align-items-center justify-content-center bg-primary"
+                        className="position-absolute top-0 start-0 w-100 h-100 p-3 d-none d-md-flex flex-wrap align-items-center justify-content-center bg-gradient-primary-hovered"
                         style={{
-                            opacity: (isHovered) ? 1 : 0,
-                            transition: 'opacity 0.3s',
+                            opacity: (isHovered) ? 0.98 : 0,
+                            transition: 'opacity 0.4s',
                             zIndex: 10,
                             pointerEvents: 'none'
                         }}
@@ -1691,7 +1679,7 @@ const LaboratoryComputersPage = () => {
                 </div>
             </div>
 
-            <div className="container p-0">
+            <div className="container p-0 pb-5 mb-5">
 
                 <div className="d-lg-flex justify-content-end mb-2 d-none">
                     <select
