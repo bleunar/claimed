@@ -26,7 +26,9 @@ def log_activity(db, account_id, lab_id, target_type, target_id, action_type, su
     comp_target_id = None
     
     if target_type == 'laboratory':
-        lab_target_id = target_id
+        # Only set FK if not deleting, as the row will be gone
+        if action_type != 'delete':
+            lab_target_id = target_id
     elif target_type == 'computer_set':
         # Only set FK if not deleting, as the row will be gone
         if action_type != 'delete':
