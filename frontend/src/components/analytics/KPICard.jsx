@@ -1,10 +1,25 @@
 import React from 'react';
 import { Card } from 'react-bootstrap';
+import { useNavigate } from 'react-router-dom';
 
-const KPICard = ({ title, value, icon, color = 'primary', trend }) => {
+const KPICard = ({ title, value, icon, color = 'primary', trend, link }) => {
+    const navigate = useNavigate();
+
+    const handleClick = () => {
+        if (link) {
+            navigate(link);
+        }
+    };
+
     return (
         <div className='col p-2'>
-            <Card className={`h-100  bg-body-secondary border-2 border shadow`}>
+            <Card
+                className={`h-100 bg-body-secondary border-2 border shadow ${link ? 'cursor-pointer' : ''}`}
+                onClick={handleClick}
+                style={link ? { cursor: 'pointer', transition: 'transform 0.15s ease-in-out' } : {}}
+                onMouseEnter={(e) => link && (e.currentTarget.style.transform = 'translateY(-2px)')}
+                onMouseLeave={(e) => link && (e.currentTarget.style.transform = 'translateY(0)')}
+            >
                 <Card.Body>
                     <div className="d-flex align-items-center justify-content-between">
                         <div>
@@ -30,3 +45,4 @@ const KPICard = ({ title, value, icon, color = 'primary', trend }) => {
 };
 
 export default KPICard;
+
