@@ -522,8 +522,8 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                                         </div>
                                     ) : (
                                         <div className="col-12 col-lg-4 p-1 d-flex align-items-center cursor-pointer mb-2 mb-lg-0 py-0 pe-0 pe-md-2">
-                                            <span className={`me-1 rounded text-nowrap text-truncate ${comp.serial_number ? "cursor-pointer" : "cursor-help"} `} title={comp.serial_number ? comp.serial_number : "Serial Number not set"} onClick={() => comp.serial_number && copyToClipboard(comp.serial_number)} >
-                                                {comp.serial_number || <span className="text-muted fst-italic">Serial not set</span>}
+                                            <span className={`me-1 rounded text-nowrap text-truncate fst-italic ${comp.serial_number ? "cursor-pointer" : "cursor-help"} `} title={comp.serial_number ? comp.serial_number : "Serial Number not set"} onClick={() => comp.serial_number && copyToClipboard(comp.serial_number)} >
+                                                {comp.serial_number || <span className="text-muted">Serial not set</span>}
                                             </span>
                                             <div className={`d-flex justify-content-start flex-fill `}>
                                                 {comp.serial_number && (

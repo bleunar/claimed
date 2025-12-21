@@ -79,55 +79,24 @@ const BarcodeScanner = ({
                             {error}
                         </Alert>
                     ) : (
-                        <div style={{ position: 'relative' }}>
-                            <Scanner
-                                onScan={handleScan}
-                                onError={handleError}
-                                formats={[
-                                    'qr_code',
-                                    'code_128',
-                                    'code_39',
-                                    'code_93',
-                                    'ean_13',
-                                    'ean_8',
-                                    'upc_a',
-                                    'upc_e',
-                                    'itf',
-                                    'codabar'
-                                ]}
-                                allowMultiple={false}
-                                scanDelay={50}
-                                components={{
-                                    tracker: false
-                                }}
-                                styles={{
-                                    container: {
-                                        width: '100%',
-                                        paddingTop: '75%',
-                                        position: 'relative'
-                                    },
-                                    video: {
-                                        position: 'absolute',
-                                        top: 0,
-                                        left: 0,
-                                        width: '100%',
-                                        height: '100%',
-                                        objectFit: 'cover'
-                                    }
-                                }}
-                            />
-                            <div
-                                className="position-absolute top-50 start-50 translate-middle"
-                                style={{
-                                    width: '60%',
-                                    height: '40%',
-                                    border: '3px solid rgba(255,255,255,0.8)',
-                                    borderRadius: '8px',
-                                    pointerEvents: 'none',
-                                    boxShadow: '0 0 0 9999px rgba(0,0,0,0.3)'
-                                }}
-                            />
-                        </div>
+                        <Scanner
+                            onScan={handleScan}
+                            onError={handleError}
+                            formats={[
+                                'qr_code',
+                                'code_128',
+                                'code_39',
+                                'code_93',
+                                'ean_13',
+                                'ean_8',
+                                'upc_a',
+                                'upc_e',
+                                'itf',
+                                'codabar'
+                            ]}
+                            allowMultiple={false}
+                            scanDelay={50}
+                        />
                     )}
                     <div className="p-3 text-center text-muted small">
                         Position the barcode within the frame. Scanning will happen automatically.
