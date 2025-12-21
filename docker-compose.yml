@@ -13,6 +13,13 @@ services:
       - mysql_host
       - mysql_user
       - mysql_db
+      - jwt_secret_key
+      - mail_server
+      - mail_server_port
+      - mail_username
+      - mail_password
+      - default_admin_email
+      - default_admin_password
     environment:
       - MYSQL_HOST_FILE=/run/secrets/mysql_host
       - MYSQL_USER_FILE=/run/secrets/mysql_user
