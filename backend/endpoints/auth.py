@@ -6,10 +6,14 @@ auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 from core.database import get_db
 from utilities.security import check_password, hash_password
 from utilities.otp_store import otp_store
+from utilities.account_activity import log_activity
 from core.email import email_service
+import logging
 import random
 import string
 from core.extensions import limiter
+
+logger = logging.getLogger(__name__)
 
 @auth_bp.route('/login', methods=['POST'])
 @limiter.limit("30 per minute")
@@ -24,9 +28,9 @@ def login():
     cursor.close()
 
     if user and check_password(password, user['password_hash']):
-        if user['status'] == 'suspended':
+        if user['suspended_at'] is not None:
             return jsonify({"msg": "Account is suspended"}), 403
-        if user['status'] == 'deleted':
+        if user['deleted_at'] is not None:
              return jsonify({"msg": "Bad email or password"}), 401
              
         from flask_jwt_extended import set_refresh_cookies
@@ -37,13 +41,24 @@ def login():
         
         resp = jsonify({"access_token": access_token})
         set_refresh_cookies(resp, refresh_token)
+        
+        # Log login activity
+        log_activity(user['id'], 'login')
+        
         return resp, 200
     
     return jsonify({"msg": "Bad email or password"}), 401
 
 @auth_bp.route('/logout', methods=['POST'])
+@jwt_required(optional=True)
 def logout():
-    from flask_jwt_extended import unset_jwt_cookies
+    from flask_jwt_extended import unset_jwt_cookies, get_jwt_identity
+    
+    # Log logout activity if user is authenticated
+    identity = get_jwt_identity()
+    if identity:
+        log_activity(identity, 'logout')
+    
     resp = jsonify({"msg": "Logout successful"})
     unset_jwt_cookies(resp)
     return resp, 200
@@ -55,11 +70,11 @@ def refresh():
     
     db = get_db()
     cursor = db.cursor(dictionary=True)
-    cursor.execute("SELECT status, role FROM accounts WHERE id = %s", (identity,))
+    cursor.execute("SELECT suspended_at, deleted_at, role FROM accounts WHERE id = %s", (identity,))
     user = cursor.fetchone()
     cursor.close()
     
-    if not user or user['status'] in ['suspended', 'deleted']:
+    if not user or user['suspended_at'] is not None or user['deleted_at'] is not None:
         return jsonify({"msg": "Account is not active"}), 401
         
     additional_claims = {"role": user['role']}
@@ -127,8 +142,16 @@ def reset_password():
     try:
         cursor.execute("UPDATE accounts SET password_hash = %s WHERE email = %s", (password_hash, email))
         db.commit()
+        
+        # Get account ID and log activity
+        cursor.execute("SELECT id FROM accounts WHERE email = %s", (email,))
+        account = cursor.fetchone()
+        if account:
+            log_activity(account['id'], 'password_reset')
+        
         cursor.close()
         return jsonify({"msg": "Password reset successfully"}), 200
     except Exception as e:
+        logger.exception("Failed to reset password")
         cursor.close()
         return jsonify({"msg": f"Failed to reset password: {str(e)}"}), 500

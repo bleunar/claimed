@@ -2,8 +2,18 @@ from functools import wraps
 from flask import jsonify
 from flask_jwt_extended import get_jwt
 
-# sekyu 
+
 def role_required(required_roles):
+    """Decorator to restrict endpoint access based on user role.
+    
+    Args:
+        required_roles: Single role string or list of allowed roles
+    
+    Usage:
+        @role_required(['admin', 'it_head'])
+        def admin_endpoint():
+            ...
+    """
     def decorator(fn):
         @wraps(fn)
         def wrapper(*args, **kwargs):

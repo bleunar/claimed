@@ -1,5 +1,8 @@
 from flask import Blueprint, jsonify
 from core.database import get_db
+import logging
+
+logger = logging.getLogger(__name__)
 
 analytics_bp = Blueprint('analytics', __name__)
 
@@ -31,6 +34,7 @@ def get_kpi_data():
             "total_components": total_components
         })
     except Exception as e:
+        logger.exception("Failed to fetch KPI data")
         return jsonify({"error": str(e)}), 500
     finally:
         cursor.close()
@@ -93,6 +97,7 @@ def get_computers_by_lab():
             'datasets': datasets
         })
     except Exception as e:
+        logger.exception("Failed to fetch computers by lab")
         return jsonify({"error": str(e)}), 500
     finally:
         cursor.close()
@@ -111,6 +116,7 @@ def get_computers_by_status():
         results = cursor.fetchall()
         return jsonify(results)
     except Exception as e:
+        logger.exception("Failed to fetch component types")
         return jsonify({"error": str(e)}), 500
     finally:
         cursor.close()
@@ -129,6 +135,7 @@ def get_components_by_status():
         results = cursor.fetchall()
         return jsonify(results)
     except Exception as e:
+        logger.exception("Failed to fetch component status")
         return jsonify({"error": str(e)}), 500
     finally:
         cursor.close()

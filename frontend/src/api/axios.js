@@ -59,8 +59,8 @@ api.interceptors.response.use(
             isRefreshing = true;
 
             try {
-                // Refresh request
-                const response = await axios.post('/api/auth/refresh');
+                // Refresh request - use withCredentials to send cookies
+                const response = await axios.post('/api/auth/refresh', {}, { withCredentials: true });
                 const { access_token } = response.data;
 
                 localStorage.setItem('access_token', access_token);

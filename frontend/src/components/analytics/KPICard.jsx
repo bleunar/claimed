@@ -4,7 +4,7 @@ import { Card } from 'react-bootstrap';
 const KPICard = ({ title, value, icon, color = 'primary', trend }) => {
     return (
         <div className='col p-2'>
-            <Card className={`h-100  bg-body-secondary border-2 border-${color} shadow`}>
+            <Card className={`h-100  bg-body-secondary border-2 border shadow`}>
                 <Card.Body>
                     <div className="d-flex align-items-center justify-content-between">
                         <div>

@@ -5,19 +5,11 @@ import toast from 'react-hot-toast';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import Pagination from '../components/Pagination';
-import { Funnel, Plus, Search, Trash, PencilSquare, CheckCircle, CheckCircleFill, ExclamationTriangle, ExclamationTriangleFill, InfoCircle, XCircle, Tools, Hdd, Cpu, Display, Keyboard, Mouse, Webcam, Printer } from 'react-bootstrap-icons';
+import { Funnel, Plus, Search, Trash, PencilSquare, CheckCircle, CheckCircleFill, ExclamationTriangle, ExclamationTriangleFill, InfoCircle, XCircle } from 'react-bootstrap-icons';
 import KeyValueEditor from '../components/common/KeyValueEditor';
-
-const COMPONENT_TYPES = [
-    { label: 'System Unit', value: 'system_unit' },
-    { label: 'Monitor', value: 'monitor' },
-    { label: 'Keyboard', value: 'keyboard' },
-    { label: 'Mouse', value: 'mouse' },
-    { label: 'AVR', value: 'avr' },
-    { label: 'Web Camera', value: 'web_camera' },
-    { label: 'Printer', value: 'printer' },
-    { label: 'Other', value: 'other' }
-];
+import KeyValues from '../components/common/KeyValues';
+import { COMPONENT_TYPES } from '../utils/componentTypes';
+import { getComponentIcon } from '../utils/componentIcons';
 
 const ComponentsPage = () => {
     const { user } = useAuth();
@@ -57,15 +49,6 @@ const ComponentsPage = () => {
     });
 
     const canManage = ['admin', 'it_head', 'lab_head'].includes(user?.role);
-
-    // State for Flag Issue Modal
-    const [showFlagModal, setShowFlagModal] = useState(false);
-    const [flaggingComponent, setFlaggingComponent] = useState(null);
-    const [flagFormData, setFlagFormData] = useState({
-        title: '',
-        description: '',
-        priority: 'medium'
-    });
 
     const [viewPropsModal, setViewPropsModal] = useState({ show: false, component: null });
 
@@ -137,19 +120,6 @@ const ComponentsPage = () => {
     const handleSearch = (e) => {
         e.preventDefault();
         // Auto-fetch handles this via useEffect
-    };
-
-    const getComponentIcon = (type) => {
-        switch (type) {
-            case 'system_unit': return <Cpu />;
-            case 'monitor': return <Display />;
-            case 'keyboard': return <Keyboard />;
-            case 'mouse': return <Mouse />;
-            case 'web_camera': return <Webcam />;
-            case 'printer': return <Printer />;
-            case 'avr': return <Hdd />;
-            default: return <Tools />;
-        }
     };
 
     const [modalComputerSets, setModalComputerSets] = useState([]);
@@ -335,36 +305,6 @@ const ComponentsPage = () => {
         }
     };
 
-    const handleFlag = (comp) => {
-        setFlaggingComponent(comp);
-        setFlagFormData({
-            title: `Issue with ${comp.brand_name}`,
-            description: '',
-            priority: 'medium'
-        });
-        setShowFlagModal(true);
-    };
-
-    const handleFlagSubmit = async (e) => {
-        e.preventDefault();
-        try {
-            const payload = {
-                title: flagFormData.title,
-                description: flagFormData.description,
-                priority: flagFormData.priority,
-                laboratory_id: flaggingComponent.laboratory_id || null,
-                computer_set_id: flaggingComponent.computer_set_id || null,
-                component_id: flaggingComponent.id
-            };
-
-            await api.post('/issues/', payload);
-            toast.success("Issue reported successfully");
-            setShowFlagModal(false);
-        } catch (err) {
-            toast.error(err.response?.data?.msg || "Failed to report issue");
-        }
-    };
-
     const handleCreate = () => {
         setEditingComponent(null);
         setFormData({
@@ -412,7 +352,7 @@ const ComponentsPage = () => {
     return (
         <div className="container-fluid py-3">
             <div className="d-flex justify-content-between align-items-center mb-4">
-                <div className='h4'>Computer Components</div>
+                <div className='h4 fw-semibold'>Computer Components</div>
                 {canManage && (
                     <button className="btn btn-sm btn-primary" onClick={handleCreate}>
                         <span className='d-none d-md-inline'>New Component</span>
@@ -669,7 +609,6 @@ const ComponentsPage = () => {
                                                             </button>
                                                         )
                                                     }
-                                                    <button className="btn btn-sm border-0 btn-outline-primary" onClick={() => handleFlag(comp)} title="Report Issue"><ExclamationTriangleFill /></button>
                                                     <button className="btn btn-sm border-0 btn-outline-primary" onClick={() => handleEdit(comp)} title="Edit Component"><PencilSquare /></button>
                                                     <button className="btn btn-sm border-0 btn-outline-danger" onClick={() => handleDelete(comp.id)} title="Delete Component"><Trash /></button>
                                                 </div>
@@ -747,10 +686,10 @@ const ComponentsPage = () => {
 
                         <div className="mb-3">
                             <label className="form-label">Properties</label>
-                                <KeyValueEditor
-                                    properties={formData.properties}
-                                    onChange={(newProps) => setFormData({ ...formData, properties: newProps })}
-                                />
+                            <KeyValueEditor
+                                properties={formData.properties}
+                                onChange={(newProps) => setFormData({ ...formData, properties: newProps })}
+                            />
                         </div>
 
                         {!editingComponent && (
@@ -863,68 +802,15 @@ const ComponentsPage = () => {
                 </Modal.Footer>
             </Modal>
 
-            {/* Flag Issue Modal */}
-            <Modal show={showFlagModal} onHide={() => setShowFlagModal(false)}>
-                <Modal.Header closeButton>
-                    <Modal.Title>Report Issue</Modal.Title>
-                </Modal.Header>
-                <form onSubmit={handleFlagSubmit}>
-                    <Modal.Body>
-                        <div className="mb-3">
-                            <label className="form-label">Component</label>
-                            <input type="text" className="form-control" value={`${flaggingComponent?.brand_name} (${flaggingComponent?.component_type})`} disabled />
-                        </div>
-                        <div className="mb-3">
-                            <label className="form-label">Title</label>
-                            <input
-                                type="text"
-                                className="form-control"
-                                value={flagFormData.title}
-                                onChange={e => setFlagFormData({ ...flagFormData, title: e.target.value })}
-                                required
-                            />
-                        </div>
-                        <div className="mb-3">
-                            <label className="form-label">Priority</label>
-                            <select
-                                className="form-select"
-                                value={flagFormData.priority}
-                                onChange={e => setFlagFormData({ ...flagFormData, priority: e.target.value })}
-                            >
-                                <option value="low">Low</option>
-                                <option value="medium">Medium</option>
-                                <option value="high">High</option>
-                                <option value="critical">Critical</option>
-                            </select>
-                        </div>
-                        <div className="mb-3">
-                            <label className="form-label">Description</label>
-                            <textarea
-                                className="form-control"
-                                rows="3"
-                                value={flagFormData.description}
-                                onChange={e => setFlagFormData({ ...flagFormData, description: e.target.value })}
-                                required
-                            ></textarea>
-                        </div>
-                    </Modal.Body>
-                    <Modal.Footer>
-                        <Button variant="secondary" onClick={() => setShowFlagModal(false)}>Cancel</Button>
-                        <Button variant="warning" type="submit">Report Issue</Button>
-                    </Modal.Footer>
-                </form>
-            </Modal>
-
             {/* View Properties Modal */}
             <Modal show={viewPropsModal.show} onHide={() => setViewPropsModal({ show: false, component: null })} centered>
                 <Modal.Header closeButton>
                     <Modal.Title>Component Properties</Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
-                    <KeyValueEditor
-                        properties={viewPropsModal.component?.properties}
-                        readOnly={true}
-                        onChange={() => { }}
+                    <KeyValues
+                        data={viewPropsModal.component?.properties}
+                        emptyMessage="No properties defined for this component"
                     />
                 </Modal.Body>
                 <Modal.Footer className=' justify-content-between align-items-end'>

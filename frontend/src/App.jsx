@@ -10,8 +10,6 @@ import LaboratoriesPage from './pages/LaboratoriesPage';
 import ComponentsPage from './pages/ComponentsPage';
 import LaboratoryComputersPage from './pages/LaboratoryComputersPage';
 import LabResourcesPage from './pages/LabResourcesPage';
-import ActivityLogsPage from './pages/ActivityLogsPage';
-import LaboratoryIssuesPage from './pages/LaboratoryIssuesPage';
 import ProfilePage from './pages/ProfilePage';
 import ProtectedRoute from './components/ProtectedRoute';
 import ThemedToaster from './components/ThemedToaster';
@@ -34,15 +32,11 @@ function App() {
               </Route>
               <Route element={<ProtectedRoute allowedRoles={['admin', 'it_head', 'lab_head']} />}>
                 <Route path='components' element={<ComponentsPage />} />
-                <Route path='activities' element={<ActivityLogsPage />} />
               </Route>
               <Route element={<ProtectedRoute allowedRoles={['admin', 'it_head', 'lab_head', 'it_technician', 'lab_assistant']} />}>
                 <Route path='laboratories' element={<LaboratoriesPage />} />
                 <Route path='laboratories/:id' element={<LaboratoryComputersPage />} />
                 <Route path='lab-resources' element={<LabResourcesPage />} />
-              </Route>
-              <Route element={<ProtectedRoute allowedRoles={['admin', 'it_head', 'lab_head']} />}>
-                <Route path='issues' element={<LaboratoryIssuesPage />} />
               </Route>
 
               <Route path='profile' element={<ProfilePage />} />

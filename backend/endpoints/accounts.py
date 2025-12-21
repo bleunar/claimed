@@ -3,7 +3,9 @@ from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from core.database import get_db
 from utilities.decorators import role_required
 from utilities.security import hash_password
+from utilities.account_activity import log_activity
 from werkzeug.utils import secure_filename
+import logging
 import uuid
 import os
 import random
@@ -12,6 +14,8 @@ from utilities.otp_store import otp_store
 from core.email import email_service
 from utilities.security import check_password, hash_password
 from email.utils import parsedate_to_datetime
+
+logger = logging.getLogger(__name__)
 
 # profile picture uploads
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
@@ -30,7 +34,7 @@ def profile():
     
     db = get_db()
     cursor = db.cursor(dictionary=True)
-    cursor.execute("SELECT id, name, email, school_id, role, status, profile_picture, birth_date, gender, department_name, password_reset_required FROM accounts WHERE id = %s", (current_user_id,))
+    cursor.execute("SELECT id, name, email, school_id, role, suspended_at, deleted_at, profile_picture, birth_date, gender, department_name, password_reset_required FROM accounts WHERE id = %s", (current_user_id,))
     user = cursor.fetchone()
     cursor.close()
     
@@ -107,6 +111,7 @@ def delete_profile_picture(id):
         try:
             os.remove(file_path)
         except Exception as e:
+            logger.exception("Failed to delete profile picture file")
             cursor.close()
             return jsonify({"msg": f"Failed to delete file: {str(e)}"}), 500
             
@@ -163,14 +168,24 @@ def update_profile():
     name = data.get('name')
     password = data.get('password')
     school_id = data.get('school_id')
+    birth_date = data.get('birth_date')
+    gender = data.get('gender')
+    department_name = data.get('department_name')
     
-    if not name and not password and not school_id:
+    if not any([name, password, school_id, birth_date, gender, department_name]):
         return jsonify({"msg": "Nothing to update"}), 400
         
     db = get_db()
     cursor = db.cursor(dictionary=True)
     
     try:
+        # Fetch current profile for comparison
+        cursor.execute(
+            "SELECT name, school_id, birth_date, gender, department_name FROM accounts WHERE id = %s",
+            (current_user_id,)
+        )
+        current_profile = cursor.fetchone()
+        
         fields = []
         values = []
         
@@ -207,6 +222,21 @@ def update_profile():
             # Clear the reset flag
             fields.append("password_reset_required = %s")
             values.append(0)
+        
+        if birth_date:
+            fields.append("birth_date = %s")
+            values.append(birth_date)
+        
+        if gender:
+            if gender not in ['male', 'female', 'others']:
+                cursor.close()
+                return jsonify({"msg": "Invalid gender value"}), 400
+            fields.append("gender = %s")
+            values.append(gender)
+        
+        if department_name is not None:
+            fields.append("department_name = %s")
+            values.append(department_name or None)
             
         values.append(current_user_id)
         
@@ -214,9 +244,36 @@ def update_profile():
         cursor.execute(query, tuple(values))  
             
         db.commit()
+        
+        # Log profile update - only include fields that actually changed
+        update_details = {}
+        if name and name != current_profile.get('name'):
+            update_details['name'] = name
+        if school_id is not None and school_id != current_profile.get('school_id'):
+            update_details['school_id'] = school_id
+        if password:
+            update_details['password_changed'] = True
+        
+        # Convert current birth_date to string for comparison
+        current_birth_date = current_profile.get('birth_date')
+        if current_birth_date:
+            current_birth_date = str(current_birth_date)
+        if birth_date and birth_date != current_birth_date:
+            update_details['birth_date'] = birth_date
+            
+        if gender and gender != current_profile.get('gender'):
+            update_details['gender'] = gender
+        if department_name is not None and department_name != current_profile.get('department_name'):
+            update_details['department'] = department_name
+        
+        # Only log if something actually changed
+        if update_details:
+            log_activity(current_user_id, 'profile_updated', update_details)
+        
         cursor.close()
         return jsonify({"msg": "Profile updated successfully"}), 200
     except Exception as e:
+        logger.exception("Failed to update profile")
         cursor.close()
         return jsonify({"msg": f"Failed to update profile: {str(e)}"}), 500
 
@@ -286,9 +343,14 @@ def confirm_email_change():
     try:
         cursor.execute("UPDATE accounts SET email = %s WHERE id = %s", (new_email, current_user_id))
         db.commit()
+        
+        # Log email update
+        log_activity(current_user_id, 'email_updated', {'new_email': new_email})
+        
         cursor.close()
         return jsonify({"msg": "Email updated successfully"}), 200
     except Exception as e:
+        logger.exception("Failed to update email")
         cursor.close()
         return jsonify({"msg": f"Failed to update email: {str(e)}"}), 500
 
@@ -310,7 +372,7 @@ def create_account():
     gender = data.get('gender') or None
     department_name = data.get('department_name') or None
 
-    if not all([name, email, school_id, password, role]):
+    if not all([name, email, password, role]):
         return jsonify({"msg": "Missing required fields"}), 400
         
     # validation based on Hierarchy
@@ -328,7 +390,7 @@ def create_account():
     
     # check single admin rule
     if role == 'admin':
-        cursor.execute("SELECT COUNT(*) as count FROM accounts WHERE role = 'admin' AND status != 'deleted'")
+        cursor.execute("SELECT COUNT(*) as count FROM accounts WHERE role = 'admin' AND deleted_at IS NULL")
         result = cursor.fetchone()
         if result['count'] >= 1:
             cursor.close()
@@ -340,11 +402,12 @@ def create_account():
         cursor.close()
         return jsonify({"msg": "Email already exists"}), 409
     
-    # check if school_id exists
-    cursor.execute("SELECT id FROM accounts WHERE school_id = %s", (school_id,))
-    if cursor.fetchone():
-        cursor.close()
-        return jsonify({"msg": "School ID already exists"}), 409
+    # check if school_id exists (only if provided)
+    if school_id:
+        cursor.execute("SELECT id FROM accounts WHERE school_id = %s", (school_id,))
+        if cursor.fetchone():
+            cursor.close()
+            return jsonify({"msg": "School ID already exists"}), 409
 
     account_id = uuid.uuid4().hex[:16]
     hashed_pw = hash_password(password)
@@ -352,12 +415,13 @@ def create_account():
     try:
         cursor.execute(
             "INSERT INTO accounts (id, name, email, school_id, password_hash, role, birth_date, gender, department_name) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
-            (account_id, name, email, school_id, hashed_pw, role, birth_date, gender, department_name)
+            (account_id, name, email, school_id or None, hashed_pw, role, birth_date, gender, department_name)
         )
         db.commit()
         cursor.close()
         return jsonify({"msg": "Account created successfully", "id": account_id}), 201
     except Exception as e:
+        logger.exception("Failed to create account")
         cursor.close()
         return jsonify({"msg": f"Failed to create account: {str(e)}"}), 500
 
@@ -375,11 +439,11 @@ def list_accounts():
     status = request.args.get('status', '')
     include_deleted = request.args.get('include_deleted', 'false').lower() == 'true'
 
-    query = "SELECT id, name, email, school_id, role, status, created_at, profile_picture, birth_date, gender, department_name FROM accounts WHERE id != %s"
+    query = "SELECT id, name, email, school_id, role, suspended_at, deleted_at, created_at, profile_picture, birth_date, gender, department_name FROM accounts WHERE id != %s"
     params = [current_user_id]
 
     if not include_deleted or current_role != 'admin':
-         query += " AND status != 'deleted'"
+         query += " AND deleted_at IS NULL"
     
     # RBAC Filtering
     if current_role == 'it_head':
@@ -414,7 +478,7 @@ def list_accounts():
     # Simplify stats for Heads or filter stats? 
     # For now, let's filter the stats queries too to be consistent.
     
-    stats_query = "SELECT role, COUNT(*) as count FROM accounts WHERE status != 'deleted'"
+    stats_query = "SELECT role, COUNT(*) as count FROM accounts WHERE deleted_at IS NULL"
     stats_params = []
     
     if current_role == 'it_head':
@@ -514,9 +578,11 @@ def update_account(id):
         update_fields.append("role = %s")
         params.append(data['role'])
     
-    if 'status' in data and data['status'] is not None:
-        update_fields.append("status = %s")
-        params.append(data['status'])
+    if 'suspended' in data:
+        if data['suspended']:
+            update_fields.append("suspended_at = NOW()")
+        else:
+            update_fields.append("suspended_at = NULL")
     
     if 'birth_date' in data:
         birth_date = data['birth_date'] or None
@@ -548,13 +614,32 @@ def update_account(id):
         return jsonify({"msg": "No fields to update"}), 400
 
     try:
+        # Get current account state for comparison
+        cursor.execute("SELECT role, suspended_at FROM accounts WHERE id = %s", (id,))
+        current_state = cursor.fetchone()
+        
         query = f"UPDATE accounts SET {', '.join(update_fields)} WHERE id = %s"
         params.append(id)
         cursor.execute(query, tuple(params))
         db.commit()
+        
+        # Log activities based on what changed
+        if 'role' in data and data['role'] != current_state['role']:
+            log_activity(id, 'role_changed', {'old_role': current_state['role'], 'new_role': data['role']})
+        
+        if 'suspended' in data:
+            if data['suspended'] and not current_state['suspended_at']:
+                log_activity(id, 'suspended')
+            elif not data['suspended'] and current_state['suspended_at']:
+                log_activity(id, 'activated')
+        
+        if 'password' in data and data['password']:
+            log_activity(id, 'password_changed')
+        
         cursor.close()
         return jsonify({"msg": "Account updated successfully"}), 200
     except Exception as e:
+        logger.exception("Failed to update account")
         cursor.close()
         return jsonify({"msg": f"Failed to update account: {str(e)}"}), 500
 
@@ -584,7 +669,7 @@ def delete_account(id):
         return jsonify({"msg": "Lab Head can only delete Lab Assistants"}), 403
 
     if target_account['role'] == 'admin':
-         cursor.execute("SELECT COUNT(*) as count FROM accounts WHERE role = 'admin' AND status != 'deleted'")
+         cursor.execute("SELECT COUNT(*) as count FROM accounts WHERE role = 'admin' AND deleted_at IS NULL")
          result = cursor.fetchone()
          if result['count'] <= 1:
              cursor.close()
@@ -602,18 +687,68 @@ def delete_account(id):
                      try:
                          os.remove(file_path)
                      except Exception as e:
-                         print(f"Failed to delete profile picture file: {str(e)}") # Log but continue
+                         logger.warning(f"Failed to delete profile picture file: {str(e)}")
 
              cursor.execute("DELETE FROM accounts WHERE id = %s", (id,))
              msg = "Account permanently deleted"
         else:
             # Soft delete
-            cursor.execute("UPDATE accounts SET status = 'deleted', deleted_at = NOW() WHERE id = %s", (id,))
+            cursor.execute("UPDATE accounts SET deleted_at = NOW() WHERE id = %s", (id,))
+            log_activity(id, 'deleted')
             msg = "Account deleted successfully"
 
         db.commit()
         cursor.close()
         return jsonify({"msg": msg}), 200
     except Exception as e:
+        logger.exception("Failed to delete account")
         cursor.close()
         return jsonify({"msg": f"Failed to delete account: {str(e)}"}), 500
+
+
+@accounts_bp.route('/<id>/activities', methods=['GET'])
+@jwt_required()
+def get_account_activities(id):
+    """Get account activities for the specified account."""
+    current_user_id = get_jwt_identity()
+    current_claims = get_jwt()
+    current_role = current_claims.get("role")
+    
+    # Users can only view their own activities, admins can view any
+    if id != current_user_id and current_role != 'admin':
+        return jsonify({"msg": "Access denied"}), 403
+    
+    limit = request.args.get('limit', 20, type=int)
+    limit = min(limit, 100)  # Max 100 items
+    
+    db = get_db()
+    cursor = db.cursor(dictionary=True)
+    
+    try:
+        cursor.execute("""
+            SELECT id, action, details, ip_address, created_at 
+            FROM account_activities 
+            WHERE account_id = %s 
+            ORDER BY created_at DESC 
+            LIMIT %s
+        """, (id, limit))
+        activities = cursor.fetchall()
+        cursor.close()
+        
+        # Parse JSON details
+        import json
+        for activity in activities:
+            if activity['details']:
+                try:
+                    activity['details'] = json.loads(activity['details'])
+                except:
+                    pass
+            # Convert datetime to ISO format with UTC indicator
+            if activity['created_at']:
+                activity['created_at'] = activity['created_at'].isoformat() + 'Z'
+        
+        return jsonify({"activities": activities}), 200
+    except Exception as e:
+        logger.exception("Failed to get account activities")
+        cursor.close()
+        return jsonify({"msg": f"Failed to get activities: {str(e)}"}), 500

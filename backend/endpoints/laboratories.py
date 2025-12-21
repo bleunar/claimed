@@ -2,8 +2,10 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from core.database import get_db
 from utilities.decorators import role_required
-from utilities.activity_logger import log_activity
+import logging
 import uuid
+
+logger = logging.getLogger(__name__)
 
 laboratories_bp = Blueprint('laboratories', __name__, url_prefix='/laboratories')
 
@@ -58,11 +60,11 @@ def create_laboratory():
             "INSERT INTO laboratories (id, name, description, location) VALUES (%s, %s, %s, %s)",
             (lab_id, name, description, location)
         )
-        log_activity(db, get_jwt_identity(), lab_id, 'laboratory', lab_id, 'create', f"Created laboratory {name}", changes=data)
         db.commit()
         cursor.close()
         return jsonify({"msg": "Laboratory created successfully", "id": lab_id}), 201
     except Exception as e:
+        logger.exception("Failed to create laboratory")
         cursor.close()
         return jsonify({"msg": f"Failed to create laboratory: {str(e)}"}), 500
 
@@ -93,26 +95,11 @@ def update_laboratory(id: str):
             "UPDATE laboratories SET name = %s, description = %s, location = %s WHERE id = %s",
             (name, description, location, id)
         )
-        
-        # Calculate changes
-        changes = {}
-        fields_to_check = ['name', 'description', 'location']
-        for field in fields_to_check:
-            old_val = existing_lab.get(field)
-            new_val = data.get(field)
-            if new_val is not None and str(old_val) != str(new_val):
-                changes[field] = {
-                    "previous": old_val,
-                    "current": new_val
-                }
-
-        if changes:
-             log_activity(db, get_jwt_identity(), id, 'laboratory', id, 'update', f"Updated laboratory {name}", changes=changes)
-             
         db.commit()
         cursor.close()
         return jsonify({"msg": "Laboratory updated successfully"}), 200
     except Exception as e:
+        logger.exception("Failed to update laboratory")
         cursor.close()
         return jsonify({"msg": f"Failed to update laboratory: {str(e)}"}), 500
 
@@ -131,10 +118,10 @@ def delete_laboratory(id):
 
     try:
         cursor.execute("DELETE FROM laboratories WHERE id = %s", (id,))
-        log_activity(db, get_jwt_identity(), id, 'laboratory', id, 'delete', f"Deleted laboratory {id}")
         db.commit()
         cursor.close()
         return jsonify({"msg": "Laboratory deleted successfully"}), 200
     except Exception as e:
+        logger.exception("Failed to delete laboratory")
         cursor.close()
         return jsonify({"msg": f"Failed to delete laboratory: {str(e)}"}), 500

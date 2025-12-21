@@ -1,91 +1,92 @@
+"""System logging configuration with MAX/MIN modes."""
 import logging
 import os
 import sys
 from datetime import datetime
 from flask import has_request_context, request
 
+
 class RequestFormatter(logging.Formatter):
+    """Formatter that includes request context when available."""
+    
     def format(self, record):
         if has_request_context():
             record.url = request.url
             record.remote_addr = request.remote_addr
             record.method = request.method
         else:
-            record.url = None
-            record.remote_addr = None
-            record.method = None
+            record.url = '-'
+            record.remote_addr = '-'
+            record.method = '-'
         return super().format(record)
 
+
 def setup_logging(app):
-    log_mode = app.config.get('LOG_MODE', 'HIGH')
+    """Configure logging based on LOG_MODE setting.
     
-    # create log dir if not exist
+    Modes:
+        MAX: Detailed logs with timestamps, modules, request info (DEBUG level)
+        MIN: Minimal logs with level and message only (INFO level)
+    """
+    log_mode = app.config.get('LOG_MODE', 'MAX').upper()
+    
+    # Create logs directory
     log_dir = os.path.join(os.getcwd(), 'logs')
     os.makedirs(log_dir, exist_ok=True)
     
-    # generate filename: yyyy_ddd_timestamp.txt
+    # Generate timestamped log filename
     timestamp = datetime.now().strftime('%Y_%j_%H%M%S')
-    log_file = os.path.join(log_dir, f"{timestamp}.txt")
+    log_file = os.path.join(log_dir, f"{timestamp}.log")
     
-    # root logger configuration
+    # Configure root logger
     root_logger = logging.getLogger()
     
     # Clear existing handlers
     if root_logger.hasHandlers():
         root_logger.handlers.clear()
         
-    # Handlers
+    # Create handlers
     file_handler = logging.FileHandler(log_file, delay=True)
     console_handler = logging.StreamHandler(sys.stdout)
     
-    # Formatters
-    file_formatter = RequestFormatter(
-        '[%(asctime)s] %(remote_addr)s requested %(url)s\n'
-        '%(levelname)s in %(module)s: %(message)s'
-    )
-    console_formatter = None # Set based on mode
-
-    # Level Logic
-    if log_mode == 'HIGH':
-        # Detailed logs (DEBUG) for both
+    if log_mode == 'MAX':
+        # Detailed logging for debugging
         root_logger.setLevel(logging.DEBUG)
-        
         file_handler.setLevel(logging.DEBUG)
         console_handler.setLevel(logging.DEBUG)
         
-        console_formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        # Detailed formatters with request context
+        file_formatter = RequestFormatter(
+            '[%(asctime)s] %(remote_addr)s %(method)s %(url)s\n'
+            '%(levelname)s in %(module)s: %(message)s\n'
+        )
+        console_formatter = RequestFormatter(
+            '%(asctime)s | %(levelname)s | %(module)s | %(message)s'
         )
         
-    elif log_mode == 'LOW':
-        # Necessary details (INFO) for both
+    else:  # MIN (default fallback)
+        # Minimal logging for production
         root_logger.setLevel(logging.INFO)
-        
         file_handler.setLevel(logging.INFO)
         console_handler.setLevel(logging.INFO)
         
+        # Simple formatters
+        file_formatter = logging.Formatter(
+            '[%(asctime)s] %(levelname)s: %(message)s'
+        )
         console_formatter = logging.Formatter(
             '%(levelname)s: %(message)s'
         )
-        
-    else: # NONE
-        # No logging
-        # We might still want CRITICAL errors to show up? 
-        # User said "NONE no logging".
-        root_logger.setLevel(logging.CRITICAL + 1)
-        # Don't add handlers if NONE
-        app.logger.info("Logging disabled (NONE mode)")
-        return
-
-    # Apply Formatters
+    
+    # Apply formatters
     file_handler.setFormatter(file_formatter)
     console_handler.setFormatter(console_formatter)
     
-    # Add Handlers
+    # Add handlers
     root_logger.addHandler(file_handler)
     root_logger.addHandler(console_handler)
-        
-    # Hijack werkzeug
+    
+    # Unify werkzeug logging
     logging.getLogger('werkzeug').handlers = root_logger.handlers
     
-    app.logger.info(f"Logging initialized in {log_mode} mode. Writing to {log_file}")
+    app.logger.info(f"Logging initialized [{log_mode}] -> {log_file}")

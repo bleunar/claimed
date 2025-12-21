@@ -2,8 +2,10 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from core.database import get_db
 from utilities.decorators import role_required
-from utilities.activity_logger import log_activity
+import logging
 import uuid
+
+logger = logging.getLogger(__name__)
 
 computer_sets_bp = Blueprint('computer_sets', __name__, url_prefix='/computer-sets')
 
@@ -59,7 +61,6 @@ def create_computer_set():
     db = get_db()
     cursor = db.cursor(dictionary=True)
     
-    # Verify laboratory exists
     # Verify laboratory exists and get name for log context
     cursor.execute("SELECT id, name FROM laboratories WHERE id = %s", (laboratory_id,))
     lab_data = cursor.fetchone()
@@ -115,19 +116,6 @@ def create_computer_set():
                         "INSERT INTO computer_set_components (id, computer_set_id, component_type, is_core, brand_name, serial_number, properties, status) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
                         (comp_id, set_id, comp.get('component_type'), comp.get('is_core', False), comp.get('brand_name'), comp.get('serial_number'), props_val, 'good')
                     )
-            
-            # Log single batch activity
-            # Truncate details for summary, metadata holds the specifics
-            summary = f"Created {count} computer sets in {lab_data['name']}"
-            
-            # Generate names list for metadata
-            created_names = [f"{prefix}{start_number + i}" for i in range(count)]
-
-            log_activity(db, get_jwt_identity(), laboratory_id, 'computer_set', created_ids[0], 'create', summary, changes={
-                'batch_config': batch_config, 
-                'created_ids': created_ids,
-                'created_names': created_names
-            })
 
             db.commit()
             cursor.close()
@@ -168,14 +156,13 @@ def create_computer_set():
                     "INSERT INTO computer_set_components (id, computer_set_id, component_type, is_core, brand_name, serial_number, properties, status) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
                     (comp_id, set_id, comp.get('component_type'), comp.get('is_core', False), comp.get('brand_name'), comp.get('serial_number'), props_val, 'good')
                 )
-            
-            log_activity(db, get_jwt_identity(), laboratory_id, 'computer_set', set_id, 'create', f"Created computer set {set_name} in {lab_data['name']}", changes=data)
                 
             db.commit()
             cursor.close()
             return jsonify({"msg": "Computer set created successfully", "id": set_id}), 201
 
     except Exception as e:
+        logger.exception("Failed to create computer set(s)")
         cursor.close()
         return jsonify({"msg": f"Failed to create computer set(s): {str(e)}"}), 500
 
@@ -212,37 +199,16 @@ def update_computer_set(id):
         cursor.close()
         return jsonify({"msg": f"Computer set '{set_name}' already exists in this laboratory."}), 409
 
-    # Fetch existing details for diff logging
-    cursor.execute("SELECT laboratory_id, set_name, status FROM computer_sets WHERE id = %s", (id,))
-    existing_set = cursor.fetchone()
-
     try:
         cursor.execute(
             "UPDATE computer_sets SET laboratory_id = %s, set_name = %s, status = %s WHERE id = %s",
             (laboratory_id, set_name, status, id)
         )
-        
-        # Calculate changes for logging
-        changes = {}
-        if existing_set:
-            fields_to_check = ['laboratory_id', 'set_name', 'status']
-            for field in fields_to_check:
-                old_val = existing_set.get(field)
-                new_val = data.get(field)
-                # Handle potential type mismatches (e.g. None vs '')
-                if str(old_val) != str(new_val) and new_val is not None:
-                     changes[field] = {
-                        "previous": old_val,
-                        "current": new_val
-                    }
-
-        if changes:
-             log_activity(db, get_jwt_identity(), laboratory_id, 'computer_set', id, 'update', f"Updated computer set {set_name}", changes=changes)
-             
         db.commit()
         cursor.close()
         return jsonify({"msg": "Computer set updated successfully"}), 200
     except Exception as e:
+        logger.exception("Failed to update computer set")
         cursor.close()
         return jsonify({"msg": f"Failed to update computer set: {str(e)}"}), 500
 
@@ -253,8 +219,6 @@ def delete_computer_set(id):
     db = get_db()
     cursor = db.cursor(dictionary=True)
     
-    # Check if exists
-    # Check if exists
     # Check if exists
     cursor.execute("""
         SELECT cs.id, cs.laboratory_id, cs.set_name, l.name as lab_name 
@@ -268,42 +232,12 @@ def delete_computer_set(id):
         return jsonify({"msg": "Computer set not found"}), 404
 
     try:
-        # Fetch components to log them as deleted
-        cursor.execute("""
-            SELECT id, component_type, brand_name, serial_number 
-            FROM computer_set_components 
-            WHERE computer_set_id = %s
-        """, (id,))
-        deleted_components = cursor.fetchall()
-
         cursor.execute("DELETE FROM computer_sets WHERE id = %s", (id,))
-        
-        ctx = {
-            "target": {
-                "computer_set": {"id": id, "name": computer_set['set_name']},
-                "laboratory": {"id": computer_set['laboratory_id'], "name": computer_set['lab_name']}
-            }
-        }
-        
-        changes = {}
-        if deleted_components:
-            changes['deleted_components'] = deleted_components
-
-        log_activity(
-            db, 
-            get_jwt_identity(), 
-            computer_set['laboratory_id'], 
-            'computer_set', 
-            id, 
-            'delete', 
-            f"Deleted {computer_set['set_name']} and components on {computer_set['lab_name']}",
-            snapshot_context=ctx,
-            changes=changes
-        )
         db.commit()
         cursor.close()
         return jsonify({"msg": "Computer set deleted successfully"}), 200
     except Exception as e:
+        logger.exception("Failed to delete computer set")
         cursor.close()
         return jsonify({"msg": f"Failed to delete computer set: {str(e)}"}), 500
 
@@ -321,7 +255,7 @@ def batch_delete_computer_sets():
     cursor = db.cursor(dictionary=True)
     
     try:
-        # Fetch details to verify existence and get context (Laboratory ID)
+        # Fetch details to verify existence
         placeholders = ', '.join(['%s'] * len(ids))
         query = f"SELECT id, set_name, laboratory_id FROM computer_sets WHERE id IN ({placeholders})"
         cursor.execute(query, tuple(ids))
@@ -331,59 +265,14 @@ def batch_delete_computer_sets():
             cursor.close()
             return jsonify({"msg": "No valid computer sets found to delete"}), 404
             
-        # Group by laboratory (should technically all be in same lab if UI enforces it, but handle robustly)
-        # We'll log one activity per laboratory involved
-        
-        # Iterate and process individually to ensure granular logging
         deleted_count = 0
         
         for set_id in ids:
-            # Fetch details for this specific set
-            cursor.execute("""
-                SELECT cs.id, cs.set_name, cs.laboratory_id, l.name as lab_name 
-                FROM computer_sets cs 
-                JOIN laboratories l ON cs.laboratory_id = l.id 
-                WHERE cs.id = %s
-            """, (set_id,))
-            target_set = cursor.fetchone()
-            
-            if not target_set:
-                continue # Skip if already gone or invalid
+            cursor.execute("SELECT id FROM computer_sets WHERE id = %s", (set_id,))
+            if not cursor.fetchone():
+                continue
                 
-            # Fetch components for this set
-            cursor.execute("""
-                SELECT id, component_type, brand_name, serial_number 
-                FROM computer_set_components 
-                WHERE computer_set_id = %s
-            """, (set_id,))
-            deleted_components = cursor.fetchall()
-            
-            # Delete the set
             cursor.execute("DELETE FROM computer_sets WHERE id = %s", (set_id,))
-            
-            # Log Activity individually
-            ctx = {
-                "target": {
-                    "computer_set": {"id": set_id, "name": target_set['set_name']},
-                    "laboratory": {"id": target_set['laboratory_id'], "name": target_set['lab_name']}
-                }
-            }
-            
-            changes = {}
-            if deleted_components:
-                changes['deleted_components'] = deleted_components
-            
-            log_activity(
-                db, 
-                get_jwt_identity(), 
-                target_set['laboratory_id'], 
-                'computer_set', 
-                set_id, 
-                'delete', 
-                f"Deleted {target_set['set_name']} and components on {target_set['lab_name']}",
-                snapshot_context=ctx,
-                changes=changes
-            )
             deleted_count += 1
 
         if deleted_count == 0:
@@ -395,6 +284,7 @@ def batch_delete_computer_sets():
         return jsonify({"msg": f"Successfully deleted {deleted_count} computer sets"}), 200
         
     except Exception as e:
+        logger.exception("Failed to batch delete computer sets")
         db.rollback()
         cursor.close()
         return jsonify({"msg": f"Failed to batch delete: {str(e)}"}), 500

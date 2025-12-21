@@ -14,13 +14,13 @@ def get_config(key, secret_file=None, default=None):
 
 class Config:
     APP_ENV =  os.getenv('APP_ENV', 'development')
-    LOG_MODE = get_config('LOG_MODE', default='HIGH').upper()
+    LOG_MODE = get_config('LOG_MODE', default='MAX').upper()
     CORS_ORIGINS = get_config('CORS_ORIGINS', default='*').split(',')
     
-    SECRET_KEY = get_config('SECRET_KEY', 'secret_key', 'secret-ni-boiii-hehhee')
+    SECRET_KEY = get_config('SECRET_KEY', 'secret_key')
     
     # JWT
-    JWT_SECRET_KEY = get_config('JWT_SECRET_KEY', 'jwt_secret_key', 'secret-ni-boiii-hehhee')
+    JWT_SECRET_KEY = get_config('JWT_SECRET_KEY', 'jwt_secret_key')
     JWT_ACCESS_TOKEN_EXPIRES = 600
     JWT_REFRESH_TOKEN_EXPIRES = 72000
     
@@ -30,9 +30,9 @@ class Config:
     JWT_COOKIE_CSRF_PROTECT = os.getenv('APP_ENV', 'development') == "production"
     
     # Database
-    MYSQL_HOST = get_config('MYSQL_HOST', 'mysql_host', 'localhost')
-    MYSQL_USER = get_config('MYSQL_USER', 'mysql_user', 'root')
-    MYSQL_PASSWORD = get_config('MYSQL_PASSWORD', 'mysql_password', 'password')
+    MYSQL_HOST = get_config('MYSQL_HOST', 'mysql_host')
+    MYSQL_USER = get_config('MYSQL_USER', 'mysql_user')
+    MYSQL_PASSWORD = get_config('MYSQL_PASSWORD', 'mysql_password')
     MYSQL_DB = get_config('MYSQL_DB', 'mysql_db', 'app_db')
 
     # Email
@@ -42,7 +42,6 @@ class Config:
     MAIL_USERNAME = get_config('MAIL_USERNAME', 'mail_username')
     MAIL_PASSWORD = get_config('MAIL_PASSWORD', 'mail_password')
 
-    # Default Admin Credentials (if wala pa admin account)
-    DEFAULT_ADMIN_EMAIL = get_config('DEFAULT_ADMIN_EMAIL', 'default_admin_email', 'admin@example.com')
-    DEFAULT_ADMIN_SID = get_config('DEFAULT_ADMIN_SID', 'default_admin_sid', 'ADMIN01')
-    DEFAULT_ADMIN_PASSWORD = get_config('DEFAULT_ADMIN_PASSWORD', 'default_admin_password', 'changeme')
+    # Default Admin Credentials (used if no admin account exists)
+    DEFAULT_ADMIN_EMAIL = get_config('DEFAULT_ADMIN_EMAIL', 'default_admin_email')
+    DEFAULT_ADMIN_PASSWORD = get_config('DEFAULT_ADMIN_PASSWORD', 'default_admin_password')

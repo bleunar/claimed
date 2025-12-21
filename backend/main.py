@@ -11,7 +11,7 @@ init_app(app)
 register_blueprints(app)
 perform_startup_checks(app)
 
-# Check ang uploads dir
+# Ensure uploads directory exists
 UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads', 'profile')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 

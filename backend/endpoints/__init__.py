@@ -4,9 +4,10 @@ from .laboratories import laboratories_bp
 from .computer_sets import computer_sets_bp
 from .components import components_bp
 from .analytics import analytics_bp
-from .activities import activities_bp
-from .issues import issues_bp
 from flask import jsonify
+import logging
+
+logger = logging.getLogger(__name__)
 
 def register_blueprints(app):
     app.register_blueprint(auth_bp)
@@ -15,10 +16,16 @@ def register_blueprints(app):
     app.register_blueprint(computer_sets_bp)
     app.register_blueprint(components_bp)
     app.register_blueprint(analytics_bp)
-    app.register_blueprint(activities_bp)
-    app.register_blueprint(issues_bp)
 
-    # Status endpoint
-    @app.route("/status", methods=["GET"])
-    def status():
-        return jsonify({"status": "ok"})
+    @app.route("/health", methods=["GET"])
+    def health():
+        """Health check endpoint for container orchestration."""
+        from core.database import get_db
+        try:
+            db = get_db()
+            cursor = db.cursor()
+            cursor.execute("SELECT 1")
+            cursor.close()
+            return jsonify({"status": "healthy", "database": "connected"}), 200
+        except Exception as e:
+            return jsonify({"status": "unhealthy", "database": str(e)}), 503

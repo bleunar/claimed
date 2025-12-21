@@ -11,41 +11,39 @@ const Breadcrumbs = () => {
         'accounts': 'Accounts',
         'laboratories': 'Laboratories',
         'components': 'PC Components',
-        'activities': 'Activity Logs',
-        'profile': 'My Account',
-        'issues': 'Lab Issues'
+        'profile': 'My Account'
     };
 
     return (
         <div className="border-bottom py-2">
             <nav aria-label="breadcrumb">
-            <ol 
-                className="breadcrumb p-0 m-0 rounded" 
-                style={{ '--bs-breadcrumb-divider': "'>'" }}
-            >
-                {pathnames.map((value, index) => {
-                    const to = `/${pathnames.slice(0, index + 1).join('/')}`;
-                    const isLast = index === pathnames.length - 1;
-                    const displayName = nameMap[value] || value;
+                <ol
+                    className="breadcrumb p-0 m-0 rounded"
+                    style={{ '--bs-breadcrumb-divider': "'>'" }}
+                >
+                    {pathnames.map((value, index) => {
+                        const to = `/${pathnames.slice(0, index + 1).join('/')}`;
+                        const isLast = index === pathnames.length - 1;
+                        const displayName = nameMap[value] || value;
 
-                    return isLast ? (
-                        <li 
-                            className="breadcrumb-item active" 
-                            aria-current="page" 
-                            key={to}
-                        >
-                            {displayName}
-                        </li>
-                    ) : (
-                        <li className="breadcrumb-item" key={to}>
-                            <Link to={to} className="text-decoration-none">
+                        return isLast ? (
+                            <li
+                                className="breadcrumb-item active"
+                                aria-current="page"
+                                key={to}
+                            >
                                 {displayName}
-                            </Link>
-                        </li>
-                    );
-                })}
-            </ol>
-        </nav>
+                            </li>
+                        ) : (
+                            <li className="breadcrumb-item" key={to}>
+                                <Link to={to} className="text-decoration-none">
+                                    {displayName}
+                                </Link>
+                            </li>
+                        );
+                    })}
+                </ol>
+            </nav>
         </div>
     );
 };

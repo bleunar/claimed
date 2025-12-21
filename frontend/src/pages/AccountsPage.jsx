@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Modal, Button, Form, InputGroup } from 'react-bootstrap';
-import { Funnel, Search, Tools, CheckCircle, XCircle, Trash, Plus, ArrowClockwise, Backspace, PersonCircle, PersonCheck, Eye, EyeSlash, PencilSquare, PersonX, Key } from 'react-bootstrap-icons';
+import { Funnel, Search, Tools, CheckCircle, XCircle, Trash, Plus, ArrowClockwise, Backspace, PersonCircle, PersonCheck, Eye, EyeSlash, PencilSquare, PersonX, Key, ClockHistory } from 'react-bootstrap-icons';
 import toast from 'react-hot-toast';
 import api from '../api/axios';
 import Pagination from '../components/Pagination';
 import LoadingSpinner from '../components/LoadingSpinner';
+import ActivityTimeline from '../components/common/ActivityTimeline';
 
 import { useAuth } from '../context/AuthContext';
 
@@ -24,7 +25,7 @@ const AccountsPage = () => {
         school_id: '',
         password: '',
         role: 'lab_assistant',
-        status: 'active',
+        suspended: false,
         birth_date: '',
         gender: '',
         department_name: ''
@@ -53,6 +54,12 @@ const AccountsPage = () => {
     const [filterRole, setFilterRole] = useState(searchParams.get('role') || '');
     const [filterStatus, setFilterStatus] = useState(searchParams.get('status') || '');
     const [includeDeleted, setIncludeDeleted] = useState(false);
+
+    // Activity Modal State
+    const [showActivityModal, setShowActivityModal] = useState(false);
+    const [activityAccount, setActivityAccount] = useState(null);
+    const [activities, setActivities] = useState([]);
+    const [activitiesLoading, setActivitiesLoading] = useState(false);
 
 
 
@@ -100,7 +107,7 @@ const AccountsPage = () => {
             email: account.email,
             school_id: account.school_id || '',
             role: account.role,
-            status: account.status,
+            suspended: !!account.suspended_at,
             birth_date: account.birth_date ? new Date(account.birth_date).toISOString().split('T')[0] : '',
             gender: account.gender || '',
             department_name: account.department_name || ''
@@ -120,7 +127,7 @@ const AccountsPage = () => {
             school_id: '',
             password: '',
             role: defaultRole,
-            status: 'active',
+            suspended: false,
             birth_date: '',
             gender: '',
             department_name: ''
@@ -133,17 +140,22 @@ const AccountsPage = () => {
         setShowPreviewModal(true);
     };
 
-    const handleSuspend = async (account) => {
-        const newStatus = account.status === 'active' ? 'suspended' : 'active';
-        const action = newStatus === 'active' ? 'activate' : 'suspend';
+    // Helper to derive status from timestamps
+    const getStatus = (account) => {
+        if (account.deleted_at) return 'deleted';
+        if (account.suspended_at) return 'suspended';
+        return 'active';
+    };
 
-        if (!window.confirm(`Are you sure you want to ${action} this account ? `)) return;
+    const handleSuspend = async (account) => {
+        const isSuspended = !!account.suspended_at;
+        const action = isSuspended ? 'activate' : 'suspend';
+
+        if (!window.confirm(`Are you sure you want to ${action} this account?`)) return;
 
         try {
             await api.put(`/accounts/${account.id}`, {
-                ...account,
-                status: newStatus,
-                password: '' // Don't update password
+                suspended: !isSuspended
             });
             toast.success(`Account ${action}d successfully`);
             fetchAccounts();
@@ -226,10 +238,10 @@ const AccountsPage = () => {
     const handleDelete = async (account) => {
         if (!user || user.role !== 'admin') return;
 
-        const isHardDelete = account.status === 'deleted';
+        const isHardDelete = !!account.deleted_at;
         const confirmMsg = isHardDelete
-            ? `WARNING: This will PERMANENTLY delete account "${account.name}" and their data.This action cannot be undone.Are you sure ? `
-            : `Are you sure you want to delete account "${account.name}" ? `;
+            ? `WARNING: This will PERMANENTLY delete account "${account.name}" and their data. This action cannot be undone. Are you sure?`
+            : `Are you sure you want to delete account "${account.name}"?`;
 
         if (!window.confirm(confirmMsg)) return;
 
@@ -243,7 +255,21 @@ const AccountsPage = () => {
         }
     };
 
-
+    const handleOpenActivityModal = async (account) => {
+        setActivityAccount(account);
+        setShowActivityModal(true);
+        setActivitiesLoading(true);
+        try {
+            const response = await api.get(`/accounts/${account.id}/activities?limit=20`);
+            setActivities(response.data.activities || []);
+        } catch (err) {
+            console.error('Failed to fetch activities', err);
+            toast.error('Failed to load activities');
+            setActivities([]);
+        } finally {
+            setActivitiesLoading(false);
+        }
+    };
 
 
     // Route Protection
@@ -305,7 +331,7 @@ const AccountsPage = () => {
     return (
         <div className="container-fluid py-3">
             <div className="d-flex justify-content-between align-items-center mb-4">
-                <div className='h4'>Account Management</div>
+                <div className='h4 fw-semibold'>Account Management</div>
                 <button className="btn btn-sm btn-primary" onClick={handleCreate}>
                     <span className='d-none d-md-inline'>Add New Account</span>
                     <Plus className='d-inline d-md-none' />
@@ -429,8 +455,8 @@ const AccountsPage = () => {
                                                 </td>
                                                 <td>
                                                     <div className='d-flex justify-content-start align-items-center'>
-                                                        <div className={`rounded-circle shadow-sm ${account.status === 'active' ? 'bg-success' : account.status === 'suspended' ? 'bg-warning' : 'bg-secondary'}`} title={account?.status.toUpperCase()} style={{ height: '16px', width: '16px' }}></div>
-                                                        <span className='text-capitalize ms-2'>{account.status}</span>
+                                                        <div className={`rounded-circle shadow-sm ${getStatus(account) === 'active' ? 'bg-success' : getStatus(account) === 'suspended' ? 'bg-warning' : 'bg-secondary'}`} title={getStatus(account).toUpperCase()} style={{ height: '16px', width: '16px' }}></div>
+                                                        <span className='text-capitalize ms-2'>{getStatus(account)}</span>
                                                     </div>
                                                 </td>
                                                 <td>
@@ -444,8 +470,8 @@ const AccountsPage = () => {
                                                         <button className="btn btn-outline-primary btn-sm border-0" onClick={() => handleOpenPasswordModal(account)} title="Set Password">
                                                             <Key />
                                                         </button>
-                                                        <button className="btn btn-outline-primary btn-sm border-0" onClick={() => handleSuspend(account)} title={account.status === 'active' ? "Suspend Account" : "Activate Account"}>
-                                                            {account.status === 'active' ? (
+                                                        <button className="btn btn-outline-primary btn-sm border-0" onClick={() => handleSuspend(account)} title={!account.suspended_at ? "Suspend Account" : "Activate Account"}>
+                                                            {!account.suspended_at ? (
                                                                 <>
                                                                     <PersonX />
                                                                 </>
@@ -456,9 +482,14 @@ const AccountsPage = () => {
                                                             )}
                                                         </button>
                                                         {user?.role === 'admin' && (
-                                                            <button className="btn btn-outline-danger btn-sm border-0" onClick={() => handleDelete(account)} title={account.status === 'deleted' ? "Permanently Delete" : "Delete Account"}>
-                                                                <Trash />
-                                                            </button>
+                                                            <>
+                                                                <button className="btn btn-outline-primary btn-sm border-0" onClick={() => handleOpenActivityModal(account)} title="View Activity">
+                                                                    <ClockHistory />
+                                                                </button>
+                                                                <button className="btn btn-outline-danger btn-sm border-0" onClick={() => handleDelete(account)} title={account.deleted_at ? "Permanently Delete" : "Delete Account"}>
+                                                                    <Trash />
+                                                                </button>
+                                                            </>
                                                         )}
                                                     </div>
                                                 </td>
@@ -559,12 +590,17 @@ const AccountsPage = () => {
                             </div>
 
                             {editingId && (
-                                <div className="mb-3">
-                                    <label className="form-label">Status</label>
-                                    <select className="form-select" name="status" value={formData.status} onChange={handleInputChange}>
-                                        <option value="active">Active</option>
-                                        <option value="suspended">Suspended</option>
-                                    </select>
+                                <div className="mb-3 form-check">
+                                    <input
+                                        type="checkbox"
+                                        className="form-check-input"
+                                        id="suspendedCheck"
+                                        checked={formData.suspended}
+                                        onChange={(e) => setFormData({ ...formData, suspended: e.target.checked })}
+                                    />
+                                    <label className="form-check-label" htmlFor="suspendedCheck">
+                                        Suspend Account
+                                    </label>
                                 </div>
                             )}
 
@@ -610,12 +646,12 @@ const AccountsPage = () => {
                                         <img
                                             src={`${api.defaults.baseURL}/accounts/${viewingAccount.id}/picture`}
                                             alt={viewingAccount.name}
-                                            className="shadow-sm border"
+                                            className=""
                                             style={{ width: '100px', height: '100px', objectFit: 'cover' }}
                                             onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; }}
                                         />
                                         <button
-                                            className="btn btn-sm btn-danger position-absolute top-0 start-100 translate-middle rounded-circle shadow-sm"
+                                            className="btn btn-sm btn-danger position-absolute top-0 start-100 translate-middle rounded-circle"
                                             style={{ width: '24px', height: '24px', padding: 0 }}
                                             onClick={handleDeletePicture}
                                             title="Remove Profile Picture"
@@ -624,36 +660,36 @@ const AccountsPage = () => {
                                         </button>
                                     </>
                                 ) : (
-                                    <PersonCircle className="text-secondary mx-auto shadow-sm" style={{ width: '100px', height: '100px' }} />
+                                    <PersonCircle className="text-secondary mx-auto" style={{ width: '100px', height: '100px' }} />
                                 )}
                             </div>
-                            <h4 className="fw-bold">{viewingAccount.name}</h4>
+                            <h4 className="fw-bold mb-0">{viewingAccount.name}</h4>
                             <p className="text-muted mb-3">{viewingAccount.email}</p>
 
                             <div className="d-flex justify-content-center gap-2 mb-2">
-                                <span className="badge bg-primary-subtle text-primary border border-primary-subtle text-uppercase">
+                                <span className="badge bg-primary text-white text-uppercase">
                                     {viewingAccount.role.replace('_', ' ')}
                                 </span>
-                                <span className={`badge ${viewingAccount.status === 'active' ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-warning-subtle text-warning border border-warning-subtle'} text-uppercase`}>
-                                    {viewingAccount.status}
+                                <span className={`badge ${getStatus(viewingAccount) === 'active' ? 'bg-primary text-white' : getStatus(viewingAccount) === 'suspended' ? 'bg-warning text-dark' : ' bg-secondary text-dark'} text-capitalize`}>
+                                    <span className='p mb-0'>{getStatus(viewingAccount)}</span>
                                 </span>
                             </div>
 
                             <div className="text-start mt-3">
-                                <div className='row rounded border border-2 overflow-hidden'>
-                                    <div className="col-6 p-2 border">
+                                <div className='row row-cols-1'>
+                                    <div className="col p-2 border-bottom">
                                         <small className="text-muted d-block">Department</small>
                                         <div>{viewingAccount.department_name || 'N/A'}</div>
                                     </div>
-                                    <div className="col-6 p-2 border">
+                                    <div className="col p-2 border-bottom">
                                         <small className="text-muted d-block">Gender</small>
                                         <div className='text-capitalize'>{viewingAccount.gender || 'N/A'}</div>
                                     </div>
-                                    <div className="col-6 p-2 border">
+                                    <div className="col p-2 border-bottom">
                                         <small className="text-muted d-block">Birth Date</small>
                                         <div>{viewingAccount.birth_date ? new Date(viewingAccount.birth_date).toLocaleDateString() : 'N/A'}</div>
                                     </div>
-                                    <div className="col-6 p-2 border">
+                                    <div className="col p-2 border-bottom">
                                         <small className="text-muted d-block">Created At</small>
                                         <div>{new Date(viewingAccount.created_at).toDateString()}</div>
                                     </div>
@@ -709,6 +745,27 @@ const AccountsPage = () => {
                         </div>
                     </Form>
                 </Modal.Body>
+            </Modal>
+
+            {/* Activity Modal */}
+            <Modal show={showActivityModal} onHide={() => setShowActivityModal(false)} centered size="md">
+                <Modal.Header closeButton>
+                    <Modal.Title>
+                        <ClockHistory className="me-2" />
+                        Activity: {activityAccount?.name}
+                    </Modal.Title>
+                </Modal.Header>
+                <Modal.Body style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+                    <ActivityTimeline
+                        activities={activities}
+                        loading={activitiesLoading}
+                        maxItems={20}
+                        userRole={user?.role}
+                    />
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={() => setShowActivityModal(false)}>Close</Button>
+                </Modal.Footer>
             </Modal>
 
         </div >

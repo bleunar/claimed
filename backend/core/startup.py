@@ -45,16 +45,16 @@ def initialize_admin(app):
         else:
             print(" [INFO] No admin account found. Creating default admin...")
             email = app.config['DEFAULT_ADMIN_EMAIL']
-            school_id = app.config['DEFAULT_ADMIN_SID']
             password = app.config['DEFAULT_ADMIN_PASSWORD']
+            school_id = '67'  # Default admin school ID
             hashed_password = hash_password(password)
             account_id = uuid.uuid4().hex[:16]
             
             query = """
-                INSERT INTO accounts (id, role, name, email, school_id, password_hash, status)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO accounts (id, role, name, email, school_id, password_hash)
+                VALUES (%s, %s, %s, %s, %s, %s)
             """
-            values = (account_id, 'admin', 'System Admin', email, school_id, hashed_password, 'active')
+            values = (account_id, 'admin', 'System Admin', email, school_id, hashed_password)
             
             cursor.execute(query, values)
             conn.commit()

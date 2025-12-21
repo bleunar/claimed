@@ -41,8 +41,7 @@ const DashboardPage = () => {
             case 'admin':
                 actions.push(
                     { label: 'Manage Accounts', path: '/dashboard/accounts', icon: <People />, variant: 'primary' },
-                    { label: 'Manage Laboratories', path: '/dashboard/laboratories', icon: <Building />, variant: 'primary' },
-                    { label: 'Activity Logs', path: '/dashboard/activities', icon: <JournalText />, variant: 'primary' }
+                    { label: 'Manage Laboratories', path: '/dashboard/laboratories', icon: <Building />, variant: 'primary' }
                 );
                 break;
             case 'it_head':

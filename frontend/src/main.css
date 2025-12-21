@@ -29,3 +29,12 @@
         background-color: rgba(var(--bs-primary-rgb), 0.15) !important;
     }
 }
+
+.stacked-modal-backdrop {
+    z-index: 1250 !important;
+    background-color: rgba(0, 0, 0, 0.6);
+}
+
+.invinsible-border {
+    border: 1px solid rgba(0, 0, 0, 0);
+}
