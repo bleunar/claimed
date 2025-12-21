@@ -5,7 +5,7 @@ const LaboratoryCard = ({ lab, canManage, onEdit, onDelete, onNavigate }) => {
     return (
         <div className="col p-2">
             <div
-                className="card bg-body-secondary h-100 shadow-sm hover-shadow"
+                className="card bg-body-secondary h-100 shadow-sm hover-shadow hover-raised"
                 style={{ cursor: 'pointer', transition: 'transform 0.2s' }}
                 onClick={() => onNavigate(lab.id)}
             >

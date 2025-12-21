@@ -35,7 +35,7 @@ def get_kpi_data():
         })
     except Exception as e:
         logger.exception("Failed to fetch KPI data")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Failed to fetch KPI data"}), 500
     finally:
         cursor.close()
         conn.close()
@@ -98,7 +98,7 @@ def get_computers_by_lab():
         })
     except Exception as e:
         logger.exception("Failed to fetch computers by lab")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Failed to fetch activity logs"}), 500
     finally:
         cursor.close()
         conn.close()
@@ -117,7 +117,7 @@ def get_computers_by_status():
         return jsonify(results)
     except Exception as e:
         logger.exception("Failed to fetch component types")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Failed to send activity report"}), 500
     finally:
         cursor.close()
         conn.close()
@@ -136,7 +136,7 @@ def get_components_by_status():
         return jsonify(results)
     except Exception as e:
         logger.exception("Failed to fetch component status")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Failed to fetch statistics"}), 500
     finally:
         cursor.close()
         conn.close()

@@ -24,7 +24,7 @@ const ComputerSetCard = ({ set, components, onView }) => {
     return (
         <div className="col p-0">
             <div
-                className={`card h-100 position-relative border-0 rounded-0 overflow-hidden shadow-sm hover-shadow ${set.status === 'active' ? 'bg-gradient-primary' : 'bg-gradient-maintenance'}`}
+                className={`card h-100 position-relative border-0 rounded-0 overflow-hidden shadow-sm p-hover hover-shadow ${set.status === 'active' ? 'bg-gradient-primary' : 'bg-gradient-maintenance'}`}
                 style={{ cursor: 'pointer', transition: 'transform 0.2s' }}
                 onClick={() => onView(set)}
                 onMouseEnter={() => setIsHovered(true)}
@@ -37,27 +37,46 @@ const ComputerSetCard = ({ set, components, onView }) => {
                             {set.status}
                         </span>
 
-                        {
-                            set.status === 'active' ? (
-                                totalCount === goodCount ? (
-                                    <span className="badge bg-primary rounded-pill mt-2" title={`${goodCount} Good Components`}>{goodCount} Operational</span>
-                                ) : (
-                                    <>
-                                        {goodCount > 0 && <span className="badge bg-primary rounded-pill mt-2" title={`${goodCount} Good Components`}>{goodCount}</span>}
-                                        {badCount > 0 && <span className="badge bg-secondary rounded-pill mt-2" title={`${badCount} Bad Components`}>{badCount}</span>}
-                                        {maintCount > 0 && <span className="badge bg-info rounded-pill mt-2" title={`${maintCount} Maintenance Components`}>{maintCount}</span>}
-                                        {missingCount > 0 && <span className="badge bg-danger rounded-pill mt-2" title={`${missingCount} Missing Components`}>{missingCount}</span>}
-                                    </>
-                                )
-                            ) : (
-                                <span className="badge bg-info rounded-pill mt-2" title="Computer Under Maintenance">Under Maintenance</span>
-
-                            )
-                        }
+                        {set.status === 'active' ? (
+                            // 1. Check if ALL components are Good
+                            totalCount === goodCount ? (
+                                <span className="badge bg-primary rounded-pill mt-2" title={`${goodCount} Good Components`}>
+                                    {goodCount} Operational
+                                </span>
+                            ) :
+                                // 2. Check if ALL components are Bad
+                                totalCount === badCount ? (
+                                    <span className="badge bg-secondary rounded-pill mt-2" title={`${badCount} Bad Components`}>
+                                        {badCount} Bad
+                                    </span>
+                                ) :
+                                    // 3. Check if ALL components are Maintenance
+                                    totalCount === maintCount ? (
+                                        <span className="badge bg-info rounded-pill mt-2" title={`${maintCount} Maintenance Components`}>
+                                            {maintCount} Maintenance
+                                        </span>
+                                    ) :
+                                        // 4. Check if ALL components are Missing
+                                        totalCount === missingCount ? (
+                                            <span className="badge bg-danger rounded-pill mt-2" title={`${missingCount} Missing Components`}>
+                                                {missingCount} Missing
+                                            </span>
+                                        ) : (
+                                            // 5. Mixed Status: Show individual badges
+                                            <>
+                                                {goodCount > 0 && <span className="badge bg-primary rounded-pill mt-2 me-1" title={`${goodCount} Good Components`}>{goodCount}</span>}
+                                                {badCount > 0 && <span className="badge bg-secondary rounded-pill mt-2 me-1" title={`${badCount} Bad Components`}>{badCount}</span>}
+                                                {maintCount > 0 && <span className="badge bg-info rounded-pill mt-2 me-1" title={`${maintCount} Maintenance Components`}>{maintCount}</span>}
+                                                {missingCount > 0 && <span className="badge bg-danger rounded-pill mt-2 me-1" title={`${missingCount} Missing Components`}>{missingCount}</span>}
+                                            </>
+                                        )
+                        ) : (
+                            <span className="badge bg-info rounded-pill mt-2" title="Computer Under Maintenance">Under Maintenance</span>
+                        )}
                     </div>
 
                     <div
-                        className="position-absolute top-0 start-0 w-100 h-100 p-3 d-none d-md-flex flex-wrap align-items-center justify-content-center bg-gradient-primary-hovered"
+                        className="position-absolute top-0 start-0 w-100 h-100 p-3 d-none d-md-flex flex-wrap align-items-center justify-content-center bg-gradient-primary-hovered "
                         style={{
                             opacity: (isHovered) ? 0.98 : 0,
                             transition: 'opacity 0.4s',
@@ -65,7 +84,7 @@ const ComputerSetCard = ({ set, components, onView }) => {
                             pointerEvents: 'none'
                         }}
                     >
-                        <div className='d-flex flex-wrap justify-content-center'>
+                        <div className='d-flex flex-wrap justify-content-center c-hover'>
                             {components.map(comp => (
                                 <div key={comp.id} className={`m-1 fs-5 ${getStatusColor(comp.status)}`} title={`${comp.brand_name} (${comp.status})`}>
                                     {getComponentIcon(comp.component_type)}

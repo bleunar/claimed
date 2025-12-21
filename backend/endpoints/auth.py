@@ -158,4 +158,4 @@ def reset_password():
     except Exception as e:
         logger.exception("Failed to reset password")
         cursor.close()
-        return jsonify({"msg": f"Failed to reset password: {str(e)}"}), 500
+        return jsonify({"msg": "Failed to reset password. Please try again."}), 500

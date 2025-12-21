@@ -66,7 +66,7 @@ def create_laboratory():
     except Exception as e:
         logger.exception("Failed to create laboratory")
         cursor.close()
-        return jsonify({"msg": f"Failed to create laboratory: {str(e)}"}), 500
+        return jsonify({"msg": "Failed to create laboratory. Please try again."}), 500
 
 @laboratories_bp.route('/<id>', methods=['PUT'])
 @jwt_required()
@@ -101,7 +101,7 @@ def update_laboratory(id: str):
     except Exception as e:
         logger.exception("Failed to update laboratory")
         cursor.close()
-        return jsonify({"msg": f"Failed to update laboratory: {str(e)}"}), 500
+        return jsonify({"msg": "Failed to update laboratory. Please try again."}), 500
 
 @laboratories_bp.route('/<id>', methods=['DELETE'])
 @jwt_required()
@@ -124,4 +124,4 @@ def delete_laboratory(id):
     except Exception as e:
         logger.exception("Failed to delete laboratory")
         cursor.close()
-        return jsonify({"msg": f"Failed to delete laboratory: {str(e)}"}), 500
+        return jsonify({"msg": "Failed to delete laboratory. Please try again."}), 500

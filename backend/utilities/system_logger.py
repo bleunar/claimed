@@ -1,9 +1,11 @@
-"""System logging configuration with MAX/MIN modes."""
+"""System logging configuration with request/response logging."""
 import logging
 import os
 import sys
+import time
+import traceback
 from datetime import datetime
-from flask import has_request_context, request
+from flask import has_request_context, request, g
 
 
 class RequestFormatter(logging.Formatter):
@@ -12,7 +14,7 @@ class RequestFormatter(logging.Formatter):
     def format(self, record):
         if has_request_context():
             record.url = request.url
-            record.remote_addr = request.remote_addr
+            record.remote_addr = request.headers.get('X-Forwarded-For', request.remote_addr)
             record.method = request.method
         else:
             record.url = '-'
@@ -22,13 +24,16 @@ class RequestFormatter(logging.Formatter):
 
 
 def setup_logging(app):
-    """Configure logging based on LOG_MODE setting.
+    """Configure logging with request/response and error logging.
     
-    Modes:
-        MAX: Detailed logs with timestamps, modules, request info (DEBUG level)
-        MIN: Minimal logs with level and message only (INFO level)
+    Features:
+        - Logs every request with status code, IP, method, path, and duration
+        - Detailed exception logging with stack traces
+        - Console output for both development and production
+        - File logging with timestamped filenames
     """
     log_mode = app.config.get('LOG_MODE', 'MAX').upper()
+    is_production = app.config.get('APP_ENV', 'development') == 'production'
     
     # Create logs directory
     log_dir = os.path.join(os.getcwd(), 'logs')
@@ -64,8 +69,7 @@ def setup_logging(app):
             '%(asctime)s | %(levelname)s | %(module)s | %(message)s'
         )
         
-    else:  # MIN (default fallback)
-        # Minimal logging for production
+    else:  # MIN mode for production
         root_logger.setLevel(logging.INFO)
         file_handler.setLevel(logging.INFO)
         console_handler.setLevel(logging.INFO)
@@ -75,7 +79,7 @@ def setup_logging(app):
             '[%(asctime)s] %(levelname)s: %(message)s'
         )
         console_formatter = logging.Formatter(
-            '%(levelname)s: %(message)s'
+            '%(asctime)s | %(levelname)s | %(message)s'
         )
     
     # Apply formatters
@@ -86,7 +90,86 @@ def setup_logging(app):
     root_logger.addHandler(file_handler)
     root_logger.addHandler(console_handler)
     
-    # Unify werkzeug logging
-    logging.getLogger('werkzeug').handlers = root_logger.handlers
+    # Suppress werkzeug's default logging (we'll handle it ourselves)
+    logging.getLogger('werkzeug').setLevel(logging.WARNING)
+    
+    # ==========================================
+    # Request/Response Logging Middleware
+    # ==========================================
+    
+    @app.before_request
+    def log_request_start():
+        """Record request start time."""
+        g.request_start_time = time.time()
+    
+    @app.after_request
+    def log_request_end(response):
+        """Log every request with status, IP, method, path, and duration."""
+        duration = 0
+        if hasattr(g, 'request_start_time'):
+            duration = (time.time() - g.request_start_time) * 1000  # Convert to ms
+        
+        # Get real IP (handle proxied requests)
+        ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+        if ip and ',' in ip:
+            ip = ip.split(',')[0].strip()
+        
+        # Determine log level based on status code
+        status = response.status_code
+        if status >= 500:
+            log_level = logging.ERROR
+        elif status >= 400:
+            log_level = logging.WARNING
+        else:
+            log_level = logging.INFO
+        
+        # Format: [STATUS] METHOD /path - IP - DURATIONms
+        log_message = f"[{status}] {request.method} {request.path} - {ip} - {duration:.0f}ms"
+        
+        # Add query params hint if present (but not the actual values for security)
+        if request.query_string:
+            log_message += " (?...)"
+        
+        app.logger.log(log_level, log_message)
+        
+        return response
+    
+    # ==========================================
+    # Exception/Error Logging
+    # ==========================================
+    
+    @app.errorhandler(Exception)
+    def handle_exception(e):
+        """Log detailed exception info with stack trace."""
+        # Get real IP
+        ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+        if ip and ',' in ip:
+            ip = ip.split(',')[0].strip()
+        
+        # Build detailed error log
+        error_details = [
+            "=" * 50,
+            "UNHANDLED EXCEPTION",
+            "=" * 50,
+            f"Time: {datetime.now().isoformat()}",
+            f"IP: {ip}",
+            f"Method: {request.method}",
+            f"Path: {request.path}",
+            f"URL: {request.url}",
+            f"Exception: {type(e).__name__}: {str(e)}",
+            "-" * 50,
+            "Stack Trace:",
+            traceback.format_exc(),
+            "=" * 50,
+        ]
+        
+        app.logger.error("\n".join(error_details))
+        
+        # Re-raise to let Flask handle the response
+        # (or return a generic error response)
+        from flask import jsonify
+        return jsonify({"msg": "An unexpected error occurred. Please try again."}), 500
     
     app.logger.info(f"Logging initialized [{log_mode}] -> {log_file}")
+    app.logger.info(f"Environment: {'production' if is_production else 'development'}")
+

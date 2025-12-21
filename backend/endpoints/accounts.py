@@ -113,7 +113,7 @@ def delete_profile_picture(id):
         except Exception as e:
             logger.exception("Failed to delete profile picture file")
             cursor.close()
-            return jsonify({"msg": f"Failed to delete file: {str(e)}"}), 500
+            return jsonify({"msg": "Failed to delete file"}), 500
             
     # Update DB
     cursor.execute("UPDATE accounts SET profile_picture = NULL WHERE id = %s", (id,))
@@ -275,7 +275,7 @@ def update_profile():
     except Exception as e:
         logger.exception("Failed to update profile")
         cursor.close()
-        return jsonify({"msg": f"Failed to update profile: {str(e)}"}), 500
+        return jsonify({"msg": "Failed to update profile. Please try again."}), 500
 
 
 @accounts_bp.route('/profile/email/request', methods=['POST'])
@@ -357,7 +357,7 @@ def confirm_email_change():
     except Exception as e:
         logger.exception("Failed to update email")
         cursor.close()
-        return jsonify({"msg": f"Failed to update email: {str(e)}"}), 500
+        return jsonify({"msg": "Failed to update email. Please try again."}), 500
 
 
 @accounts_bp.route('/', methods=['POST'])
@@ -428,7 +428,7 @@ def create_account():
     except Exception as e:
         logger.exception("Failed to create account")
         cursor.close()
-        return jsonify({"msg": f"Failed to create account: {str(e)}"}), 500
+        return jsonify({"msg": "Failed to create account. Please try again."}), 500
 
 
 @accounts_bp.route('/', methods=['GET'])
@@ -646,7 +646,7 @@ def update_account(id):
     except Exception as e:
         logger.exception("Failed to update account")
         cursor.close()
-        return jsonify({"msg": f"Failed to update account: {str(e)}"}), 500
+        return jsonify({"msg": "Failed to update account. Please try again."}), 500
 
 @accounts_bp.route('/<id>', methods=['DELETE'])
 @jwt_required()
@@ -708,7 +708,7 @@ def delete_account(id):
     except Exception as e:
         logger.exception("Failed to delete account")
         cursor.close()
-        return jsonify({"msg": f"Failed to delete account: {str(e)}"}), 500
+        return jsonify({"msg": "Failed to delete account. Please try again."}), 500
 
 
 @accounts_bp.route('/<id>/activities', methods=['GET'])
@@ -756,4 +756,4 @@ def get_account_activities(id):
     except Exception as e:
         logger.exception("Failed to get account activities")
         cursor.close()
-        return jsonify({"msg": f"Failed to get activities: {str(e)}"}), 500
+        return jsonify({"msg": "Failed to get activities. Please try again."}), 500

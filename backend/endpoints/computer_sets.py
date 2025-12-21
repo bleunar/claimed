@@ -164,7 +164,7 @@ def create_computer_set():
     except Exception as e:
         logger.exception("Failed to create computer set(s)")
         cursor.close()
-        return jsonify({"msg": f"Failed to create computer set(s): {str(e)}"}), 500
+        return jsonify({"msg": "Failed to create computer set(s). Please try again."}), 500
 
 @computer_sets_bp.route('/<id>', methods=['PUT'])
 @jwt_required()
@@ -210,7 +210,7 @@ def update_computer_set(id):
     except Exception as e:
         logger.exception("Failed to update computer set")
         cursor.close()
-        return jsonify({"msg": f"Failed to update computer set: {str(e)}"}), 500
+        return jsonify({"msg": "Failed to update computer set. Please try again."}), 500
 
 @computer_sets_bp.route('/<id>', methods=['DELETE'])
 @jwt_required()
@@ -239,7 +239,7 @@ def delete_computer_set(id):
     except Exception as e:
         logger.exception("Failed to delete computer set")
         cursor.close()
-        return jsonify({"msg": f"Failed to delete computer set: {str(e)}"}), 500
+        return jsonify({"msg": "Failed to delete computer set. Please try again."}), 500
 
 @computer_sets_bp.route('/batch-delete', methods=['POST'])
 @jwt_required()
@@ -287,4 +287,4 @@ def batch_delete_computer_sets():
         logger.exception("Failed to batch delete computer sets")
         db.rollback()
         cursor.close()
-        return jsonify({"msg": f"Failed to batch delete: {str(e)}"}), 500
+        return jsonify({"msg": "Failed to batch delete. Please try again."}), 500

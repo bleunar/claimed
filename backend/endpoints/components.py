@@ -177,7 +177,7 @@ def create_component():
     except Exception as e:
         logger.exception("Failed to create component")
         cursor.close()
-        return jsonify({"msg": f"Failed to create component: {str(e)}"}), 500
+        return jsonify({"msg": "Failed to create component. Please try again."}), 500
 
 @components_bp.route('/<id>', methods=['PUT'])
 @jwt_required()
@@ -226,7 +226,7 @@ def update_component(id):
     except Exception as e:
         logger.exception("Failed to update component")
         cursor.close()
-        return jsonify({"msg": f"Failed to update component: {str(e)}"}), 500
+        return jsonify({"msg": "Failed to update component. Please try again."}), 500
 
 @components_bp.route('/<id>', methods=['DELETE'])
 @jwt_required()
@@ -249,7 +249,7 @@ def delete_component(id):
     except Exception as e:
         logger.exception("Failed to delete component")
         cursor.close()
-        return jsonify({"msg": f"Failed to delete component: {str(e)}"}), 500
+        return jsonify({"msg": "Failed to delete component. Please try again."}), 500
 
 @components_bp.route('/batch-transaction', methods=['POST'])
 @jwt_required()
@@ -319,4 +319,4 @@ def batch_component_transaction():
         logger.exception("Batch transaction failed")
         db.rollback()
         cursor.close()
-        return jsonify({"msg": f"Batch transaction failed: {str(e)}"}), 500
+        return jsonify({"msg": "Batch transaction failed. Please try again."}), 500
