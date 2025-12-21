@@ -12,7 +12,7 @@ def create_app():
     setup_logging(app)
 
     # Initialize CORS
-    CORS(app, resources={r"/*": {"origins": app.config['CORS_ORIGINS']}})
+    CORS(app, resources={r"/*": {"origins": app.config['CORS_ORIGINS']}}, supports_credentials=True)
     
     # Initialize extensions here
     jwt = JWTManager(app)
