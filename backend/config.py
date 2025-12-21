@@ -21,7 +21,7 @@ class Config:
     
     # JWT
     JWT_SECRET_KEY = get_config('JWT_SECRET_KEY', 'jwt_secret_key')
-    JWT_ACCESS_TOKEN_EXPIRES = 600
+    JWT_ACCESS_TOKEN_EXPIRES = 1800  # 30 minutes
     JWT_REFRESH_TOKEN_EXPIRES = 72000
     
     JWT_TOKEN_LOCATION = ['headers', 'cookies']
