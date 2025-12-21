@@ -510,13 +510,13 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                                 {
                                     isEditMode && canEditComponentDetails(user) ? (
                                         <div className="col-12 col-lg-3 p-1">
-                                            <div className="input-group input-group-sm">
-                                                <input type="text" className="form-control form-control-sm p-1 bg-body-secondary" value={comp.serial_number} placeholder="Serial Number" onChange={(e) => handleLocalChange(comp.id, 'serial_number', e.target.value)} maxLength={36} />
+                                            <div className="input-group input-group-sm border rounded">
+                                                <input type="text" className="form-control form-control-sm p-1 bg-body-secondary border-0" value={comp.serial_number} placeholder="Serial Number" onChange={(e) => handleLocalChange(comp.id, 'serial_number', e.target.value)} maxLength={36} />
                                                 <BarcodeScanner
                                                     onScan={(value) => handleLocalChange(comp.id, 'serial_number', value)}
                                                     buttonIconOnly={true}
-                                                    buttonVariant="outline-primary"
-                                                    className="btn-sm d-lg-none border-0"
+                                                    buttonVariant=""
+                                                    className="btn-sm d-lg-none border-0 bg-body-secondary"
                                                 />
                                             </div>
                                         </div>
@@ -677,10 +677,10 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                     <Modal.Body>
                         <div className="mb-3">
                             <label className="form-label">Serial Number</label>
-                            <div className="input-group">
+                            <div className="input-group rounded border-0">
                                 <input
                                     type="text"
-                                    className="form-control"
+                                    className="form-control bg-body-secondary"
                                     value={serialInput}
                                     onChange={(e) => setSerialInput(e.target.value)}
                                     placeholder="Enter or scan serial number..."
@@ -690,8 +690,8 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                                 <BarcodeScanner
                                     onScan={(value) => setSerialInput(value)}
                                     buttonIconOnly={true}
-                                    buttonVariant="outline-primary"
-                                    className="d-lg-none border-0"
+                                    buttonVariant=""
+                                    className="d-lg-none border-0 bg-body-secondary"
                                 />
                             </div>
                             <div className="form-text">

@@ -65,6 +65,7 @@ const BarcodeScanner = ({
                 onHide={() => setShowScanner(false)}
                 centered
                 size="md"
+                style={{ zIndex: 1300 }}
             >
                 <Modal.Header closeButton>
                     <Modal.Title className="d-flex align-items-center gap-2">
