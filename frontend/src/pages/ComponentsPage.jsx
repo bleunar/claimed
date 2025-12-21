@@ -676,6 +676,7 @@ const ComponentsPage = () => {
                                     onScan={(value) => setFormData({ ...formData, serial_number: value })}
                                     buttonIconOnly={true}
                                     buttonVariant="outline-primary"
+                                    className="d-lg-none border-0"
                                 />
                             </div>
                         </div>

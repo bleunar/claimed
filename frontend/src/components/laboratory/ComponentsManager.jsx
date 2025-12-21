@@ -516,7 +516,7 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                                                     onScan={(value) => handleLocalChange(comp.id, 'serial_number', value)}
                                                     buttonIconOnly={true}
                                                     buttonVariant="outline-primary"
-                                                    className="btn-sm"
+                                                    className="btn-sm d-lg-none border-0"
                                                 />
                                             </div>
                                         </div>
@@ -691,6 +691,7 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                                     onScan={(value) => setSerialInput(value)}
                                     buttonIconOnly={true}
                                     buttonVariant="outline-primary"
+                                    className="d-lg-none border-0"
                                 />
                             </div>
                             <div className="form-text">

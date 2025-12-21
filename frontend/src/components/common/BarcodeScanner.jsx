@@ -95,7 +95,10 @@ const BarcodeScanner = ({
                                     'codabar'
                                 ]}
                                 allowMultiple={false}
-                                scanDelay={500}
+                                scanDelay={50}
+                                components={{
+                                    tracker: false
+                                }}
                                 styles={{
                                     container: {
                                         width: '100%',
