@@ -105,9 +105,11 @@ def forgot_password():
     # 2. Generate OTP
     otp = ''.join(random.choices(string.digits, k=6))
 
-    # 3. store OTP in memory 
+    # 3. store OTP in memory with cooldown check
     # Key: email, Action: reset_password
-    otp_store.set_otp(email, otp, data={'action': 'reset_password'})
+    success, error = otp_store.set_otp(email, otp, data={'action': 'reset_password'})
+    if not success:
+        return jsonify({"msg": error}), 429  # Too Many Requests
 
     # send email
     email_service.send_otp_email(email, otp, action="Password Reset")
@@ -129,10 +131,12 @@ def reset_password():
     if not is_valid:
         return jsonify({"msg": error}), 400
 
-    # verify OTP
-    success, data = otp_store.verify_otp(email, otp)
-    if not success or data.get('action') != 'reset_password':
-        return jsonify({"msg": "Invalid or expired OTP"}), 400
+    # verify OTP (now returns 3 values: success, data, error_msg)
+    success, data, error_msg = otp_store.verify_otp(email, otp)
+    if not success:
+        return jsonify({"msg": error_msg}), 400
+    if data.get('action') != 'reset_password':
+        return jsonify({"msg": "Invalid OTP action"}), 400
     
     # update password
     password_hash = hash_password(new_password)

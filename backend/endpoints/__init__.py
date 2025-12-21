@@ -16,16 +16,3 @@ def register_blueprints(app):
     app.register_blueprint(computer_sets_bp)
     app.register_blueprint(components_bp)
     app.register_blueprint(analytics_bp)
-
-    @app.route("/health", methods=["GET"])
-    def health():
-        """Health check endpoint for container orchestration."""
-        from core.database import get_db
-        try:
-            db = get_db()
-            cursor = db.cursor()
-            cursor.execute("SELECT 1")
-            cursor.close()
-            return jsonify({"status": "healthy", "database": "connected"}), 200
-        except Exception as e:
-            return jsonify({"status": "unhealthy", "database": str(e)}), 503

@@ -299,10 +299,12 @@ def request_email_change():
     # generate OTP
     otp = ''.join(random.choices(string.digits, k=6))
 
-    # store OTP in memory
-    # Key = uid_email_change, Data = new_email
+    # store OTP in memory with cooldown check
+    # Key = uid_email_change, Data = new_email + action
     key = f"email_change:{current_user_id}"
-    otp_store.set_otp(key, otp, data={'new_email': new_email})
+    success, error = otp_store.set_otp(key, otp, data={'new_email': new_email, 'action': 'email_change'})
+    if not success:
+        return jsonify({"msg": error}), 429  # Too Many Requests
 
     # send Email to NEW email
     email_service.send_otp_email(new_email, otp, action="Email Change")
@@ -330,12 +332,15 @@ def confirm_email_change():
         cursor.close()
         return jsonify({"msg": "Invalid password"}), 401
 
-    # verify OTP
+    # verify OTP (now returns 3 values: success, data, error_msg)
     key = f"email_change:{current_user_id}"
-    success, data = otp_store.verify_otp(key, otp)
+    success, data, error_msg = otp_store.verify_otp(key, otp)
     if not success:
         cursor.close()
-        return jsonify({"msg": "Invalid or expired OTP"}), 400
+        return jsonify({"msg": error_msg}), 400
+    if data.get('action') != 'email_change':
+        cursor.close()
+        return jsonify({"msg": "Invalid OTP action"}), 400
     
     new_email = data.get('new_email')
 
