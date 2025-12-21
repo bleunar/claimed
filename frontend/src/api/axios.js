@@ -5,6 +5,7 @@ const api = axios.create({
     headers: {
         'Content-Type': 'application/json',
     },
+    withCredentials: true,  // Required for cross-subdomain cookie auth
 });
 
 api.interceptors.request.use(

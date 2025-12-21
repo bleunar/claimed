@@ -26,7 +26,8 @@ class Config:
     
     JWT_TOKEN_LOCATION = ['headers', 'cookies']
     JWT_COOKIE_SECURE = os.getenv('APP_ENV', 'development') == "production"
-    JWT_COOKIE_SAMESITE = 'Lax'
+    JWT_COOKIE_SAMESITE = 'None' if os.getenv('APP_ENV', 'development') == "production" else 'Lax'
+    JWT_COOKIE_DOMAIN = get_config('JWT_COOKIE_DOMAIN', default=None)  # Set to '.example.com' in production for cross-subdomain auth
     JWT_COOKIE_CSRF_PROTECT = os.getenv('APP_ENV', 'development') == "production"
     
     # Database

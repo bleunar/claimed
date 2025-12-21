@@ -331,7 +331,7 @@ const ComputerSetForm = ({ mode, editingId, initialData, laboratoryId, laborator
                 <Modal.Body>
                     {propModal.index !== null && components[propModal.index] && (
                         <>
-                            {creationMode === 'batch' && <div className="alert alert-info small">Properties defined here will be applied on <strong>all</strong> components of this type.</div>}
+                            {creationMode === 'batch' && <div className="alert alert-info small">Properties defined here will be applied on <strong>all</strong> components of this type. <br /><br /> Only fill up values of property that can be applied on all computer sets</div>}
                             <KeyValueEditor
                                 properties={components[propModal.index].properties || {}}
                                 onChange={(newProps) => handleComponentPropertiesChange(propModal.index, newProps)}

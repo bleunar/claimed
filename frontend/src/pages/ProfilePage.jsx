@@ -201,7 +201,7 @@ const ProfilePage = () => {
                             <div className="text-muted mb-3 text-uppercase" style={{ fontSize: '0.75rem' }}>{user?.role.replace('_', ' ').toLowerCase()}</div>
                         </Card.Body>
                         <Card.Footer className='d-flex justify-content-evenly p-0 m-0 border-top'>
-                            <Form.Label htmlFor="upload-photo" className="btn btn-primary flex-fill rounded-0 border-0 mb-0">
+                            <Form.Label htmlFor="upload-photo" className="btn btn-outline-primary flex-fill rounded-0 border-0 mb-0">
                                 Update Photo
                             </Form.Label>
                             <Form.Control
@@ -213,7 +213,7 @@ const ProfilePage = () => {
                             />
                             {user?.profile_picture && (
                                 <Button
-                                    variant="primary"
+                                    variant="outline-primary"
                                     className="w-50 rounded-0 border-0 mb-0"
                                     onClick={handleRemovePhoto}
                                 >

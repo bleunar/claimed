@@ -622,7 +622,12 @@ const AccountsPage = () => {
 
                             <div className="mb-3">
                                 <label className="form-label">Department</label>
-                                <input type="text" className="form-control" name="department_name" value={formData.department_name} onChange={handleInputChange} placeholder="e.g. CITE" />
+                                <select className="form-select" name="department_name" value={formData.department_name} onChange={handleInputChange}>
+                                    <option value="" hidden>Select department</option>
+                                    <option value="ITSD">ITSD</option>
+                                    <option value="CITE">CITE</option>
+                                    <option value="others">Other</option>
+                                </select>
                             </div>
                         </div>
                         <div className="modal-footer">
