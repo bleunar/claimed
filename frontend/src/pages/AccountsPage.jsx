@@ -683,27 +683,52 @@ const AccountsPage = () => {
                             <div className="text-start mt-3">
                                 <div className='row row-cols-1'>
                                     <div className="col p-2 border-bottom">
+                                        <small className="text-muted d-block">School ID</small>
+                                        <div>{viewingAccount.school_id || <span className="text-muted fst-italic">Not set</span>}</div>
+                                    </div>
+                                    <div className="col p-2 border-bottom">
                                         <small className="text-muted d-block">Department</small>
-                                        <div>{viewingAccount.department_name || 'N/A'}</div>
+                                        <div>{viewingAccount.department_name || <span className="text-muted fst-italic">Not set</span>}</div>
                                     </div>
                                     <div className="col p-2 border-bottom">
                                         <small className="text-muted d-block">Gender</small>
-                                        <div className='text-capitalize'>{viewingAccount.gender || 'N/A'}</div>
+                                        <div className='text-capitalize'>{viewingAccount.gender || <span className="text-muted fst-italic">Not set</span>}</div>
                                     </div>
                                     <div className="col p-2 border-bottom">
                                         <small className="text-muted d-block">Birth Date</small>
-                                        <div>{viewingAccount.birth_date ? new Date(viewingAccount.birth_date).toLocaleDateString() : 'N/A'}</div>
+                                        <div>{viewingAccount.birth_date ? new Date(viewingAccount.birth_date).toLocaleDateString() : <span className="text-muted fst-italic">Not set</span>}</div>
                                     </div>
                                     <div className="col p-2 border-bottom">
-                                        <small className="text-muted d-block">Created At</small>
-                                        <div>{new Date(viewingAccount.created_at).toDateString()}</div>
+                                        <small className="text-muted d-block">Account Created</small>
+                                        <div>{new Date(viewingAccount.created_at).toLocaleString()}</div>
                                     </div>
+                                    {viewingAccount.suspended_at && (
+                                        <div className="col p-2 border-bottom bg-warning bg-opacity-10">
+                                            <small className="text-warning d-block">Suspended Since</small>
+                                            <div className="text-warning">{new Date(viewingAccount.suspended_at).toLocaleString()}</div>
+                                        </div>
+                                    )}
+                                    {viewingAccount.deleted_at && (
+                                        <div className="col p-2 border-bottom bg-danger bg-opacity-10">
+                                            <small className="text-danger d-block">Deleted On</small>
+                                            <div className="text-danger">{new Date(viewingAccount.deleted_at).toLocaleString()}</div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
                     )}
                 </Modal.Body>
-                <Modal.Footer>
+                <Modal.Footer className="d-flex justify-content-between">
+                    <Button
+                        variant="outline-primary"
+                        onClick={() => {
+                            setShowPreviewModal(false);
+                            handleOpenActivityModal(viewingAccount);
+                        }}
+                    >
+                        <ClockHistory className="me-1" /> View History
+                    </Button>
                     <Button variant="secondary" onClick={() => setShowPreviewModal(false)}>Close</Button>
                 </Modal.Footer>
             </Modal>

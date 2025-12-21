@@ -153,9 +153,9 @@ const LoginPage = () => {
 
             <div className="fixed-bottom p-4">
                 <div className="d-flex justify-content-center gap-4 ">
-                    <img src={pui} alt='phinma ui logo' height={36} />
-                    <img src={pui_full} alt='phinma ui full logo' height={36} />
-                    <img src={cite} alt='phinma ui cite logo' height={36} />
+                    <img src={pui} alt='phinma ui logo' height={24} />
+                    <img src={pui_full} alt='phinma ui full logo' height={24} />
+                    <img src={cite} alt='phinma ui cite logo' height={24} />
                 </div>
             </div>
         </div>
