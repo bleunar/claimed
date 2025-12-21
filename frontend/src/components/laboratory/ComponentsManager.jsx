@@ -4,6 +4,7 @@ import { PencilSquare, Trash, Copy, Check2, XLg, QuestionLg, ListUl, Tools } fro
 import KeyValueEditor from '../common/KeyValueEditor';
 import KeyValues from '../common/KeyValues';
 import ConfirmModal, { useConfirmModal } from '../common/ConfirmModal';
+import BarcodeScanner from '../common/BarcodeScanner';
 import toast from 'react-hot-toast';
 import api from '../../api/axios';
 import { useTheme } from '../../context/ThemeContext';
@@ -509,7 +510,15 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                                 {
                                     isEditMode && canEditComponentDetails(user) ? (
                                         <div className="col-12 col-lg-3 p-1">
-                                            <input type="text" className="form-control form-control-sm p-1 bg-body-secondary p-0" value={comp.serial_number} placeholder="Serial Number" onChange={(e) => handleLocalChange(comp.id, 'serial_number', e.target.value)} maxLength={36} />
+                                            <div className="input-group input-group-sm">
+                                                <input type="text" className="form-control form-control-sm p-1 bg-body-secondary" value={comp.serial_number} placeholder="Serial Number" onChange={(e) => handleLocalChange(comp.id, 'serial_number', e.target.value)} maxLength={36} />
+                                                <BarcodeScanner
+                                                    onScan={(value) => handleLocalChange(comp.id, 'serial_number', value)}
+                                                    buttonIconOnly={true}
+                                                    buttonVariant="outline-primary"
+                                                    className="btn-sm"
+                                                />
+                                            </div>
                                         </div>
                                     ) : (
                                         <div className="col-12 col-lg-4 p-1 d-flex align-items-center cursor-pointer mb-2 mb-lg-0 py-0 pe-0 pe-md-2">
@@ -668,15 +677,22 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                     <Modal.Body>
                         <div className="mb-3">
                             <label className="form-label">Serial Number</label>
-                            <input
-                                type="text"
-                                className="form-control"
-                                value={serialInput}
-                                onChange={(e) => setSerialInput(e.target.value)}
-                                placeholder="Enter serial number..."
-                                autoFocus
-                                required
-                            />
+                            <div className="input-group">
+                                <input
+                                    type="text"
+                                    className="form-control"
+                                    value={serialInput}
+                                    onChange={(e) => setSerialInput(e.target.value)}
+                                    placeholder="Enter or scan serial number..."
+                                    autoFocus
+                                    required
+                                />
+                                <BarcodeScanner
+                                    onScan={(value) => setSerialInput(value)}
+                                    buttonIconOnly={true}
+                                    buttonVariant="outline-primary"
+                                />
+                            </div>
                             <div className="form-text">
                                 Enter the serial number of a component used on other sets
                             </div>

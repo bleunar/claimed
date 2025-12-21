@@ -8,6 +8,7 @@ import Pagination from '../components/Pagination';
 import { Funnel, Plus, Search, Trash, PencilSquare, CheckCircle, CheckCircleFill, ExclamationTriangle, ExclamationTriangleFill, InfoCircle, XCircle } from 'react-bootstrap-icons';
 import KeyValueEditor from '../components/common/KeyValueEditor';
 import KeyValues from '../components/common/KeyValues';
+import BarcodeScanner from '../components/common/BarcodeScanner';
 import { COMPONENT_TYPES } from '../utils/componentTypes';
 import { getComponentIcon } from '../utils/componentIcons';
 
@@ -662,13 +663,21 @@ const ComponentsPage = () => {
                         </div>
                         <div className="mb-3">
                             <label className="form-label">Serial Number</label>
-                            <input
-                                type="text"
-                                className="form-control"
-                                value={formData.serial_number}
-                                onChange={(e) => setFormData({ ...formData, serial_number: e.target.value })}
-                                maxLength="36"
-                            />
+                            <div className="input-group">
+                                <input
+                                    type="text"
+                                    className="form-control"
+                                    value={formData.serial_number}
+                                    onChange={(e) => setFormData({ ...formData, serial_number: e.target.value })}
+                                    maxLength="36"
+                                    placeholder="Enter or scan serial number"
+                                />
+                                <BarcodeScanner
+                                    onScan={(value) => setFormData({ ...formData, serial_number: value })}
+                                    buttonIconOnly={true}
+                                    buttonVariant="outline-primary"
+                                />
+                            </div>
                         </div>
                         <div className="mb-3">
                             <label className="form-label">Status</label>
