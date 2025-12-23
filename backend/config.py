@@ -21,8 +21,9 @@ class Config:
     
     # JWT
     JWT_SECRET_KEY = get_config('JWT_SECRET_KEY', 'jwt_secret_key')
-    JWT_ACCESS_TOKEN_EXPIRES = 1800  # 30 minutes
-    JWT_REFRESH_TOKEN_EXPIRES = 72000
+    JWT_ALGORITHM = 'HS256'  # Explicit algorithm to prevent algorithm confusion attacks
+    JWT_ACCESS_TOKEN_EXPIRES = 600  # 10 minutes (reduced for security)
+    JWT_REFRESH_TOKEN_EXPIRES = 72000  # 20 hours
     
     JWT_TOKEN_LOCATION = ['headers', 'cookies']
     JWT_COOKIE_SECURE = os.getenv('APP_ENV', 'development') == "production"

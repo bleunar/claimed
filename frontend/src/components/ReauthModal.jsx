@@ -3,6 +3,7 @@ import { Modal, Form, Button, Alert, Spinner } from 'react-bootstrap';
 import { ShieldLock, ExclamationTriangle } from 'react-bootstrap-icons';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
+import { setAccessToken } from '../utils/tokenManager';
 
 // Create context for re-authentication
 const ReauthContext = createContext(null);
@@ -86,8 +87,8 @@ export const ReauthProvider = ({ children }) => {
             const response = await api.post('/auth/verify-password', { password });
             const { access_token, role } = response.data;
 
-            // Update token in localStorage
-            localStorage.setItem('access_token', access_token);
+            // Update token in memory (not localStorage for XSS protection)
+            setAccessToken(access_token);
 
             // Refresh user context to get updated role
             if (refreshUser) {
@@ -120,7 +121,7 @@ export const ReauthProvider = ({ children }) => {
         <ReauthContext.Provider value={{ show, setShow }}>
             {children}
 
-            <Modal show={show} onHide={handleClose} centered keyboard={false} style={{zIndex: 1260}} backdrop="static" backdropClassName="stacked-modal-backdrop">
+            <Modal show={show} onHide={handleClose} centered keyboard={false} style={{ zIndex: 1260 }} backdrop="static" backdropClassName="stacked-modal-backdrop">
                 <Modal.Header className="border-0 pb-0">
                     <Modal.Title className="d-flex align-items-center gap-2">
                         <ShieldLock className="text-warning" size={32} />

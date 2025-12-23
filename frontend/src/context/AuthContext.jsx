@@ -1,5 +1,6 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import api from '../api/axios';
+import { setAccessToken, clearAccessToken, hasAccessToken } from '../utils/tokenManager';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 const AuthContext = createContext();
@@ -10,29 +11,18 @@ export const AuthProvider = ({ children }) => {
 
     useEffect(() => {
         const checkAuth = async () => {
-            const token = localStorage.getItem('access_token');
-            if (token) {
-                try {
-                    const response = await api.get('/accounts/profile');
-                    setUser({ ...response.data.user, _picTimestamp: Date.now() });
-                } catch (error) {
-                    console.error("Auth check failed:", error);
-                    localStorage.removeItem('access_token');
-                }
-            } else {
-                // If no token, maybe we have a cookie? Try to refresh.
-                try {
-                    // We use the 'api' instance here. If it fails 401 (no token),
-                    // the interceptor will try to refresh. If refresh succeeds,
-                    // the original request (profile) will be retried and succeed.
-                    const response = await api.get('/accounts/profile');
-                    setUser({ ...response.data.user, _picTimestamp: Date.now() });
-                } catch (error) {
-                    // Expected if truly logged out. Do nothing.
-                    // Interceptor might have redirected to / if refresh failed.
-                    // But for initial load, if we stay on /login, that is fine.
-                }
+            // With in-memory tokens, we always need to try refresh on page load
+            // since memory is cleared on refresh. The refresh token cookie persists.
+            // Mark this as initial auth check to suppress 401 console noise
+            window.__initialAuthCheck = true;
+            try {
+                const response = await api.get('/accounts/profile');
+                setUser({ ...response.data.user, _picTimestamp: Date.now() });
+            } catch (error) {
+                // Expected if truly logged out or refresh failed.
+                // Don't log this as it's expected behavior
             }
+            window.__initialAuthCheck = false;
             setLoading(false);
         };
         checkAuth();
@@ -41,8 +31,10 @@ export const AuthProvider = ({ children }) => {
     const login = async (email, password) => {
         try {
             const response = await api.post('/auth/login', { email, password });
-            const { access_token } = response.data; // refresh_token is in cookie now
-            localStorage.setItem('access_token', access_token);
+            const { access_token } = response.data;
+
+            // Store in memory (not localStorage for XSS protection)
+            setAccessToken(access_token);
 
             // Fetch user profile immediately after login
             const profileResponse = await api.get('/accounts/profile');
@@ -60,7 +52,9 @@ export const AuthProvider = ({ children }) => {
         } catch (e) {
             console.error("Logout endpoint failed", e);
         } finally {
-            localStorage.removeItem('access_token');
+            // Clear in-memory token
+            clearAccessToken();
+            // Clear preferences (these can stay in localStorage as they're not sensitive)
             localStorage.removeItem('theme');
             localStorage.removeItem('toastPosition');
             setUser(null);
@@ -94,3 +88,4 @@ export const AuthProvider = ({ children }) => {
 };
 
 export const useAuth = () => useContext(AuthContext);
+

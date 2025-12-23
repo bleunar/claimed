@@ -1,5 +1,6 @@
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import { getAccessToken, setAccessToken, clearAccessToken, hasAccessToken } from '../utils/tokenManager';
 
 const api = axios.create({
     baseURL: import.meta.env.VITE_API_URL,
@@ -11,7 +12,7 @@ const api = axios.create({
 
 api.interceptors.request.use(
     (config) => {
-        const token = localStorage.getItem('access_token');
+        const token = getAccessToken();
         if (token) {
             config.headers['Authorization'] = `Bearer ${token}`;
         }
@@ -64,11 +65,10 @@ api.interceptors.response.use(
             isRefreshing = true;
 
             try {
-                // Refresh request - use withCredentials to send cookies
                 const response = await axios.post(`${import.meta.env.VITE_API_URL}/auth/refresh`, {}, { withCredentials: true });
                 const { access_token } = response.data;
 
-                localStorage.setItem('access_token', access_token);
+                setAccessToken(access_token);
                 api.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
 
                 processQueue(null, access_token);
@@ -81,8 +81,8 @@ api.interceptors.response.use(
                 isRefreshing = false;
 
                 // Only log out if we had a token (user was logged in)
-                const hadToken = localStorage.getItem('access_token');
-                localStorage.removeItem('access_token');
+                const hadToken = hasAccessToken();
+                clearAccessToken();
 
                 if (hadToken && window.location.pathname !== '/') {
                     // Show toast and delay redirect so user can see it
@@ -104,7 +104,7 @@ api.interceptors.response.use(
         if (error.response?.status === 403) {
             const message = error.response?.data?.msg || '';
             if (message.includes('suspended') || message.includes('not active')) {
-                localStorage.removeItem('access_token');
+                clearAccessToken();
                 toast.error('Your account has been suspended.', { duration: 4000 });
                 setTimeout(() => {
                     window.location.href = '/';
