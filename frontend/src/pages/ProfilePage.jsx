@@ -222,7 +222,7 @@ const ProfilePage = () => {
                             />
                             {user?.profile_picture && (
                                 <Button
-                                    variant="outline-primary"
+                                    variant="outline-danger"
                                     className="w-50 rounded-0 border-0 mb-0"
                                     onClick={handleRemovePhoto}
                                 >

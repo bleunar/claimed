@@ -37,6 +37,20 @@ const processQueue = (error, token = null) => {
     failedQueue = [];
 };
 
+// Helper function to get CSRF token from cookie (needed for production)
+const getCsrfToken = () => {
+    const name = 'csrf_refresh_token=';
+    const decodedCookie = decodeURIComponent(document.cookie);
+    const cookies = decodedCookie.split(';');
+    for (let cookie of cookies) {
+        cookie = cookie.trim();
+        if (cookie.indexOf(name) === 0) {
+            return cookie.substring(name.length);
+        }
+    }
+    return null;
+};
+
 api.interceptors.response.use(
     (response) => response,
     async (error) => {
@@ -65,7 +79,15 @@ api.interceptors.response.use(
             isRefreshing = true;
 
             try {
-                const response = await axios.post(`${import.meta.env.VITE_API_URL}/auth/refresh`, {}, { withCredentials: true });
+                // Include CSRF token for production (JWT_COOKIE_CSRF_PROTECT)
+                const csrfToken = getCsrfToken();
+                const headers = csrfToken ? { 'X-CSRF-TOKEN': csrfToken } : {};
+
+                const response = await axios.post(
+                    `${import.meta.env.VITE_API_URL}/auth/refresh`,
+                    {},
+                    { withCredentials: true, headers }
+                );
                 const { access_token } = response.data;
 
                 setAccessToken(access_token);
