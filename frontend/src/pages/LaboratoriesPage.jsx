@@ -7,6 +7,7 @@ import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { LaboratoryCard } from '../components/laboratory';
+import RoleBasedContent from '../components/ComponentProtector';
 
 const LaboratoriesPage = () => {
     const { user } = useAuth();
@@ -128,7 +129,11 @@ const LaboratoriesPage = () => {
                                 </div>
                             ) : (
                                 <div className="w-100 text-center">
-                                    <span className="text-muted w-100">No Laboratories Found, <span className='btn btn-link px-0' onClick={handleCreate}>Add One</span></span>
+                                    <span className="text-muted w-100">No Laboratories Found
+                                        <RoleBasedContent allowedRoles={['admin', 'it_head', 'lab_head']}>
+                                            , <span className='btn btn-link px-0' onClick={handleCreate}>Add One</span>
+                                        </RoleBasedContent>
+                                    </span>
                                 </div>
                             )
                         )

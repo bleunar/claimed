@@ -12,6 +12,7 @@ import {
     ComponentsManager,
     ComputerSetCard
 } from '../components/laboratory';
+import RoleBasedContent from '../components/ComponentProtector';
 
 const LaboratoryComputersPage = () => {
     const { id: laboratoryId } = useParams();
@@ -246,7 +247,11 @@ const LaboratoryComputersPage = () => {
                 {
                     computerSets.length == 0 && (
                         <div className="col-12">
-                            <div className="text-center text-muted"><p>No computer sets found in this laboratory. <div className='btn btn-link px-0' onClick={handleCreate}>Add Computers</div></p></div>
+                            <div className="text-center text-muted"><p>No computer sets found in this laboratory
+                                        <RoleBasedContent allowedRoles={['admin', 'it_head', 'lab_head']}>
+                                            . <span className='btn btn-link px-0' onClick={handleCreate}>Add One</span>
+                                        </RoleBasedContent>
+                                        </p></div>
                         </div>
                     )
                 }
