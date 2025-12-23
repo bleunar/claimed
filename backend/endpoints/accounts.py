@@ -447,14 +447,6 @@ def create_account():
     db = get_db()
     cursor = db.cursor(dictionary=True)
     
-    # check single admin rule
-    if role == 'admin':
-        cursor.execute("SELECT COUNT(*) as count FROM accounts WHERE role = 'admin' AND deleted_at IS NULL")
-        result = cursor.fetchone()
-        if result['count'] >= 1:
-            cursor.close()
-            return jsonify({"msg": "Only one admin account allowed"}), 400
-    
     # check if email exists
     cursor.execute("SELECT id FROM accounts WHERE email = %s", (email,))
     if cursor.fetchone():
