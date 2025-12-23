@@ -77,6 +77,25 @@ def print_config(app):
                 print(f"\t> {key}: {value}")
     print("----------------------------\n")
 
+def check_redis_connection(app):
+    """Check Redis connection if REDIS_URL is configured."""
+    import os
+    redis_url = os.environ.get('REDIS_URL')
+    
+    if not redis_url:
+        print("> [INFO] REDIS_URL not set - using in-memory OTP storage (development mode)")
+        return True
+    
+    try:
+        import redis
+        r = redis.from_url(redis_url)
+        r.ping()
+        print(f"> [OK] Redis connection successful: {redis_url}")
+        return True
+    except Exception as e:
+        print(f"> [ERROR] Redis connection failed: {e}")
+        return False
+
 def perform_startup_checks(app):
     print("--- Starting system checks ---")
     
@@ -91,11 +110,21 @@ def perform_startup_checks(app):
     print("--- Checking email server connection ---")
     email_status = retry_operation(lambda: email_service.check_connection(app), name="Email Connection")
     
+    # 4. Check Redis (production only)
+    print("--- Checking Redis connection ---")
+    redis_status = retry_operation(lambda: check_redis_connection(app), max_retries=5, delay=5, name="Redis Connection")
+    
     if not db_status:
         print("\n> CRITICAL: Database check failed. Exiting.")
         sys.exit(1)
+    
+    if not redis_status:
+        import os
+        if os.environ.get('REDIS_URL'):
+            print("\n> CRITICAL: Redis check failed in production. Exiting.")
+            sys.exit(1)
         
-    # 4. Initialize Admin
+    # 5. Initialize Admin
     admin_status = initialize_admin(app)
     if not admin_status:
          print("\n> WARNING: Admin initialization failed.")

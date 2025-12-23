@@ -1,10 +1,28 @@
 name: claimed
 
 services:
+  claimed_redis:
+    image: redis:7-alpine
+    container_name: claimed_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - claimed
+
   claimed_backend:
     build: ./backend
     container_name: claimed_backend
     restart: unless-stopped
+    depends_on:
+      claimed_redis:
+        condition: service_healthy
     env_file:
       - ./backend/.env
     secrets:
@@ -27,6 +45,7 @@ services:
       - MYSQL_DB_FILE=/run/secrets/mysql_db
       - SECRET_KEY_FILE=/run/secrets/secret_key
       - CORS_ORIGINS=${CORS_ORIGINS}
+      - REDIS_URL=redis://claimed_redis:6379/0
     volumes:
       - upload_data:/app/uploads
       - ./backend_logs:/app/logs
@@ -70,6 +89,7 @@ networks:
 
 volumes:
   upload_data:
+  redis_data:
 
 secrets:
   secret_key:
