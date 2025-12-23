@@ -115,7 +115,18 @@ const BarcodeScanner = ({
                                 }}
                             />
                             <style>{`
-                                .scanner-container svg {
+                                .scanner-container > div > svg,
+                                .scanner-container svg[class*="finder"],
+                                .scanner-container svg[class*="viewfinder"],
+                                .scanner-container > div > div > svg {
+                                    position: absolute !important;
+                                    top: 50% !important;
+                                    left: 50% !important;
+                                    transform: translate(-50%, -50%) !important;
+                                    width: 200px !important;
+                                    height: 200px !important;
+                                }
+                                .scanner-container > div > div:last-child {
                                     position: absolute !important;
                                     top: 50% !important;
                                     left: 50% !important;
