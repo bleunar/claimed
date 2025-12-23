@@ -9,6 +9,10 @@ import StackedBarChart from '../components/analytics/StackedBarChart';
 import PieChart from '../components/analytics/PieChart';
 import { useState, useEffect } from 'react';
 import ForceChangePasswordModal from '../components/modals/ForceChangePasswordModal';
+import {
+    COMPUTER_SET_STATUS_COLORS,
+    COMPONENT_STATUS_COLORS
+} from '../utils/statusColors';
 
 const DashboardPage = () => {
     const { user } = useAuth();
@@ -72,6 +76,21 @@ const DashboardPage = () => {
         return actions;
     };
 
+    // Computer Set Status colors: operational (green), maintenance (cyan)
+    const computerSetColors = [
+        COMPUTER_SET_STATUS_COLORS.operational,
+        COMPUTER_SET_STATUS_COLORS.maintenance,
+        '#6c757d' // fallback gray
+    ];
+
+    // Component Status colors: good (green), bad (orange), maintenance (cyan), missing (red)
+    const componentColors = [
+        COMPONENT_STATUS_COLORS.good,
+        COMPONENT_STATUS_COLORS.bad,
+        COMPONENT_STATUS_COLORS.maintenance,
+        COMPONENT_STATUS_COLORS.missing
+    ];
+
     if (loading) return <div className="text-center mt-5"><div className="spinner-border text-primary"></div></div>;
     if (error) return <div className="alert alert-danger mt-5">{error}</div>;
 
@@ -105,21 +124,21 @@ const DashboardPage = () => {
                     <StackedBarChart
                         title="Computer Sets per Laboratory"
                         apiPath="/analytics/bar/computers-by-lab"
-                        colors={['#28a745', '#17a2b8']}
+                        colors={computerSetColors}
                     />
                 </div>
                 <div className="col-lg-3 mb-4">
                     <PieChart
                         title="Computer Status"
                         apiPath="/analytics/pie/computers-by-status"
-                        colors={['#28a745', '#17a2b8', '#6c757d']}
+                        colors={computerSetColors}
                     />
                 </div>
                 <div className="col-lg-3 mb-4">
                     <PieChart
                         title="Component Status"
                         apiPath="/analytics/pie/components-by-status"
-                        colors={['#28a745', '#ffc107', '#17a2b8', '#dc3545']}
+                        colors={componentColors}
                     />
                 </div>
             </div>
@@ -128,3 +147,4 @@ const DashboardPage = () => {
 };
 
 export default DashboardPage;
+

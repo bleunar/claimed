@@ -16,7 +16,6 @@ const KPICard = ({ title, value, icon, color = 'primary', trend, link }) => {
             <Card
                 className={`h-100 bg-body-secondary border-2 border hover-raised shadow ${link ? 'cursor-pointer' : ''}`}
                 onClick={handleClick}
-                style={link ? { cursor: 'pointer', transition: 'transform 0.15s ease-in-out' } : {}}
                 title={`View ${title}`}
             >
                 <Card.Body>
