@@ -79,7 +79,7 @@ const BarcodeScanner = ({
                             {error}
                         </Alert>
                     ) : (
-                        <div style={{ position: 'relative' }}>
+                        <div className="scanner-container" style={{ position: 'relative', overflow: 'hidden' }}>
                             <Scanner
                                 onScan={handleScan}
                                 onError={handleError}
@@ -110,9 +110,18 @@ const BarcodeScanner = ({
                                         width: '100%',
                                         height: '100%',
                                         objectFit: 'cover'
-                                    }
+                                    },
+                                    finderBorder: 50
                                 }}
                             />
+                            <style>{`
+                                .scanner-container svg {
+                                    position: absolute !important;
+                                    top: 50% !important;
+                                    left: 50% !important;
+                                    transform: translate(-50%, -50%) !important;
+                                }
+                            `}</style>
                         </div>
                     )}
                     <div className="p-3 text-center text-muted small">
