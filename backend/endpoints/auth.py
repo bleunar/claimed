@@ -81,6 +81,52 @@ def refresh():
     access_token = create_access_token(identity=identity, additional_claims=additional_claims)
     return jsonify(access_token=access_token), 200
 
+
+@auth_bp.route('/verify-password', methods=['POST'])
+@jwt_required()
+def verify_password():
+    """Verify user's password and issue a fresh token with updated role.
+    
+    Used when a role mismatch is detected between JWT and database.
+    """
+    from flask_jwt_extended import get_jwt
+    
+    identity = get_jwt_identity()
+    password = request.json.get('password')
+    
+    if not password:
+        return jsonify({"msg": "Password is required"}), 400
+    
+    db = get_db()
+    cursor = db.cursor(dictionary=True)
+    cursor.execute("SELECT password_hash, role, suspended_at, deleted_at FROM accounts WHERE id = %s", (identity,))
+    user = cursor.fetchone()
+    cursor.close()
+    
+    if not user:
+        return jsonify({"msg": "Account not found"}), 404
+    
+    if user['suspended_at'] is not None:
+        return jsonify({"msg": "Account is suspended"}), 403
+    
+    if user['deleted_at'] is not None:
+        return jsonify({"msg": "Account is not active"}), 401
+    
+    if not check_password(password, user['password_hash']):
+        return jsonify({"msg": "Invalid password"}), 401
+    
+    # Issue new token with fresh role from database
+    additional_claims = {"role": user['role']}
+    access_token = create_access_token(identity=identity, additional_claims=additional_claims)
+    
+    log_activity(identity, 'role_reauth', {'new_role': user['role']})
+    
+    return jsonify({
+        "access_token": access_token,
+        "role": user['role'],
+        "msg": "Identity verified successfully"
+    }), 200
+
 @auth_bp.route('/register', methods=['POST'])
 def register():
     return jsonify({"message": "Register endpoint"}), 200

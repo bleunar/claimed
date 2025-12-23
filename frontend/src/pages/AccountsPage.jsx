@@ -9,6 +9,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import ActivityTimeline from '../components/common/ActivityTimeline';
 
 import { useAuth } from '../context/AuthContext';
+import RoleBasedContent from '../components/ComponentProtector';
 
 
 const AccountsPage = () => {
@@ -574,6 +575,9 @@ const AccountsPage = () => {
                                 <select className="form-select" name="role" value={formData.role} onChange={handleInputChange}>
                                     {user?.role === 'admin' && (
                                         <>
+                                            <RoleBasedContent allowedRoles={["admin"]}>
+                                                <option value="admin">Administrator</option>
+                                            </RoleBasedContent>
                                             <option value="it_head">ITSD Head</option>
                                             <option value="it_technician">ITSD Technician</option>
                                             <option value="lab_head">Laboratory Head</option>

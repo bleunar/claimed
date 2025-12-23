@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from core.database import get_db
-from utilities.decorators import role_required
+from utilities.decorators import role_required, verify_role_freshness
 import logging
 import uuid
 
@@ -50,6 +50,7 @@ def get_computer_set(id):
 
 @computer_sets_bp.route('/', methods=['POST'])
 @jwt_required()
+@verify_role_freshness
 @role_required(['admin', 'it_head', 'lab_head'])
 def create_computer_set():
     data = request.json
@@ -168,6 +169,7 @@ def create_computer_set():
 
 @computer_sets_bp.route('/<id>', methods=['PUT'])
 @jwt_required()
+@verify_role_freshness
 @role_required(['admin', 'it_head', 'lab_head', 'it_technician'])
 def update_computer_set(id):
     data = request.json
@@ -214,6 +216,7 @@ def update_computer_set(id):
 
 @computer_sets_bp.route('/<id>', methods=['DELETE'])
 @jwt_required()
+@verify_role_freshness
 @role_required(['admin', 'it_head', 'lab_head'])
 def delete_computer_set(id):
     db = get_db()
@@ -243,6 +246,7 @@ def delete_computer_set(id):
 
 @computer_sets_bp.route('/batch-delete', methods=['POST'])
 @jwt_required()
+@verify_role_freshness
 @role_required(['admin', 'it_head', 'lab_head'])
 def batch_delete_computer_sets():
     data = request.json

@@ -14,7 +14,7 @@ export const AuthProvider = ({ children }) => {
             if (token) {
                 try {
                     const response = await api.get('/accounts/profile');
-                    setUser(response.data.user);
+                    setUser({ ...response.data.user, _picTimestamp: Date.now() });
                 } catch (error) {
                     console.error("Auth check failed:", error);
                     localStorage.removeItem('access_token');
@@ -26,7 +26,7 @@ export const AuthProvider = ({ children }) => {
                     // the interceptor will try to refresh. If refresh succeeds,
                     // the original request (profile) will be retried and succeed.
                     const response = await api.get('/accounts/profile');
-                    setUser(response.data.user);
+                    setUser({ ...response.data.user, _picTimestamp: Date.now() });
                 } catch (error) {
                     // Expected if truly logged out. Do nothing.
                     // Interceptor might have redirected to / if refresh failed.
@@ -46,7 +46,7 @@ export const AuthProvider = ({ children }) => {
 
             // Fetch user profile immediately after login
             const profileResponse = await api.get('/accounts/profile');
-            setUser(profileResponse.data.user);
+            setUser({ ...profileResponse.data.user, _picTimestamp: Date.now() });
             return true;
         } catch (error) {
             console.error("Login failed:", error);
@@ -71,7 +71,8 @@ export const AuthProvider = ({ children }) => {
     const refreshUser = async () => {
         try {
             const response = await api.get('/accounts/profile');
-            setUser(response.data.user);
+            // Add timestamp for cache busting on profile pictures
+            setUser({ ...response.data.user, _picTimestamp: Date.now() });
         } catch (error) {
             console.error("Failed to refresh user:", error);
         }

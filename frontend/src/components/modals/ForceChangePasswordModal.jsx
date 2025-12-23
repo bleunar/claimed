@@ -55,12 +55,11 @@ const ForceChangePasswordModal = ({ show }) => {
 
     return (
         <Modal show={show} backdrop="static" keyboard={false} centered>
-            <Modal.Header className="bg-warning-subtle">
-                <Modal.Title className="text-warning-emphasis">Password Change Required</Modal.Title>
+            <Modal.Header>
+                <Modal.Title>Password Change Required</Modal.Title>
             </Modal.Header>
             <Modal.Body>
                 <p className="text-muted mb-4">
-                    Your account has been flagged for a mandatory password reset.
                     Please set a new secure password to continue accessing the system.
                 </p>
 
@@ -82,7 +81,7 @@ const ForceChangePasswordModal = ({ show }) => {
                         </InputGroup>
                         <Form.Text className="text-muted d-block mt-1">
                             <small>
-                                Rules: At least 8 characters, 1 uppercase letter, 1 digit.
+                                At least 8 characters, 1 uppercase letter, 1 digit.
                             </small>
                         </Form.Text>
                     </Form.Group>
@@ -100,7 +99,7 @@ const ForceChangePasswordModal = ({ show }) => {
 
                     <div className="d-grid">
                         <Button variant="primary" type="submit" disabled={loading}>
-                            {loading ? <><span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Updating...</> : 'Update Password & Continue'}
+                            {loading ? <><span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Updating...</> : 'Update Password'}
                         </Button>
                     </div>
                 </Form>

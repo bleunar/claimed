@@ -16,18 +16,18 @@ def retry_operation(operation, max_retries=20, delay=15, name="Operation"):
             if operation():
                 return True
             else:
-                print(f" [RETRY] {name} failed. Attempt {attempt}/{max_retries}. Retrying in {delay}s...")
+                print(f"> [RETRY] {name} failed. Attempt {attempt}/{max_retries}. Retrying in {delay}s...")
         except Exception as e:
-            print(f" [RETRY] {name} raised exception: {e}. Attempt {attempt}/{max_retries}. Retrying in {delay}s...")
+            print(f"> [RETRY] {name} raised exception: {e}. Attempt {attempt}/{max_retries}. Retrying in {delay}s...")
         
         if attempt < max_retries:
             time.sleep(delay)
             
-    print(f" [FAILED] {name} failed after {max_retries} attempts.")
+    print(f"> [FAILED] {name} failed after {max_retries} attempts.")
     return False
 
 def initialize_admin(app):
-    print("Checking for admin account...")
+    print("--- Checking for admin account ---")
     try:
         conn = mysql.connector.connect(
             host=app.config['MYSQL_HOST'],
@@ -41,9 +41,9 @@ def initialize_admin(app):
         admin = cursor.fetchone()
         
         if admin:
-            print(" [OK] Admin account exists.")
+            print("> [OK] Admin account exists.")
         else:
-            print(" [INFO] No admin account found. Creating default admin...")
+            print("> [INFO] No admin account found. Creating default admin...")
             email = app.config['DEFAULT_ADMIN_EMAIL']
             password = app.config['DEFAULT_ADMIN_PASSWORD']
             school_id = '67'
@@ -58,13 +58,13 @@ def initialize_admin(app):
             
             cursor.execute(query, values)
             conn.commit()
-            print(f" [CREATED] Default admin created: {email}")
+            print(f"> [CREATED] Default admin created: {email}")
             
         cursor.close()
         conn.close()
         return True
     except mysql.connector.Error as err:
-        print(f" [ERROR] Failed to initialize admin: {err}")
+        print(f"> [ERROR] Failed to initialize admin: {err}")
         return False
 
 def print_config(app):
@@ -72,32 +72,32 @@ def print_config(app):
     for key, value in app.config.items():
         if key.isupper():
             if any(secret in key.upper() for secret in ['KEY', 'PASSWORD', 'SECRET', 'TOKEN']):
-                print(f"{key}: ********")
+                print(f"\t> {key}: [######## REDACTED BY KAI SOTTO ########]")
             else:
-                print(f"{key}: {value}")
+                print(f"\t> {key}: {value}")
     print("----------------------------\n")
 
 def perform_startup_checks(app):
-    print("Starting system checks...")
+    print("--- Starting system checks ---")
     
     # 1. Print Config
     print_config(app)
     
     # 2. Check Database
-    print("Checking database connection...")
+    print("--- Checking database connection ---")
     db_status = retry_operation(lambda: check_db(app), name="Database Connection")
     
     # 3. Check Email
-    print("Checking email server connection...")
+    print("--- Checking email server connection ---")
     email_status = retry_operation(lambda: email_service.check_connection(app), name="Email Connection")
     
     if not db_status:
-        print("\nCRITICAL: Database check failed. Exiting.")
+        print("\n> CRITICAL: Database check failed. Exiting.")
         sys.exit(1)
         
     # 4. Initialize Admin
     admin_status = initialize_admin(app)
     if not admin_status:
-         print("\nWARNING: Admin initialization failed.")
+         print("\n> WARNING: Admin initialization failed.")
 
-    print("\nSystem checks completed successfully.\n")
+    print("\n--- System checks completed successfully. ---\n")

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '../context/ThemeContext';
-import { Form, Button, Card, Row, Col, Image, Modal } from 'react-bootstrap';
+import { Form, Button, Card, Row, Col, Image, Modal, ProgressBar } from 'react-bootstrap';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
 import { Person, PersonCircle, Eye, EyeSlash } from 'react-bootstrap-icons';
@@ -29,6 +29,7 @@ const ProfilePage = () => {
     const [departmentName, setDepartmentName] = useState('');
     const [activities, setActivities] = useState([]);
     const [activitiesLoading, setActivitiesLoading] = useState(true);
+    const [uploadProgress, setUploadProgress] = useState(0);
 
     useEffect(() => {
         if (user) {
@@ -145,11 +146,16 @@ const ProfilePage = () => {
         formData.append('file', selectedFile);
 
         setUploading(true);
+        setUploadProgress(0);
 
         try {
             await api.post('/accounts/profile/upload-picture', formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
+                },
+                onUploadProgress: (progressEvent) => {
+                    const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                    setUploadProgress(percentCompleted);
                 },
             });
             toast.success("Profile picture uploaded successfully");
@@ -158,9 +164,10 @@ const ProfilePage = () => {
             refreshUser();
         } catch (err) {
             toast.error(err.response?.data?.msg || "Failed to upload profile picture");
-            setShowPreviewModal(false); // Close modal on error too? Or keep open? Let's close for now.
+            setShowPreviewModal(false);
         } finally {
             setUploading(false);
+            setUploadProgress(0);
         }
     };
 
@@ -177,7 +184,9 @@ const ProfilePage = () => {
 
     const getProfileImageUrl = () => {
         if (user?.profile_picture) {
-            return `/api/accounts/${user.id}/picture?t=${imageTimestamp}`;
+            // Use full API URL - img tags need absolute path to backend
+            const apiUrl = import.meta.env.VITE_API_URL || '';
+            return `${apiUrl}/accounts/${user.id}/picture?t=${imageTimestamp}`;
         }
         return null;
     };
@@ -370,7 +379,7 @@ const ProfilePage = () => {
                         <Card.Header className='text-body-secondary fw-bold'>Update Password</Card.Header>
                         <Card.Body className='bg-body-tertiary'>
                             <Form onSubmit={handleUpdatePassword} className='row'>
-                                
+
                                 <div className="col-12 col-md-6">
                                     <Form.Group className="mb-3">
                                         <Form.Label>New Password</Form.Label>
@@ -468,6 +477,21 @@ const ProfilePage = () => {
                     )}
 
                     <div className="text-muted small my-4">NOTE: Using images with an aspect ratio of 1:1 (Square) is recommnded</div>
+
+                    {uploading && (
+                        <div className="mt-3">
+                            <ProgressBar
+                                now={uploadProgress}
+                                label={`${uploadProgress}%`}
+                                animated
+                                striped
+                                variant="success"
+                            />
+                            <div className="text-muted small mt-2">
+                                {uploadProgress < 100 ? 'Uploading...' : 'Processing image...'}
+                            </div>
+                        </div>
+                    )}
                 </Modal.Body>
                 <Modal.Footer className='border-0'>
                     <Button variant="secondary" onClick={handleClosePreview} disabled={uploading}>

@@ -113,6 +113,42 @@ api.interceptors.response.use(
             }
         }
 
+        // Handle 419 Role Mismatch - require password re-authentication
+        if (error.response?.status === 419 && error.response?.data?.role_mismatch) {
+            const originalRequest = error.config;
+
+            // Prevent infinite loops
+            if (originalRequest._reauthRetry) {
+                return Promise.reject(error);
+            }
+
+            originalRequest._reauthRetry = true;
+
+            // Import the emitter dynamically to avoid circular dependencies
+            const { reauthEmitter } = await import('../components/ReauthModal');
+
+            return new Promise((resolve, reject) => {
+                // Set up one-time listener for re-auth result
+                const unsubscribe = reauthEmitter.subscribe((newToken) => {
+                    unsubscribe();
+
+                    if (newToken) {
+                        // Retry the original request with new token
+                        originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
+                        resolve(api(originalRequest));
+                    } else {
+                        reject(error);
+                    }
+                });
+
+                // Emit event to show the modal
+                reauthEmitter.emit({
+                    message: error.response?.data?.msg || 'Your role has been changed. Please verify your identity.',
+                    currentRole: error.response?.data?.current_role
+                });
+            });
+        }
+
         return Promise.reject(error);
     }
 );

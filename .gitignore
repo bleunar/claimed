@@ -32,6 +32,7 @@ backend/.venv
 backend/.env
 secrets/.*
 backend_logs/*
+backend_logs
 
 .env
 

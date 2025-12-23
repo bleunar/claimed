@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from core.database import get_db
-from utilities.decorators import role_required
+from utilities.decorators import role_required, verify_role_freshness
 import logging
 import uuid
 
@@ -35,6 +35,7 @@ def get_laboratory(id):
 
 @laboratories_bp.route('/', methods=['POST'])
 @jwt_required()
+@verify_role_freshness
 @role_required(['admin', 'it_head', 'lab_head'])
 def create_laboratory():
     data = request.json
@@ -70,6 +71,7 @@ def create_laboratory():
 
 @laboratories_bp.route('/<id>', methods=['PUT'])
 @jwt_required()
+@verify_role_freshness
 @role_required(['admin', 'it_head', 'lab_head'])
 def update_laboratory(id: str):
     data = request.json
@@ -105,6 +107,7 @@ def update_laboratory(id: str):
 
 @laboratories_bp.route('/<id>', methods=['DELETE'])
 @jwt_required()
+@verify_role_freshness
 @role_required(['admin', 'it_head', 'lab_head'])
 def delete_laboratory(id):
     db = get_db()

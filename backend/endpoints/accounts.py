@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request, send_from_directory
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from core.database import get_db
-from utilities.decorators import role_required
+from utilities.decorators import role_required, verify_role_freshness
 from utilities.security import hash_password
 from utilities.account_activity import log_activity
 from werkzeug.utils import secure_filename
@@ -45,21 +45,32 @@ def profile():
 
 @accounts_bp.route('/<id>/picture', methods=['GET'])
 def get_profile_picture(id):
+    # NOTE: No @jwt_required() - img tags cannot send Authorization headers
+    # Profile pictures are considered low-sensitivity public content
     db = get_db()
     cursor = db.cursor(dictionary=True)
     cursor.execute("SELECT profile_picture FROM accounts WHERE id = %s", (id,))
     user = cursor.fetchone()
-    cursor.close()
     
     if not user or not user['profile_picture']:
+        cursor.close()
         return jsonify({"msg": "No profile picture found"}), 404
 
     uploads_dir = os.path.join(os.getcwd(), 'uploads')
     file_path = os.path.join(uploads_dir, user['profile_picture'])
     
     if not os.path.exists(file_path):
-        return jsonify({"msg": "Profile picture file missing"}), 404
-        
+        # Clean up orphaned DB reference
+        try:
+            cursor.execute("UPDATE accounts SET profile_picture = NULL WHERE id = %s", (id,))
+            db.commit()
+            logger.info(f"Cleaned up orphaned profile_picture reference for account {id}")
+        except Exception as e:
+            logger.error(f"Failed to clean up orphaned profile_picture: {e}")
+        cursor.close()
+        return jsonify({"msg": "Profile picture file missing", "cleared": True}), 404
+    
+    cursor.close()
     return send_from_directory(uploads_dir, user['profile_picture'])
 
 @accounts_bp.route('/<id>/picture', methods=['DELETE'])
@@ -134,15 +145,57 @@ def upload_profile_picture():
         return jsonify({"msg": "No selected file"}), 400
         
     if file and allowed_file(file.filename):
-        # use account's id as file name
+        from PIL import Image
+        import io
+        
         current_user_id = get_jwt_identity()
-        extension = file.filename.rsplit('.', 1)[1].lower()
-        unique_filename = f"{current_user_id}.{extension}"
+        
+        # Always save as WebP for optimal compression
+        unique_filename = f"{current_user_id}.webp"
         
         upload_folder = os.path.join(os.getcwd(), 'uploads', 'profile')
         os.makedirs(upload_folder, exist_ok=True)
         
-        file.save(os.path.join(upload_folder, unique_filename))
+        # Delete any existing profile pictures for this user (handles extension changes)
+        for existing_ext in ['png', 'jpg', 'jpeg', 'gif', 'webp']:
+            old_file = os.path.join(upload_folder, f"{current_user_id}.{existing_ext}")
+            if os.path.exists(old_file):
+                try:
+                    os.remove(old_file)
+                    logger.info(f"Deleted old profile picture: {old_file}")
+                except Exception as e:
+                    logger.error(f"Failed to delete old profile picture: {e}")
+        
+        try:
+            # Open image with Pillow
+            img = Image.open(file)
+            
+            # Convert to RGB if necessary (for PNG with transparency, etc.)
+            if img.mode in ('RGBA', 'LA', 'P'):
+                # Create white background for transparent images
+                background = Image.new('RGB', img.size, (255, 255, 255))
+                if img.mode == 'P':
+                    img = img.convert('RGBA')
+                background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
+                img = background
+            elif img.mode != 'RGB':
+                img = img.convert('RGB')
+            
+            # Resize to max 512x512 while maintaining aspect ratio
+            max_size = (512, 512)
+            img.thumbnail(max_size, Image.Resampling.LANCZOS)
+            
+            # Save as WebP with compression (quality 85 provides good balance)
+            file_path = os.path.join(upload_folder, unique_filename)
+            img.save(file_path, 'WEBP', quality=85, optimize=True)
+            
+            # Log file size
+            file_size = os.path.getsize(file_path)
+            logger.info(f"Saved profile picture: {file_path} ({file_size / 1024:.1f} KB)")
+            
+        except Exception as e:
+            logger.exception("Failed to process image")
+            return jsonify({"msg": "Failed to process image. Please try again."}), 500
         
         db = get_db()
         cursor = db.cursor()
@@ -362,6 +415,7 @@ def confirm_email_change():
 
 @accounts_bp.route('/', methods=['POST'])
 @jwt_required()
+@verify_role_freshness
 @role_required(['admin', 'it_head', 'lab_head'])
 def create_account():
     current_claims = get_jwt()
@@ -508,6 +562,7 @@ def list_accounts():
 
 @accounts_bp.route('/<id>', methods=['PUT'])
 @jwt_required()
+@verify_role_freshness
 @role_required(['admin', 'it_head', 'lab_head'])
 def update_account(id):
     current_claims = get_jwt()
@@ -580,8 +635,23 @@ def update_account(id):
         params.append(hashed_pw)
     
     if 'role' in data and data['role'] is not None:
+        new_role = data['role']
+        
+        # Validate role assignment based on current user's role
+        allowed_roles = []
+        if current_role == 'admin':
+            allowed_roles = ['admin', 'it_head', 'it_technician', 'lab_head', 'lab_assistant']
+        elif current_role == 'it_head':
+            allowed_roles = ['it_technician']
+        elif current_role == 'lab_head':
+            allowed_roles = ['lab_assistant']
+        
+        if new_role not in allowed_roles:
+            cursor.close()
+            return jsonify({"msg": f"You are not authorized to assign the role '{new_role}'"}), 403
+        
         update_fields.append("role = %s")
-        params.append(data['role'])
+        params.append(new_role)
     
     if 'suspended' in data:
         if data['suspended']:
@@ -650,6 +720,7 @@ def update_account(id):
 
 @accounts_bp.route('/<id>', methods=['DELETE'])
 @jwt_required()
+@verify_role_freshness
 @role_required(['admin', 'it_head', 'lab_head'])
 def delete_account(id):
     current_claims = get_jwt()

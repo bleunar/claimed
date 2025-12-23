@@ -33,7 +33,7 @@ const Navbar = ({ onToggleSidebar, sideBarToggled }) => {
                             </div>
 
                             <ProfileImage
-                                src={user?.profile_picture ? `/api/accounts/${user.id}/picture?t=${user._picTimestamp || ''}` : null}
+                                src={user?.profile_picture ? `${import.meta.env.VITE_API_URL}/accounts/${user.id}/picture?t=${user._picTimestamp || ''}` : null}
                                 size="md"
                                 shape="square"
                             />

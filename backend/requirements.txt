@@ -6,3 +6,4 @@ gunicorn
 mysql-connector-python
 flask-jwt-extended
 Flask-Limiter
+Pillow
