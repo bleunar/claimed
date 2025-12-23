@@ -97,9 +97,6 @@ const BarcodeScanner = ({
                                 ]}
                                 allowMultiple={false}
                                 scanDelay={50}
-                                components={{
-                                    tracker: false
-                                }}
                                 styles={{
                                     container: {
                                         width: '100%',
@@ -114,17 +111,6 @@ const BarcodeScanner = ({
                                         height: '100%',
                                         objectFit: 'cover'
                                     }
-                                }}
-                            />
-                            <div
-                                className="position-absolute top-50 start-50 translate-middle"
-                                style={{
-                                    width: '60%',
-                                    height: '40%',
-                                    border: '3px solid rgba(255,255,255,0.8)',
-                                    borderRadius: '8px',
-                                    pointerEvents: 'none',
-                                    boxShadow: '0 0 0 9999px rgba(0,0,0,0.3)'
                                 }}
                             />
                         </div>

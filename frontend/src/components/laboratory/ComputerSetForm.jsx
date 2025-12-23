@@ -296,7 +296,7 @@ const ComputerSetForm = ({ mode, editingId, initialData, laboratoryId, laborator
 
                                             <div className={creationMode == "single" ? "col" : "col-lg-2"}>
                                                 <div className="d-flex justify-content-evenly gap-2 rounded">
-                                                    <button type="button" className={`btn btn-outline-primary bg-body flex-fill text-body border`} title='Properties' onClick={() => setPropModal({ show: true, index: index })}><ListUl /> <span className='d-inline d-lg-none small'>Properties</span></button>
+                                                    <button type="button" className={`btn btn-outline-primary bg-body flex-fill text-body border`} title='Component Properties' onClick={() => setPropModal({ show: true, index: index })}><ListUl /> <span className='d-inline d-lg-none small'>Properties</span></button>
                                                     {
                                                         (!comp.is_core) && (
                                                             <button type="button" className="btn btn-outline-danger bg-body border" title='Remove Component' onClick={() => removeComponent(index)}><Trash /> <span className='d-inline d-lg-none small'>Delete</span></button>
@@ -331,7 +331,7 @@ const ComputerSetForm = ({ mode, editingId, initialData, laboratoryId, laborator
                 <Modal.Body>
                     {propModal.index !== null && components[propModal.index] && (
                         <>
-                            {creationMode === 'batch' && <div className="alert alert-info small">Properties defined here will be applied on <strong>all</strong> components of this type. <br /><br /> Only fill up values of property that can be applied on all computer sets</div>}
+                            {creationMode === 'batch' && <div className="alert alert-info small">Properties defined here will be applied on <strong>all</strong> components of this type. <br /><br /> Only fill up values of property that can be applied on all computer sets of this component</div>}
                             <KeyValueEditor
                                 properties={components[propModal.index].properties || {}}
                                 onChange={(newProps) => handleComponentPropertiesChange(propModal.index, newProps)}
