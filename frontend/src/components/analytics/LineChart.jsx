@@ -5,8 +5,23 @@ import { Card } from 'react-bootstrap';
 import useChartData from '../../hooks/useChartData';
 import { ExclamationTriangle } from 'react-bootstrap-icons';
 
-const LineChart = ({ apiPath, title, options, label = 'Data' }) => {
+const LineChart = ({ apiPath, title, options, label = 'Data', colors = [], colorMap = null }) => {
     const { chartData, error } = useChartData(apiPath);
+
+    // Default colors
+    const defaultBgColor = 'rgba(54, 162, 235, 0.2)';
+    const defaultBorderColor = 'rgba(54, 162, 235, 1)';
+    const fallbackColors = colors.length > 0 ? colors : ['#28a745', '#ffc107', '#dc3545', '#6c757d', '#17a2b8', '#6610f2'];
+
+    // Get colors for each point based on labels
+    const getPointColors = (labels) => {
+        if (colorMap) {
+            return labels.map((lbl, index) =>
+                colorMap[lbl] || colorMap[lbl?.toLowerCase()] || fallbackColors[index % fallbackColors.length]
+            );
+        }
+        return null; // Return null to use default single color
+    };
 
     // Initial State
     const initialData = {
@@ -14,22 +29,26 @@ const LineChart = ({ apiPath, title, options, label = 'Data' }) => {
         datasets: [{
             label: label,
             data: [],
-            backgroundColor: 'rgba(54, 162, 235, 0.2)',
-            borderColor: 'rgba(54, 162, 235, 1)',
+            backgroundColor: defaultBgColor,
+            borderColor: defaultBorderColor,
             borderWidth: 1,
             fill: true
         }]
     };
 
+    const lineLabels = chartData ? chartData.map(item => item.labels) : [];
+    const pointColors = getPointColors(lineLabels);
+
     const displayData = chartData ? {
-        labels: chartData.map(item => item.labels),
+        labels: lineLabels,
         datasets: [{
             label: label,
             data: chartData.map(item => item.data),
-            backgroundColor: 'rgba(54, 162, 235, 0.2)',
-            borderColor: 'rgba(54, 162, 235, 1)',
+            backgroundColor: pointColors || defaultBgColor,
+            borderColor: pointColors || defaultBorderColor,
+            pointBackgroundColor: pointColors || defaultBorderColor,
             borderWidth: 1,
-            fill: true
+            fill: !pointColors // Only fill if using single color
         }]
     } : initialData;
 

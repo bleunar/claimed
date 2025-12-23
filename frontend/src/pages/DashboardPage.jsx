@@ -76,20 +76,22 @@ const DashboardPage = () => {
         return actions;
     };
 
-    // Computer Set Status colors: operational (green), maintenance (cyan)
-    const computerSetColors = [
-        COMPUTER_SET_STATUS_COLORS.operational,
-        COMPUTER_SET_STATUS_COLORS.maintenance,
-        '#6c757d' // fallback gray
-    ];
+    // Computer Set Status color maps - explicit label to color mapping
+    const computerSetColorMap = {
+        'operational': COMPUTER_SET_STATUS_COLORS.operational,
+        'active': COMPUTER_SET_STATUS_COLORS.operational,
+        'maintenance': COMPUTER_SET_STATUS_COLORS.maintenance
+    };
 
-    // Component Status colors: good (green), bad (orange), maintenance (cyan), missing (red)
-    const componentColors = [
-        COMPONENT_STATUS_COLORS.good,
-        COMPONENT_STATUS_COLORS.bad,
-        COMPONENT_STATUS_COLORS.maintenance,
-        COMPONENT_STATUS_COLORS.missing
-    ];
+    // Component Status color maps - explicit label to color mapping
+    const componentColorMap = {
+        'good': COMPONENT_STATUS_COLORS.good,
+        'working': COMPONENT_STATUS_COLORS.good,
+        'bad': COMPONENT_STATUS_COLORS.bad,
+        'defective': COMPONENT_STATUS_COLORS.bad,
+        'maintenance': COMPONENT_STATUS_COLORS.maintenance,
+        'missing': COMPONENT_STATUS_COLORS.missing
+    };
 
     if (loading) return <div className="text-center mt-5"><div className="spinner-border text-primary"></div></div>;
     if (error) return <div className="alert alert-danger mt-5">{error}</div>;
@@ -124,21 +126,21 @@ const DashboardPage = () => {
                     <StackedBarChart
                         title="Computer Sets per Laboratory"
                         apiPath="/analytics/bar/computers-by-lab"
-                        colors={computerSetColors}
+                        colorMap={computerSetColorMap}
                     />
                 </div>
                 <div className="col-lg-3 mb-4">
                     <PieChart
                         title="Computer Status"
                         apiPath="/analytics/pie/computers-by-status"
-                        colors={computerSetColors}
+                        colorMap={computerSetColorMap}
                     />
                 </div>
                 <div className="col-lg-3 mb-4">
                     <PieChart
                         title="Component Status"
                         apiPath="/analytics/pie/components-by-status"
-                        colors={componentColors}
+                        colorMap={componentColorMap}
                     />
                 </div>
             </div>

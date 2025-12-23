@@ -5,8 +5,28 @@ import { Card } from 'react-bootstrap';
 import useChartData from '../../hooks/useChartData';
 import { ExclamationTriangle } from 'react-bootstrap-icons';
 
-const BarChart = ({ apiPath, title, options, label = 'Data' }) => {
+const BarChart = ({ apiPath, title, options, label = 'Data', colors = [], colorMap = null }) => {
     const { chartData, error } = useChartData(apiPath);
+
+    // Default colors
+    const defaultColor = 'rgba(54, 162, 235, 0.6)';
+    const defaultBorderColor = 'rgba(54, 162, 235, 1)';
+    const fallbackColors = colors.length > 0 ? colors : ['#28a745', '#ffc107', '#dc3545', '#6c757d', '#17a2b8', '#6610f2'];
+
+    // Get colors for each bar based on labels
+    const getBarColors = (labels) => {
+        if (colorMap) {
+            return labels.map((lbl, index) =>
+                colorMap[lbl] || colorMap[lbl?.toLowerCase()] || fallbackColors[index % fallbackColors.length]
+            );
+        }
+        // If colors array provided, use per-bar coloring
+        if (colors.length > 0) {
+            return labels.map((_, index) => fallbackColors[index % fallbackColors.length]);
+        }
+        // Default single color for all bars
+        return defaultColor;
+    };
 
     // Initial State (Zero/Empty)
     const initialData = {
@@ -14,20 +34,23 @@ const BarChart = ({ apiPath, title, options, label = 'Data' }) => {
         datasets: [{
             label: label,
             data: [],
-            backgroundColor: 'rgba(54, 162, 235, 0.6)',
-            borderColor: 'rgba(54, 162, 235, 1)',
+            backgroundColor: defaultColor,
+            borderColor: defaultBorderColor,
             borderWidth: 1
         }]
     };
 
     // Prepare data for Chart.js
+    const barLabels = chartData ? chartData.map(item => item.labels) : [];
+    const barColors = getBarColors(barLabels);
+
     const displayData = chartData ? {
-        labels: chartData.map(item => item.labels),
+        labels: barLabels,
         datasets: [{
             label: label,
             data: chartData.map(item => item.data),
-            backgroundColor: 'rgba(54, 162, 235, 0.6)',
-            borderColor: 'rgba(54, 162, 235, 1)',
+            backgroundColor: barColors,
+            borderColor: Array.isArray(barColors) ? barColors : defaultBorderColor,
             borderWidth: 1
         }]
     } : initialData;

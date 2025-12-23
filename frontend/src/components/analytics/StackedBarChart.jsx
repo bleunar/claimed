@@ -5,12 +5,21 @@ import { Card } from 'react-bootstrap';
 import useChartData from '../../hooks/useChartData';
 import { ExclamationTriangle } from 'react-bootstrap-icons';
 
-const StackedBarChart = ({ apiPath, title, options, colors = [] }) => {
+const StackedBarChart = ({ apiPath, title, options, colors = [], colorMap = null }) => {
     const { chartData, error } = useChartData(apiPath);
 
     // Default colors if none provided (matching PieChart defaults)
     const defaultColors = ['#28a745', '#ffc107', '#dc3545', '#6c757d', '#17a2b8', '#6610f2'];
-    const finalColors = colors.length > 0 ? colors : defaultColors;
+    const fallbackColors = colors.length > 0 ? colors : defaultColors;
+
+    // Get color for a dataset based on its label
+    const getDatasetColor = (dataset, index) => {
+        if (colorMap && dataset.label) {
+            // Try exact match, then lowercase match
+            return colorMap[dataset.label] || colorMap[dataset.label.toLowerCase()] || fallbackColors[index % fallbackColors.length];
+        }
+        return fallbackColors[index % fallbackColors.length];
+    };
 
     // Initial State (Empty)
     const initialData = {
@@ -24,8 +33,8 @@ const StackedBarChart = ({ apiPath, title, options, colors = [] }) => {
         labels: chartData.labels || [],
         datasets: (chartData.datasets || []).map((dataset, index) => ({
             ...dataset,
-            backgroundColor: finalColors[index % finalColors.length],
-            borderColor: finalColors[index % finalColors.length],
+            backgroundColor: getDatasetColor(dataset, index),
+            borderColor: getDatasetColor(dataset, index),
             borderWidth: 1
         }))
     } : initialData;

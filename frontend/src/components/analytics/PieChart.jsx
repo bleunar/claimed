@@ -5,19 +5,30 @@ import { Card } from 'react-bootstrap';
 import useChartData from '../../hooks/useChartData';
 import { ExclamationTriangle } from 'react-bootstrap-icons';
 
-const PieChart = ({ apiPath, title, options, colors = [] }) => {
+const PieChart = ({ apiPath, title, options, colors = [], colorMap = null }) => {
     const { chartData, error } = useChartData(apiPath);
 
     // Default colors if none provided
     const defaultColors = ['#28a745', '#ffc107', '#dc3545', '#6c757d', '#17a2b8', '#6610f2'];
-    const finalColors = colors.length > 0 ? colors : defaultColors;
+    const fallbackColors = colors.length > 0 ? colors : defaultColors;
+
+    // Generate colors based on colorMap (label-based) or fall back to index-based
+    const getBackgroundColors = (labels) => {
+        if (colorMap) {
+            // Map each label to its specific color, with fallback
+            return labels.map((label, index) =>
+                colorMap[label] || colorMap[label?.toLowerCase()] || fallbackColors[index % fallbackColors.length]
+            );
+        }
+        return fallbackColors;
+    };
 
     // Initial State
     const initialData = {
         labels: [],
         datasets: [{
             data: [],
-            backgroundColor: finalColors,
+            backgroundColor: fallbackColors,
             borderWidth: 1
         }]
     };
@@ -26,7 +37,7 @@ const PieChart = ({ apiPath, title, options, colors = [] }) => {
         labels: chartData.map(item => item.labels),
         datasets: [{
             data: chartData.map(item => item.data),
-            backgroundColor: finalColors,
+            backgroundColor: getBackgroundColors(chartData.map(item => item.labels)),
             borderWidth: 1
         }]
     } : initialData;
