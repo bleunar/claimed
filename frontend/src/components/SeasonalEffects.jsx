@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import Snowfall from 'react-snowfall';
+import { useLocation } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 
 /**
@@ -92,8 +93,11 @@ const SeasonalEffects = () => {
     // Memoize active effects check
     const activeEffects = useMemo(() => getActiveEffects(), []);
 
+    // Use React Router's useLocation for reactive route detection
+    const location = useLocation();
+
     // Check if we're on the login page - effects are always enabled there
-    const isLoginPage = typeof window !== 'undefined' && window.location.pathname === '/';
+    const isLoginPage = location.pathname === '/';
 
     // Determine if effects should be shown:
     // - On login page: always show (if there are active effects)
