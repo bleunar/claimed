@@ -11,7 +11,7 @@ import ActivityTimeline from '../components/common/ActivityTimeline';
 
 const ProfilePage = () => {
     const { user, refreshUser } = useAuth();
-    const { theme, toggleTheme, toastPosition, setToastPosition } = useTheme();
+    const { theme, toggleTheme, toastPosition, setToastPosition, seasonalEffects, toggleSeasonalEffects, isDecember } = useTheme();
     const [name, setName] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -379,6 +379,19 @@ const ProfilePage = () => {
                                     <option value="bottom-right">Bottom Right</option>
                                 </Form.Select>
                             </Form.Group>
+
+                            {/* Seasonal Effects Toggle - Only show in December */}
+                            {isDecember && (
+                                <Form.Group className='mb-3 d-flex justify-content-between align-items-center'>
+                                    <Form.Label className='mb-0'>❄️ Seasonal Effects</Form.Label>
+                                    <Form.Check
+                                        type="switch"
+                                        id="seasonal-effects-switch"
+                                        checked={seasonalEffects}
+                                        onChange={toggleSeasonalEffects}
+                                    />
+                                </Form.Group>
+                            )}
                         </Card.Body>
                     </Card>
                 </Col>

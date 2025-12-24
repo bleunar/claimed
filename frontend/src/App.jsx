@@ -13,6 +13,7 @@ import ProfilePage from './pages/ProfilePage';
 import ProtectedRoute from './components/ProtectedRoute';
 import ThemedToaster from './components/ThemedToaster';
 import { ReauthProvider } from './components/ReauthModal';
+import SeasonalEffects from './components/SeasonalEffects';
 
 import { ThemeProvider } from './context/ThemeContext';
 import ErrorPage from './pages/Error';
@@ -20,6 +21,7 @@ import ErrorPage from './pages/Error';
 function App() {
   return (
     <ThemeProvider>
+      <SeasonalEffects />
       <AuthProvider>
         <ReauthProvider>
           <ThemedToaster />

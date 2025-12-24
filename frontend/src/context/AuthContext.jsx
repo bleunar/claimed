@@ -2,7 +2,6 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 import api from '../api/axios';
 import { setAccessToken, clearAccessToken, hasAccessToken } from '../utils/tokenManager';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { useNavigate } from 'react-router-dom';
 
 const AuthContext = createContext();
 
@@ -60,7 +59,6 @@ export const AuthProvider = ({ children }) => {
     };
 
     const logout = async () => {
-            setLoading(true)
         try {
             await api.post('/auth/logout');
         } catch (error) {
@@ -69,9 +67,8 @@ export const AuthProvider = ({ children }) => {
             // Clear access token in memory
             clearAccessToken();
             setUser(null);
-            setLoading(false)
             // Redirect to login page with full page reload to clear all state
-            useNavigate("/")
+            window.location.href = '/';
         }
     };
 
@@ -91,7 +88,7 @@ export const AuthProvider = ({ children }) => {
                 <div
                     className="position-fixed top-0 start-0 w-100 vh-100 d-flex justify-content-center align-items-center"
                     style={{
-                        backgroundColor: 'rgba(var(--bs-body-bg-rgb), 0.85)',
+                        backgroundColor: 'rgba(var(--bs-body-bg-rgb), 0.30)',
                         zIndex: 9999,
                         backdropFilter: 'blur(4px)',
                         opacity: fadeOut ? 0 : 1,
