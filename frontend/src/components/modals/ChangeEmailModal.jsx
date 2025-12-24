@@ -98,21 +98,22 @@ const ChangeEmailModal = ({ show, onHide, onSuccess }) => {
                         </Form.Group>
                         <Form.Group className="mb-3">
                             <Form.Label>Current Password</Form.Label>
-                            <InputGroup>
+                            <div className="input-group bg-body rounded border">
                                 <Form.Control
                                     type={showPassword ? "text" : "password"}
                                     placeholder="Confirm with current password"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
+                                    className="border-0"
                                     required
                                 />
-                                <Button
-                                    variant="primary"
+                                <div
+                                    className="btn"
                                     onClick={() => setShowPassword(!showPassword)}
                                 >
                                     {showPassword ? <EyeSlash /> : <Eye />}
-                                </Button>
-                            </InputGroup>
+                                </div>
+                            </div>
                         </Form.Group>
                         <div className="d-grid gap-2">
                             <Button variant="primary" type="submit" disabled={loading}>

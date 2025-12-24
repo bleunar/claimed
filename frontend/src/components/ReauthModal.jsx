@@ -142,19 +142,21 @@ export const ReauthProvider = ({ children }) => {
                     <Form onSubmit={handleSubmit}>
                         <Form.Group className="mb-3">
                             <Form.Label>Enter your password to continue</Form.Label>
-                            <Form.Control
-                                type="password"
-                                placeholder="Password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                autoFocus
-                                disabled={loading}
-                                isInvalid={!!error}
-                            />
+                            <div className="input-group bg-body rounded border">
+                                <Form.Control
+                                    type="password"
+                                    placeholder="Password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className="border-0"
+                                    autoFocus
+                                    disabled={loading}
+                                />
+                            </div>
                             {error && (
-                                <Form.Control.Feedback type="invalid">
+                                <div className="text-danger small mt-1">
                                     {error}
-                                </Form.Control.Feedback>
+                                </div>
                             )}
                         </Form.Group>
 

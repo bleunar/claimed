@@ -149,21 +149,22 @@ const ForgotPasswordModal = ({ show, onHide }) => {
                         </Form.Group>
                         <Form.Group className="mb-3">
                             <Form.Label>New Password</Form.Label>
-                            <InputGroup>
+                            <div className="input-group bg-body rounded border">
                                 <Form.Control
                                     type={showPassword ? "text" : "password"}
                                     placeholder="Enter new password"
                                     value={newPassword}
                                     onChange={(e) => setNewPassword(e.target.value)}
+                                    className="border-0"
                                     required
                                 />
-                                <Button
-                                    variant="primary"
+                                <div
+                                    className="btn"
                                     onClick={() => setShowPassword(!showPassword)}
                                 >
                                     {showPassword ? <EyeSlash /> : <Eye />}
-                                </Button>
-                            </InputGroup>
+                                </div>
+                            </div>
                         </Form.Group>
                         <div className="d-flex gap-2">
                             <Button variant="secondary" onClick={() => setStep(1)} disabled={loading} className='col-6'>

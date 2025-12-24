@@ -10,6 +10,7 @@ const ForceChangePasswordModal = ({ show }) => {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [loading, setLoading] = useState(false);
 
     const validatePassword = (pwd) => {
@@ -66,19 +67,23 @@ const ForceChangePasswordModal = ({ show }) => {
                 <Form onSubmit={handleSubmit}>
                     <Form.Group className="mb-3">
                         <Form.Label>New Password</Form.Label>
-                        <InputGroup>
+                        <div className="input-group bg-body rounded border">
                             <Form.Control
                                 type={showPassword ? "text" : "password"}
                                 placeholder="Enter new password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
+                                className="border-0"
                                 required
                                 minLength={8}
                             />
-                            <Button variant="outline-secondary" onClick={() => setShowPassword(!showPassword)}>
+                            <div
+                                className="btn"
+                                onClick={() => setShowPassword(!showPassword)}
+                            >
                                 {showPassword ? <EyeSlash /> : <Eye />}
-                            </Button>
-                        </InputGroup>
+                            </div>
+                        </div>
                         <Form.Text className="text-muted d-block mt-1">
                             <small>
                                 At least 8 characters, 1 uppercase letter, 1 digit.
@@ -88,13 +93,22 @@ const ForceChangePasswordModal = ({ show }) => {
 
                     <Form.Group className="mb-4">
                         <Form.Label>Confirm New Password</Form.Label>
-                        <Form.Control
-                            type={showPassword ? "text" : "password"}
-                            placeholder="Confirm new password"
-                            value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                            required
-                        />
+                        <div className="input-group bg-body rounded border">
+                            <Form.Control
+                                type={showPassword ? "text" : "password"}
+                                placeholder="Confirm new password"
+                                value={confirmPassword}
+                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                className="border-0"
+                                required
+                            />
+                            <div
+                                className="btn"
+                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            >
+                                {showConfirmPassword ? <EyeSlash /> : <Eye />}
+                            </div>
+                        </div>
                     </Form.Group>
 
                     <div className="d-grid">

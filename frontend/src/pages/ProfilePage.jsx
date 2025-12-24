@@ -30,6 +30,8 @@ const ProfilePage = () => {
     const [activities, setActivities] = useState([]);
     const [activitiesLoading, setActivitiesLoading] = useState(true);
     const [uploadProgress, setUploadProgress] = useState(0);
+    const [updatingProfile, setUpdatingProfile] = useState(false);
+    const [updatingPassword, setUpdatingPassword] = useState(false);
 
     useEffect(() => {
         if (user) {
@@ -57,6 +59,7 @@ const ProfilePage = () => {
 
     const handleUpdateName = async (e) => {
         e.preventDefault();
+        setUpdatingProfile(true);
         try {
             const updateData = {
                 name,
@@ -74,6 +77,8 @@ const ProfilePage = () => {
             fetchActivities();
         } catch (err) {
             toast.error(err.response?.data?.msg || "Failed to update profile");
+        } finally {
+            setUpdatingProfile(false);
         }
     };
 
@@ -105,6 +110,7 @@ const ProfilePage = () => {
             return;
         }
 
+        setUpdatingPassword(true);
         try {
             await api.put('/accounts/profile', { password });
             toast.success("Password updated successfully");
@@ -112,6 +118,8 @@ const ProfilePage = () => {
             setConfirmPassword('');
         } catch (err) {
             toast.error(err.response?.data?.msg || "Failed to update password");
+        } finally {
+            setUpdatingPassword(false);
         }
     };
 
@@ -210,7 +218,7 @@ const ProfilePage = () => {
                             <div className="text-muted mb-3 text-uppercase" style={{ fontSize: '0.75rem' }}>{user?.role.replace('_', ' ').toLowerCase()}</div>
                         </Card.Body>
                         <Card.Footer className='d-flex justify-content-evenly p-0 m-0 border-top'>
-                            <Form.Label htmlFor="upload-photo" className="btn btn-outline-primary flex-fill rounded-0 border-0 mb-0">
+                            <Form.Label htmlFor="upload-photo" className={`btn btn-outline-primary flex-fill rounded-0 mb-0 ${user?.profile_picture ? "border-0 border-end" : "border-0"}`}>
                                 Update Photo
                             </Form.Label>
                             <Form.Control
@@ -327,8 +335,10 @@ const ProfilePage = () => {
 
                                 <div className="col-12">
                                     <div className="text-end mt-3">
-                                        <Button variant="primary" className='mb-0' type="submit">
-                                            Update Profile
+                                        <Button variant="primary" className='mb-0' type="submit" disabled={updatingProfile}>
+                                            {updatingProfile ? (
+                                                <><span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Updating...</>
+                                            ) : 'Update Profile'}
                                         </Button>
                                     </div>
                                 </div>
@@ -427,8 +437,10 @@ const ProfilePage = () => {
 
 
                                 <div className="text-end">
-                                    <Button type="submit">
-                                        Update
+                                    <Button type="submit" disabled={updatingPassword}>
+                                        {updatingPassword ? (
+                                            <><span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Updating...</>
+                                        ) : 'Update'}
                                     </Button>
                                 </div>
                             </Form>

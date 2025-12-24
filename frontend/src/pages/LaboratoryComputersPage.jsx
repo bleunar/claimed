@@ -223,7 +223,8 @@ const LaboratoryComputersPage = () => {
                         onChange={(e) => setItemsPerRow(parseInt(e.target.value))}
                         title="Items per row"
                     >
-                        <option value={5}>5 PC per row</option>
+                        <option value={6} defaultValue>6 PC per row</option>
+                        <option value={5} defaultValue>5 PC per row</option>
                         <option value={4}>4 PC per row</option>
                         <option value={3}>3 PC per row</option>
                     </select>
