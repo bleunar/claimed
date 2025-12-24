@@ -27,20 +27,19 @@ const KPICard = ({ title, value, icon, color = 'primary', trend, link }) => {
                         <div>
                             {
                                 value !== undefined && value !== null ? (
-                                    <div className="h3 mb-1 fw-bold text-gray-800">{value}</div>
+                                    <>
+                                        <div className="h3 mb-1 fw-bold text-gray-800">{value}</div>
+                                        <div className="text-uppercase text-muted small mb-0">{title}</div>
+                                    </>
                                 ) : (
-                                    <div className="h3 mb-1 placeholder-glow">
-                                        <span className="placeholder col-6"></span>
-                                    </div>
-                                )
-                            }
-                            {
-                                title ? (
-                                    <div className="text-uppercase text-muted small mb-0">{title}</div>
-                                ) : (
-                                    <div className="small mb-0 placeholder-glow">
-                                        <span className="placeholder col-8"></span>
-                                    </div>
+                                    <>
+                                        <div className="h3 mb-1 placeholder-glow">
+                                            <span className="placeholder col-6"></span>
+                                        </div>
+                                        <div className="small mb-0 placeholder-glow">
+                                            <span className="placeholder col-8"></span>
+                                        </div>
+                                    </>
                                 )
                             }
                             {trend && (
