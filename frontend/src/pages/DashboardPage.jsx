@@ -97,7 +97,7 @@ const DashboardPage = () => {
             <ForceChangePasswordModal show={!!user?.password_reset_required} />
 
             {/* KPI Cards */}
-            <div className="row row-cols-1 row-cols-sm-2 row-cols-md-4 row-cols-xl-5 mb-4">
+            <div className="row row-cols-2 row-cols-lg-4 mb-4">
                 <KPICard title="Users" value={kpiData?.total_users} icon={<People />} color="primary" link="/dashboard/accounts" />
                 <KPICard title="Laboratories" value={kpiData?.total_labs} icon={<DoorClosed />} color="primary" link="/dashboard/laboratories" />
                 <KPICard title="Computers" value={kpiData?.total_computers} icon={<PcDisplay />} color="primary" link="/dashboard/laboratories" />
