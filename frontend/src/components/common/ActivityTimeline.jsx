@@ -129,8 +129,7 @@ const ActivityItem = ({ activity, showIpAddress = false }) => {
     const IconComponent = ACTION_ICONS[activity.action] || PersonGear;
     const label = ACTION_LABELS[activity.action] || activity.action;
     const color = ACTION_COLORS[activity.action] || 'secondary';
-    // Allow expansion if there are details to show OR if showing IP address and it exists
-    const canExpand = hasExpandableDetails(activity) || (showIpAddress && activity.ip_address);
+    const canExpand = (showIpAddress && activity.ip_address);
 
     const handleClick = () => {
         if (canExpand) setExpanded(!expanded);

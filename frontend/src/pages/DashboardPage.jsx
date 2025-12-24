@@ -17,7 +17,6 @@ import {
 const DashboardPage = () => {
     const { user } = useAuth();
     const [kpiData, setKpiData] = useState(null);
-    const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
     useEffect(() => {
@@ -28,8 +27,6 @@ const DashboardPage = () => {
             } catch (err) {
                 console.error("Error fetching KPI data:", err);
                 setError("Failed to load dashboard KPIs.");
-            } finally {
-                setLoading(false);
             }
         };
 
@@ -93,7 +90,6 @@ const DashboardPage = () => {
         'missing': COMPONENT_STATUS_COLORS.missing
     };
 
-    if (loading) return <div className="text-center mt-5"><div className="spinner-border text-primary"></div></div>;
     if (error) return <div className="alert alert-danger mt-5">{error}</div>;
 
     return (

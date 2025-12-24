@@ -19,14 +19,30 @@ const KPICard = ({ title, value, icon, color = 'primary', trend, link }) => {
                 onClick={handleClick}
                 onMouseEnter={() => setHovered(true)}
                 onMouseLeave={() => setHovered(false)}
-                style={{ transition: "150ms ease-in-out"}}
+                style={{ transition: "150ms ease-in-out" }}
                 title={`View ${title}`}
             >
                 <Card.Body>
                     <div className="d-flex align-items-center justify-content-between">
                         <div>
-                            <div className="h3 mb-1 fw-bold text-gray-800">{value}</div>
-                            <div className="text-uppercase text-muted small mb-0">{title}</div>
+                            {
+                                value !== undefined && value !== null ? (
+                                    <div className="h3 mb-1 fw-bold text-gray-800">{value}</div>
+                                ) : (
+                                    <div className="h3 mb-1 placeholder-glow">
+                                        <span className="placeholder col-6"></span>
+                                    </div>
+                                )
+                            }
+                            {
+                                title ? (
+                                    <div className="text-uppercase text-muted small mb-0">{title}</div>
+                                ) : (
+                                    <div className="small mb-0 placeholder-glow">
+                                        <span className="placeholder col-8"></span>
+                                    </div>
+                                )
+                            }
                             {trend && (
                                 <div className={`mt-2 mb-0 text-xs font-weight-bold text-${trend.direction === 'up' ? 'success' : 'danger'}`}>
                                     <span className="me-1">
