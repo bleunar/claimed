@@ -68,14 +68,19 @@ const BarChart = ({ apiPath, title, options, label = 'Data', colors = [], colorM
 
     return (
         <Card className="shadow bg-body-tertiary h-100">
-            <Card.Body>
-                <div style={{ position: 'relative', height: '300px', width: '100%' }}>
-                    {error && (
-                        <div className="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-body-tertiary bg-opacity-75" style={{ zIndex: 10 }}>
-                            <ExclamationTriangle className="text-danger mb-2" size={32} />
-                            <span className="text-danger small">{error}</span>
-                        </div>
-                    )}
+            <Card.Body className='p-0 relative w-100' style={{ height: '300px' }}>
+                {!chartData && !error && (
+                    <div className="position-absolute top-0 start-0 w-100 h-100 placeholder-glow" style={{ zIndex: 10 }}>
+                        <span className="placeholder w-100 h-100 rounded"></span>
+                    </div>
+                )}
+                {error && (
+                    <div className="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-body-tertiary bg-opacity-75" style={{ zIndex: 10 }}>
+                        <ExclamationTriangle className="text-danger mb-2" size={32} />
+                        <span className="text-danger small">{error}</span>
+                    </div>
+                )}
+                <div className={`p-3 w-100 h-100 ${chartData && !error ? "opacity-100" : 'opacity-0'}`}>
                     <Bar data={displayData} options={defaultOptions} />
                 </div>
             </Card.Body>
