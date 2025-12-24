@@ -2,6 +2,7 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 import api from '../api/axios';
 import { setAccessToken, clearAccessToken, hasAccessToken } from '../utils/tokenManager';
 import LoadingSpinner from '../components/LoadingSpinner';
+import { useNavigate } from 'react-router-dom';
 
 const AuthContext = createContext();
 
@@ -46,7 +47,11 @@ export const AuthProvider = ({ children }) => {
             const response = await api.post('/auth/login', { email, password });
             // Store access token in memory only (not localStorage for XSS protection)
             setAccessToken(response.data.access_token);
-            setUser({ ...response.data.user, _picTimestamp: Date.now() });
+
+            // Fetch user profile (login endpoint only returns token, not user info)
+            const profileResponse = await api.get('/accounts/profile');
+            setUser({ ...profileResponse.data.user, _picTimestamp: Date.now() });
+
             return { success: true };
         } catch (error) {
             console.error("Login failed:", error);
@@ -55,6 +60,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     const logout = async () => {
+            setLoading(true)
         try {
             await api.post('/auth/logout');
         } catch (error) {
@@ -63,6 +69,9 @@ export const AuthProvider = ({ children }) => {
             // Clear access token in memory
             clearAccessToken();
             setUser(null);
+            setLoading(false)
+            // Redirect to login page with full page reload to clear all state
+            useNavigate("/")
         }
     };
 

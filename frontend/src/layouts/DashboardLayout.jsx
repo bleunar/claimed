@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, Navigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
+import { useAuth } from '../context/AuthContext';
 
 import { Speedometer2, People, DoorClosed, BoxSeam, Keyboard, JournalText, List, ListOl, Grid, Person } from 'react-bootstrap-icons';
 import Breadcrumbs from '../components/Breadcrumbs';
 
 const DashboardLayout = () => {
+    const { user, loading } = useAuth();
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
@@ -43,6 +45,12 @@ const DashboardLayout = () => {
     const toggleSidebar = () => {
         setIsSidebarOpen(!isSidebarOpen);
     };
+
+    // Redirect to login if not authenticated (after loading completes)
+    // This must be AFTER all hooks to follow React's rules of hooks
+    if (!loading && !user) {
+        return <Navigate to="/" replace />;
+    }
 
     return (
         <div className="d-flex" style={{ height: '100dvh', overflow: 'hidden' }}>

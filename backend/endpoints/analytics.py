@@ -1,12 +1,15 @@
 from flask import Blueprint, jsonify
 from core.database import get_db
 import logging
+from flask_jwt_extended import jwt_required
+
 
 logger = logging.getLogger(__name__)
 
 analytics_bp = Blueprint('analytics', __name__)
 
 @analytics_bp.route('/analytics/kpi', methods=['GET'])
+@jwt_required()
 def get_kpi_data():
     conn = get_db()
     cursor = conn.cursor(dictionary=True)
@@ -41,6 +44,7 @@ def get_kpi_data():
         conn.close()
 
 @analytics_bp.route('/analytics/bar/computers-by-lab', methods=['GET'])
+@jwt_required()
 def get_computers_by_lab():
     conn = get_db()
     cursor = conn.cursor(dictionary=True)
@@ -104,6 +108,7 @@ def get_computers_by_lab():
         conn.close()
 
 @analytics_bp.route('/analytics/pie/computers-by-status', methods=['GET'])
+@jwt_required()
 def get_computers_by_status():
     conn = get_db()
     cursor = conn.cursor(dictionary=True)
@@ -123,6 +128,7 @@ def get_computers_by_status():
         conn.close()
 
 @analytics_bp.route('/analytics/pie/components-by-status', methods=['GET'])
+@jwt_required()
 def get_components_by_status():
     conn = get_db()
     cursor = conn.cursor(dictionary=True)
