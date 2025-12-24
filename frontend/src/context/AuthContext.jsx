@@ -8,6 +8,8 @@ const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [showOverlay, setShowOverlay] = useState(true);
+    const [fadeOut, setFadeOut] = useState(false);
 
     useEffect(() => {
         const checkAuth = async () => {
@@ -28,18 +30,24 @@ export const AuthProvider = ({ children }) => {
         checkAuth();
     }, []);
 
+    // Handle fade-out animation when loading completes
+    useEffect(() => {
+        if (!loading && showOverlay) {
+            setFadeOut(true);
+            const timer = setTimeout(() => {
+                setShowOverlay(false);
+            }, 300); // Match CSS transition duration
+            return () => clearTimeout(timer);
+        }
+    }, [loading, showOverlay]);
+
     const login = async (email, password) => {
         try {
             const response = await api.post('/auth/login', { email, password });
-            const { access_token } = response.data;
-
-            // Store in memory (not localStorage for XSS protection)
-            setAccessToken(access_token);
-
-            // Fetch user profile immediately after login
-            const profileResponse = await api.get('/accounts/profile');
-            setUser({ ...profileResponse.data.user, _picTimestamp: Date.now() });
-            return true;
+            // Store access token in memory only (not localStorage for XSS protection)
+            setAccessToken(response.data.access_token);
+            setUser({ ...response.data.user, _picTimestamp: Date.now() });
+            return { success: true };
         } catch (error) {
             console.error("Login failed:", error);
             throw error;
@@ -49,16 +57,12 @@ export const AuthProvider = ({ children }) => {
     const logout = async () => {
         try {
             await api.post('/auth/logout');
-        } catch (e) {
-            console.error("Logout endpoint failed", e);
+        } catch (error) {
+            console.error("Logout failed:", error);
         } finally {
-            // Clear in-memory token
+            // Clear access token in memory
             clearAccessToken();
-            // Clear preferences (these can stay in localStorage as they're not sensitive)
-            localStorage.removeItem('theme');
-            localStorage.removeItem('toastPosition');
             setUser(null);
-            window.location.href = '/';
         }
     };
 
@@ -72,16 +76,22 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    if (loading) {
-        return (
-            <div className="vh-100 d-flex justify-content-center align-items-center">
-                <LoadingSpinner />
-            </div>
-        );
-    }
-
     return (
         <AuthContext.Provider value={{ user, login, logout, loading, refreshUser }}>
+            {showOverlay && (
+                <div
+                    className="position-fixed top-0 start-0 w-100 vh-100 d-flex justify-content-center align-items-center"
+                    style={{
+                        backgroundColor: 'rgba(var(--bs-body-bg-rgb), 0.85)',
+                        zIndex: 9999,
+                        backdropFilter: 'blur(4px)',
+                        opacity: fadeOut ? 0 : 1,
+                        transition: 'opacity 300ms ease-out'
+                    }}
+                >
+                    <LoadingSpinner />
+                </div>
+            )}
             {children}
         </AuthContext.Provider>
     );
