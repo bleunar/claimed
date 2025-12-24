@@ -1,4 +1,5 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext, useMemo } from 'react';
+import { hasActiveSeasonalEffect } from '../components/SeasonalEffects';
 
 const ThemeContext = createContext();
 
@@ -7,11 +8,11 @@ export const ThemeProvider = ({ children }) => {
     const [toastPosition, setToastPosition] = useState(localStorage.getItem('toastPosition') || 'top-center');
     const [seasonalEffects, setSeasonalEffects] = useState(() => {
         const saved = localStorage.getItem('seasonalEffects');
-        return saved !== null ? saved === 'true' : true; // Default to true
+        return saved !== null ? saved === 'true' : false; // Default to false (off on dashboard)
     });
 
-    // Check if current month is December
-    const isDecember = new Date().getMonth() === 11;
+    // Check if any seasonal effect is currently active (based on EFFECTS_CONFIG)
+    const hasActiveSeason = useMemo(() => hasActiveSeasonalEffect(), []);
 
     useEffect(() => {
         document.documentElement.setAttribute('data-bs-theme', theme);
@@ -42,7 +43,7 @@ export const ThemeProvider = ({ children }) => {
             setToastPosition,
             seasonalEffects,
             toggleSeasonalEffects,
-            isDecember
+            hasActiveSeason
         }}>
             {children}
         </ThemeContext.Provider>
