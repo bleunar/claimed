@@ -7,14 +7,14 @@ const ErrorPage = ({
   redirectLink = "/dashboard" 
 }) => {
   return (
-    <div className="d-flex align-items-center justify-content-center bg-light h-100">
-      <div className="text-center p-5 bg-white shadow-sm rounded-3 border" style={{ maxWidth: '500px' }}>
+    <div className="d-flex align-items-center justify-content-center h-100">
+      <div className="text-center p-5" style={{ maxWidth: '500px' }}>
         <div className="mb-4">
           <ExclamationTriangle className="display-2" />
         </div>
 
-        <div className="h5 text-dark">Error {error_code}</div>
-        <div className="h2 fw-semibold text-dark">{title}</div>
+        <div className="h5 text-body">Error {error_code}</div>
+        <div className="h2 fw-semibold text-body">{title}</div>
         <p className="fw-semilight text-muted mb-4">
           {description}
         </p>
