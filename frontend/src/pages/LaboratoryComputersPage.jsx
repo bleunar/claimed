@@ -188,15 +188,23 @@ const LaboratoryComputersPage = () => {
         }
     };
 
-    if (loading) return <LoadingSpinner centered />;
-    if (!laboratory) return <div className="container py-3">Laboratory not found</div>;
+    if (!loading && !laboratory) return <div className="container py-3">Laboratory not found</div>;
 
     return (
         <div className="container-fluid py-3">
             <div className="row mb-4">
                 <div className='col-12 col-md-6 mb-2 mb-md-0'>
-                    <div className="h4 fw-semibold mb-0">{laboratory?.name}</div>
-                    <div className="text-muted mb-0">{laboratory?.description}</div>
+                    {loading ? (
+                        <div className="placeholder-glow">
+                            <span className="placeholder rounded mb-1" style={{ width: '200px', height: '28px', display: 'block' }}></span>
+                            <span className="placeholder rounded" style={{ width: '300px', height: '18px', display: 'block' }}></span>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="h4 fw-semibold mb-0">{laboratory?.name}</div>
+                            <div className="text-muted mb-0">{laboratory?.description}</div>
+                        </>
+                    )}
                 </div>
                 <div className="col-12 col-md-6">
                     <div className="d-flex justify-content-start justify-content-md-end align-items-end h-100 gap-2">
@@ -231,31 +239,37 @@ const LaboratoryComputersPage = () => {
                 </div>
 
                 <div className={`row rounded row-cols-2 row-cols-md-3 row-cols-lg-${itemsPerRow}`}>
-                    {
-                        computerSets.length > 0 && (
-                            computerSets.map(set => (
-                                <ComputerSetCard
-                                    key={set.id}
-                                    set={set}
-                                    components={allComponents ? allComponents.filter(c => c.computer_set_id === set.id) : []}
-                                    onView={handleViewComponents}
-                                />
-                            ))
-                        )
-                    }
-                </div>
-
-                {
-                    computerSets.length == 0 && (
+                    {loading ? (
+                        // Placeholder skeleton cards while loading
+                        [...Array(25)].map((_, idx) => (
+                            <div key={idx} className="col p-0">
+                                <div className="card h-100 border-0 rounded-0 bg-body-secondary">
+                                    <div className="card-body text-center d-flex flex-column justify-content-center align-items-center placeholder-glow" style={{ minHeight: '150px' }}>
+                                        <span className="placeholder rounded mb-2" style={{ width: '80px', height: '24px', display: 'inline-block' }}></span>
+                                        <span className="placeholder rounded-pill" style={{ width: '100px', height: '16px', display: 'inline-block' }}></span>
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    ) : computerSets.length > 0 ? (
+                        computerSets.map(set => (
+                            <ComputerSetCard
+                                key={set.id}
+                                set={set}
+                                components={allComponents ? allComponents.filter(c => c.computer_set_id === set.id) : []}
+                                onView={handleViewComponents}
+                            />
+                        ))
+                    ) : (
                         <div className="col-12">
                             <div className="text-center text-muted"><p>No computer sets found in this laboratory
-                                        <RoleBasedContent allowedRoles={['admin', 'it_head', 'lab_head']}>
-                                            . <span className='btn btn-link px-0' onClick={handleCreate}>Add One</span>
-                                        </RoleBasedContent>
-                                        </p></div>
+                                <RoleBasedContent allowedRoles={['admin', 'it_head', 'lab_head']}>
+                                    . <span className='btn btn-link px-0' onClick={handleCreate}>Add One</span>
+                                </RoleBasedContent>
+                            </p></div>
                         </div>
-                    )
-                }
+                    )}
+                </div>
             </div>
 
             {/* Computer Set Form Modal (Create/Edit) */}

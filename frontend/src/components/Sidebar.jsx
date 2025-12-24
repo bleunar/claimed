@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { NavLink, Link, useLocation, useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'react-bootstrap-icons';
 import { Offcanvas } from 'react-bootstrap';
@@ -11,6 +11,15 @@ const Sidebar = ({ isOpen, isMobile, options, onClose, onToggle }) => {
     const { user, logout } = useAuth();
     const location = useLocation();
     const navigate = useNavigate()
+
+    // Preload images to prevent loading delays when switching states
+    useEffect(() => {
+        const preloadImages = [Logo, LogoShrinked];
+        preloadImages.forEach((src) => {
+            const img = new Image();
+            img.src = src;
+        });
+    }, []);
 
     const linkStyle = ({ isActive }) => ({
         textDecoration: 'none',
@@ -94,7 +103,7 @@ const Sidebar = ({ isOpen, isMobile, options, onClose, onToggle }) => {
                     <div
                         onClick={onToggle}
                         className="d-flex align-items-center justify-content-center"
-                        style={{ width: '30px', height: '30px', cursor: 'pointer'}}
+                        style={{ width: '30px', height: '30px', cursor: 'pointer' }}
                         title={isOpen ? "Collapse Sidebar" : "Expand Sidebar"}
                     >
                         {isOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
