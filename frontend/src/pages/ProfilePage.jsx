@@ -375,7 +375,6 @@ const ProfilePage = () => {
                                     }}
                                 >
                                     <option value="top-center">Top Center</option>
-                                    <option value="bottom-left">Bottom Left</option>
                                     <option value="bottom-center">Bottom Center</option>
                                     <option value="bottom-right">Bottom Right</option>
                                 </Form.Select>
