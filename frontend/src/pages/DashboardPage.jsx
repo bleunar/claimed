@@ -107,12 +107,20 @@ const DashboardPage = () => {
             <div className="mb-4">
                 <div className="h6 fw-bold mb-3">Quick Actions</div>
                 <div className="d-flex flex-wrap gap-2">
-                    {getQuickActions().map((action, idx) => (
-                        <Link key={idx} to={action.path} className={`btn btn-sm btn-${action.variant} d-flex align-items-center gap-2 shadow-sm`}>
-                            {action.icon}
-                            {action.label}
-                        </Link>
-                    ))}
+                    {user ? (
+                        getQuickActions().map((action, idx) => (
+                            <Link key={idx} to={action.path} className={`btn btn-sm btn-${action.variant} d-flex align-items-center gap-2 shadow-sm`}>
+                                {action.icon}
+                                {action.label}
+                            </Link>
+                        ))
+                    ) : (
+                        [...Array(4)].map((_, idx) => (
+                            <div key={idx} className="placeholder-glow">
+                                <span className="placeholder rounded" style={{ width: '120px', height: '32px', display: 'inline-block' }}></span>
+                            </div>
+                        ))
+                    )}
                 </div>
             </div>
 
