@@ -33,11 +33,11 @@ const KPICard = ({ title, value, icon, color = 'primary', trend, link }) => {
                                     </>
                                 ) : (
                                     <>
-                                        <div className="h3 mb-1 placeholder-glow">
-                                            <span className="placeholder col-6"></span>
+                                        <div className="placeholder-glow mb-1">
+                                            <span className="placeholder d-block rounded" style={{ width: '60px', height: '28px' }}></span>
                                         </div>
-                                        <div className="small mb-0 placeholder-glow">
-                                            <span className="placeholder col-8"></span>
+                                        <div className="placeholder-glow">
+                                            <span className="placeholder d-block rounded" style={{ width: '100px', height: '14px' }}></span>
                                         </div>
                                     </>
                                 )
@@ -51,8 +51,14 @@ const KPICard = ({ title, value, icon, color = 'primary', trend, link }) => {
                                 </div>
                             )}
                         </div>
-                        <div className={`text-${color} fs-1 opacity-75 d-none d-md-inline`}>
-                            {icon}
+                        <div className={`fs-1 opacity-75 d-none d-md-inline`}>
+                            {value !== undefined && value !== null ? (
+                                <span className={`text-${color}`}>{icon}</span>
+                            ) : (
+                                <div className="placeholder-glow">
+                                    <span className="placeholder rounded" style={{ width: '40px', height: '40px', display: 'inline-block' }}></span>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </Card.Body>
