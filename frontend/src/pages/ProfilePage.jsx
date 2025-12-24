@@ -366,7 +366,7 @@ const ProfilePage = () => {
                             {/* Seasonal Effects Toggle - Only show in December */}
                             {hasActiveSeason && (
                                 <Form.Group className='mb-3 d-flex justify-content-between align-items-center'>
-                                    <Form.Label className='mb-0'>❄️ Seasonal Effects</Form.Label>
+                                    <Form.Label className='mb-0' title='Particles will appear on your screen to match the season'>Seasonal Effects</Form.Label>
                                     <Form.Check
                                         type="switch"
                                         id="seasonal-effects-switch"

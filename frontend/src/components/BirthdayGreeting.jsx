@@ -110,7 +110,7 @@ const BirthdayGreeting = () => {
                         Wishing you a fantastic day filled with joy, laughter, and wonderful memories!
                     </p>
                     <Button variant="primary" size="lg" onClick={handleClose}>
-                        Thank You! 🥳
+                        Confirm
                     </Button>
                 </Modal.Body>
             </Modal>
