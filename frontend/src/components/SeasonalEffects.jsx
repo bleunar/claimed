@@ -20,10 +20,10 @@ const EFFECTS_CONFIG = [
         endDay: 31,
         component: Snowfall,
         props: {
-            snowflakeCount: 50,
+            snowflakeCount: 20,
             speed: [0.5, 2],
             wind: [-0.5, 3],
-            radius: [0.5, 5]
+            radius: [0.3, 2]
         }
     },
     // Example: Valentine's Day hearts (February 14)
