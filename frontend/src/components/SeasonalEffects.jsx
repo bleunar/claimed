@@ -1,7 +1,8 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import Snowfall from 'react-snowfall';
 import { useLocation } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
+import { isSeasonalEffectsEnabled } from '../utils/effectsConfig';
 
 /**
  * Seasonal Effects Configuration
@@ -33,18 +34,9 @@ const EFFECTS_CONFIG = [
     //     name: "Valentine's Hearts",
     //     month: 1, // February
     //     day: 14,
-    //     component: HeartsEffect, // Would need to create this
+    //     component: HeartsEffect,
     //     props: { count: 50 }
     // },
-    // Example: New Year's confetti (January 1)
-    // {
-    //     id: 'new-year-confetti',
-    //     name: 'New Year Confetti',
-    //     month: 0, // January
-    //     day: 1,
-    //     component: ConfettiEffect,
-    //     props: { duration: 5000 }
-    // }
 ];
 
 /**
@@ -54,22 +46,18 @@ const isEffectActive = (effect, currentDate) => {
     const currentMonth = currentDate.getMonth();
     const currentDay = currentDate.getDate();
 
-    // Must match month
     if (effect.month !== currentMonth) {
         return false;
     }
 
-    // If specific day is set, check it
     if (effect.day !== undefined) {
         return effect.day === currentDay;
     }
 
-    // If date range is set, check if current day is within range
     if (effect.startDay !== undefined && effect.endDay !== undefined) {
         return currentDay >= effect.startDay && currentDay <= effect.endDay;
     }
 
-    // If only month is set (no day/range), active for entire month
     return true;
 };
 
@@ -89,6 +77,12 @@ export const hasActiveSeasonalEffect = (date = new Date()) => {
 
 const SeasonalEffects = () => {
     const { seasonalEffects } = useTheme();
+    const [configEnabled, setConfigEnabled] = useState(null);
+
+    // Load config on mount
+    useEffect(() => {
+        isSeasonalEffectsEnabled().then(setConfigEnabled);
+    }, []);
 
     // Memoize active effects check
     const activeEffects = useMemo(() => getActiveEffects(), []);
@@ -98,6 +92,16 @@ const SeasonalEffects = () => {
 
     // Check if we're on the login page - effects are always enabled there
     const isLoginPage = location.pathname === '/';
+
+    // Don't render until config is loaded
+    if (configEnabled === null) {
+        return null;
+    }
+
+    // Don't render if disabled in config.yml
+    if (!configEnabled) {
+        return null;
+    }
 
     // Determine if effects should be shown:
     // - On login page: always show (if there are active effects)

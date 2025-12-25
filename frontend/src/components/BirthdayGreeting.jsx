@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Confetti from 'react-confetti';
 import { Modal, Button } from 'react-bootstrap';
 import { useAuth } from '../context/AuthContext';
+import { isBirthdayEnabled } from '../utils/effectsConfig';
 
 /**
  * Generate a unique key for the current year's birthday celebration per user
@@ -31,6 +32,12 @@ const BirthdayGreeting = () => {
     const [showModal, setShowModal] = useState(false);
     const [showConfetti, setShowConfetti] = useState(false);
     const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
+    const [configEnabled, setConfigEnabled] = useState(null);
+
+    // Load config on mount
+    useEffect(() => {
+        isBirthdayEnabled().then(setConfigEnabled);
+    }, []);
 
     // Get window dimensions for confetti
     useEffect(() => {
@@ -48,6 +55,8 @@ const BirthdayGreeting = () => {
 
     // Check if it's the user's birthday and hasn't been celebrated yet this year
     useEffect(() => {
+        // Don't proceed until config is loaded and enabled
+        if (configEnabled === null || configEnabled === false) return;
         if (!user?.id || !user?.birth_date) return;
 
         const celebratedKey = getBirthdayCelebratedKey(user.id);
@@ -62,7 +71,7 @@ const BirthdayGreeting = () => {
 
             return () => clearTimeout(timer);
         }
-    }, [user?.id, user?.birth_date]);
+    }, [user?.id, user?.birth_date, configEnabled]);
 
     const handleClose = () => {
         // Mark as celebrated for this year
@@ -76,6 +85,11 @@ const BirthdayGreeting = () => {
             setShowConfetti(false);
         }, 500);
     };
+
+    // Don't render if config is disabled
+    if (configEnabled === null || configEnabled === false) {
+        return null;
+    }
 
     // Get first name for personalized greeting
     const firstName = user?.name?.split(' ')[0] || 'there';
