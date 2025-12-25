@@ -14,10 +14,10 @@ let configPromise = null;
 const DEFAULT_CONFIG = {
     effects: {
         seasonal: {
-            enabled: true
+            enabled: false
         },
         birthday: {
-            enabled: true
+            enabled: false
         }
     }
 };
@@ -40,7 +40,7 @@ export const loadEffectsConfig = async () => {
     // Start loading
     configPromise = (async () => {
         try {
-            const response = await fetch('/src/assets/config.yml');
+            const response = await fetch('/config.yml');
             if (!response.ok) {
                 console.warn('Failed to load config.yml, using defaults');
                 configCache = DEFAULT_CONFIG;
