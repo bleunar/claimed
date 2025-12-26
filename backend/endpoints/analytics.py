@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify
 from core.database import get_db
+from utilities.activity_tracker import activity_tracker
 import logging
 from flask_jwt_extended import jwt_required
 
@@ -14,7 +15,7 @@ def get_kpi_data():
     conn = get_db()
     cursor = conn.cursor(dictionary=True)
     try:
-        cursor.execute("SELECT COUNT(*) as count FROM accounts")
+        cursor.execute("SELECT COUNT(*) as count FROM accounts WHERE deleted_at IS NULL")
         total_users = cursor.fetchone()['count']
 
         cursor.execute("SELECT COUNT(*) as count FROM laboratories")
@@ -28,13 +29,43 @@ def get_kpi_data():
 
         cursor.execute("SELECT COUNT(*) as count FROM computer_set_components")
         total_components = cursor.fetchone()['count']
+        
+        # Components with issues (bad, maintenance, missing)
+        cursor.execute("""
+            SELECT COUNT(*) as count FROM computer_set_components 
+            WHERE status IN ('bad', 'maintenance', 'missing')
+        """)
+        components_with_issues = cursor.fetchone()['count']
+        
+        # Active accounts (not suspended and not deleted)
+        cursor.execute("""
+            SELECT COUNT(*) as count FROM accounts 
+            WHERE suspended_at IS NULL AND deleted_at IS NULL
+        """)
+        active_accounts = cursor.fetchone()['count']
+        
+        # Suspended accounts
+        cursor.execute("""
+            SELECT COUNT(*) as count FROM accounts 
+            WHERE suspended_at IS NOT NULL AND deleted_at IS NULL
+        """)
+        suspended_accounts = cursor.fetchone()['count']
+        
+        # Online accounts and devices (from activity tracker)
+        online_accounts = activity_tracker.get_online_count()
+        online_devices = activity_tracker.get_online_device_count()
 
         return jsonify({
             "total_users": total_users,
             "total_labs": total_labs,
             "total_computers": total_computers,
             "maintenance_alerts": maintenance_alerts,
-            "total_components": total_components
+            "total_components": total_components,
+            "components_with_issues": components_with_issues,
+            "active_accounts": active_accounts,
+            "suspended_accounts": suspended_accounts,
+            "online_accounts": online_accounts,
+            "online_devices": online_devices
         })
     except Exception as e:
         logger.exception("Failed to fetch KPI data")
@@ -84,15 +115,11 @@ def get_computers_by_lab():
                 'label': 'Active',
                 'data': [lab_status_map[lab['id']]['active'] for lab in labs],
                 'backgroundColor': 'rgba(40, 167, 69, 0.7)',
-                'borderColor': 'rgba(40, 167, 69, 1)',
-                'borderWidth': 1
             },
             {
                 'label': 'Maintenance',
                 'data': [lab_status_map[lab['id']]['maintenance'] for lab in labs],
                 'backgroundColor': 'rgba(255, 193, 7, 0.7)',
-                'borderColor': 'rgba(255, 193, 7, 1)',
-                'borderWidth': 1
             }
         ]
         
@@ -143,6 +170,93 @@ def get_components_by_status():
     except Exception as e:
         logger.exception("Failed to fetch component status")
         return jsonify({"error": "Failed to fetch statistics"}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+@analytics_bp.route('/analytics/line/weekly-activities', methods=['GET'])
+@jwt_required()
+def get_weekly_activities():
+    """Get account activities for the current week (Monday to Saturday)
+    
+    Filtered by current user's role:
+    - admin: all account activities
+    - it_head: activities for it_head and it_technician roles
+    - lab_head: activities for lab_head and lab_assistant roles
+    """
+    from flask_jwt_extended import get_jwt_identity
+    
+    conn = get_db()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        # Get current user's role
+        identity = get_jwt_identity()
+        cursor.execute("SELECT role FROM accounts WHERE id = %s", (identity,))
+        user = cursor.fetchone()
+        
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+        
+        current_role = user['role']
+        
+        # Define role filters based on current user's role
+        if current_role == 'admin':
+            role_filter = None  # No filter, see all
+        elif current_role == 'it_head':
+            role_filter = ('it_head', 'it_technician')
+        elif current_role == 'lab_head':
+            role_filter = ('lab_head', 'lab_assistant')
+        else:
+            # Non-head roles shouldn't access this endpoint
+            return jsonify({"error": "Access denied"}), 403
+        
+        # Build query with optional role filter
+        # Note: Activities are stored in UTC, convert to local timezone (UTC+8) for accurate day grouping
+        local_tz_offset = '+08:00'  # Asia/Manila timezone
+        
+        if role_filter:
+            cursor.execute(f"""
+                SELECT 
+                    DAYOFWEEK(CONVERT_TZ(aa.created_at, '+00:00', '{local_tz_offset}')) as day_num,
+                    DAYNAME(CONVERT_TZ(aa.created_at, '+00:00', '{local_tz_offset}')) as day_name,
+                    COUNT(*) as count
+                FROM account_activities aa
+                JOIN accounts a ON aa.account_id = a.id
+                WHERE 
+                    YEARWEEK(CONVERT_TZ(aa.created_at, '+00:00', '{local_tz_offset}'), 1) = YEARWEEK(CONVERT_TZ(NOW(), '+00:00', '{local_tz_offset}'), 1)
+                    AND a.role IN (%s, %s)
+                GROUP BY day_num, day_name
+                ORDER BY day_num
+            """, role_filter)
+        else:
+            cursor.execute(f"""
+                SELECT 
+                    DAYOFWEEK(CONVERT_TZ(created_at, '+00:00', '{local_tz_offset}')) as day_num,
+                    DAYNAME(CONVERT_TZ(created_at, '+00:00', '{local_tz_offset}')) as day_name,
+                    COUNT(*) as count
+                FROM account_activities
+                WHERE 
+                    YEARWEEK(CONVERT_TZ(created_at, '+00:00', '{local_tz_offset}'), 1) = YEARWEEK(CONVERT_TZ(NOW(), '+00:00', '{local_tz_offset}'), 1)
+                GROUP BY day_num, day_name
+                ORDER BY day_num
+            """)
+        
+        results = cursor.fetchall()
+        
+        # Create a complete week structure (Monday to Sunday)
+        day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+        day_map = {row['day_name']: row['count'] for row in results}
+        
+        # Format for line chart (labels/data format)
+        chart_data = [
+            {'labels': day, 'data': day_map.get(day, 0)}
+            for day in day_order
+        ]
+        
+        return jsonify(chart_data)
+    except Exception as e:
+        logger.exception("Failed to fetch weekly activities")
+        return jsonify({"error": "Failed to fetch weekly activities"}), 500
     finally:
         cursor.close()
         conn.close()

@@ -5,7 +5,7 @@ import { Card } from 'react-bootstrap';
 import useChartData from '../../hooks/useChartData';
 import { ExclamationTriangle } from 'react-bootstrap-icons';
 
-const LineChart = ({ apiPath, title, options, label = 'Data', colors = [], colorMap = null }) => {
+const LineChart = ({ apiPath, title, options, label = 'Data', colors = [], colorMap = null, bare = false }) => {
     const { chartData, error } = useChartData(apiPath);
 
     // Default colors
@@ -30,7 +30,7 @@ const LineChart = ({ apiPath, title, options, label = 'Data', colors = [], color
             label: label,
             data: [],
             backgroundColor: defaultBgColor,
-            borderColor: defaultBorderColor,
+            borderColor: '#6c757d',
             borderWidth: 1,
             fill: true
         }]
@@ -45,7 +45,7 @@ const LineChart = ({ apiPath, title, options, label = 'Data', colors = [], color
             label: label,
             data: chartData.map(item => item.data),
             backgroundColor: pointColors || defaultBgColor,
-            borderColor: pointColors || defaultBorderColor,
+            borderColor: '#6c757d',
             pointBackgroundColor: pointColors || defaultBorderColor,
             borderWidth: 1,
             fill: !pointColors // Only fill if using single color
@@ -60,26 +60,52 @@ const LineChart = ({ apiPath, title, options, label = 'Data', colors = [], color
             legend: { position: 'top' },
             title: { display: !!title, text: title },
         },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1,
+                    precision: 0
+                }
+            }
+        },
         ...options
     };
 
+    // Chart content (shared between bare and wrapped modes)
+    const chartContent = (
+        <>
+            {!chartData && !error && (
+                <div className="position-absolute top-0 start-0 w-100 h-100 placeholder-glow" style={{ zIndex: 10 }}>
+                    <span className="placeholder w-100 h-100 rounded"></span>
+                </div>
+            )}
+            {error && (
+                <div className="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-body-tertiary bg-opacity-75" style={{ zIndex: 10 }}>
+                    <ExclamationTriangle className="text-danger mb-2" size={32} />
+                    <span className="text-danger small">{error}</span>
+                </div>
+            )}
+            <div className={`w-100 h-100 ${chartData && !error ? "opacity-100" : 'opacity-0'}`}>
+                <Line data={displayData} options={defaultOptions} />
+            </div>
+        </>
+    );
+
+    // Bare mode: return chart only without Card wrapper
+    if (bare) {
+        return (
+            <div className="position-relative w-100" style={{ height: '300px' }}>
+                {chartContent}
+            </div>
+        );
+    }
+
+    // Wrapped mode: return full Card with styling
     return (
         <Card className="shadow bg-body-tertiary h-100">
             <Card.Body className='p-0 relative w-100' style={{ height: '300px' }}>
-                {!chartData && !error && (
-                    <div className="position-absolute top-0 start-0 w-100 h-100 placeholder-glow" style={{ zIndex: 10 }}>
-                        <span className="placeholder w-100 h-100 rounded"></span>
-                    </div>
-                )}
-                {error && (
-                    <div className="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-body-tertiary bg-opacity-75" style={{ zIndex: 10 }}>
-                        <ExclamationTriangle className="text-danger mb-2" size={32} />
-                        <span className="text-danger small">{error}</span>
-                    </div>
-                )}
-                <div className={`p-3 w-100 h-100 ${chartData && !error ? "opacity-100" : 'opacity-0'}`}>
-                    <Line data={displayData} options={defaultOptions} />
-                </div>
+                {chartContent}
             </Card.Body>
         </Card>
     );

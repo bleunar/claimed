@@ -238,7 +238,7 @@ const LaboratoryComputersPage = () => {
                     </select>
                 </div>
 
-                <div className={`row rounded row-cols-2 row-cols-md-3 row-cols-lg-${itemsPerRow}`}>
+                <div className={`row rounded ${computerSets.length == 0 ? "row-cols-1" : `row-cols-2 row-cols-md-3 row-cols-lg-${itemsPerRow}`}`}>
                     {loading ? (
                         // Placeholder skeleton cards while loading
                         [...Array(25)].map((_, idx) => (

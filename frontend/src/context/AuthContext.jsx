@@ -19,6 +19,32 @@ export const AuthProvider = ({ children }) => {
             // since memory is cleared on refresh. The refresh token cookie persists.
             // Mark this as initial auth check to suppress 401 console noise
             window.__initialAuthCheck = true;
+
+            try {
+                // First, try to refresh the token since access token is lost on page refresh
+                // Import axios directly to avoid circular interceptor issues
+                const axios = (await import('axios')).default;
+                const csrfToken = document.cookie.split('; ').find(row => row.startsWith('csrf_refresh_token='))?.split('=')[1];
+                const headers = csrfToken ? { 'X-CSRF-TOKEN': csrfToken } : {};
+
+                const refreshResponse = await axios.post(
+                    `${import.meta.env.VITE_API_URL}/auth/refresh`,
+                    {},
+                    { withCredentials: true, headers }
+                );
+
+                if (refreshResponse.data.access_token) {
+                    setAccessToken(refreshResponse.data.access_token);
+                }
+            } catch (refreshError) {
+                // Refresh failed - user is not logged in or session expired
+                // This is expected for new visitors
+                window.__initialAuthCheck = false;
+                loadPreferencesFromUser(null);
+                setLoading(false);
+                return;
+            }
+
             try {
                 const response = await api.get('/accounts/profile');
                 const userData = response.data.user;

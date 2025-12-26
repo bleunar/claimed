@@ -1,54 +1,44 @@
 import React from 'react';
-import { Bar } from 'react-chartjs-2';
+import { Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS } from 'chart.js/auto';
 import { Card } from 'react-bootstrap';
 import useChartData from '../../hooks/useChartData';
 import { ExclamationTriangle } from 'react-bootstrap-icons';
 
-const BarChart = ({ apiPath, title, options, label = 'Data', colors = [], colorMap = null, bare = false }) => {
+const DonutChart = ({ apiPath, title, options, colors = [], colorMap = null, cutout = '60%', bare = false }) => {
     const { chartData, error } = useChartData(apiPath);
 
-    // Default colors
-    const defaultColor = 'rgba(54, 162, 235, 0.6)';
-    const fallbackColors = colors.length > 0 ? colors : ['#28a745', '#ffc107', '#dc3545', '#6c757d', '#17a2b8', '#6610f2'];
+    // Default colors if none provided
+    const defaultColors = ['#28a745', '#ffc107', '#dc3545', '#6c757d', '#17a2b8', '#6610f2'];
+    const fallbackColors = colors.length > 0 ? colors : defaultColors;
 
-    // Get colors for each bar based on labels
-    const getBarColors = (labels) => {
+    // Generate colors based on colorMap (label-based) or fall back to index-based
+    const getBackgroundColors = (labels) => {
         if (colorMap) {
-            return labels.map((lbl, index) =>
-                colorMap[lbl] || colorMap[lbl?.toLowerCase()] || fallbackColors[index % fallbackColors.length]
+            // Map each label to its specific color, with fallback
+            return labels.map((label, index) =>
+                colorMap[label] || colorMap[label?.toLowerCase()] || fallbackColors[index % fallbackColors.length]
             );
         }
-        // If colors array provided, use per-bar coloring
-        if (colors.length > 0) {
-            return labels.map((_, index) => fallbackColors[index % fallbackColors.length]);
-        }
-        // Default single color for all bars
-        return defaultColor;
+        return fallbackColors;
     };
 
-    // Initial State (Zero/Empty)
+    // Initial State
     const initialData = {
         labels: [],
         datasets: [{
-            label: label,
             data: [],
-            backgroundColor: defaultColor,
+            backgroundColor: fallbackColors,
             borderColor: '#6c757d',
             borderWidth: 1,
         }]
     };
 
-    // Prepare data for Chart.js
-    const barLabels = chartData ? chartData.map(item => item.labels) : [];
-    const barColors = getBarColors(barLabels);
-
     const displayData = chartData ? {
-        labels: barLabels,
+        labels: chartData.map(item => item.labels),
         datasets: [{
-            label: label,
             data: chartData.map(item => item.data),
-            backgroundColor: barColors,
+            backgroundColor: getBackgroundColors(chartData.map(item => item.labels)),
             borderColor: '#6c757d',
             borderWidth: 1,
         }]
@@ -57,7 +47,7 @@ const BarChart = ({ apiPath, title, options, label = 'Data', colors = [], colorM
     const defaultOptions = {
         responsive: true,
         maintainAspectRatio: false,
-        maxBarThickness: 100,
+        cutout: cutout,
         plugins: {
             legend: { position: 'top' },
             title: { display: !!title, text: title },
@@ -80,7 +70,7 @@ const BarChart = ({ apiPath, title, options, label = 'Data', colors = [], colorM
                 </div>
             )}
             <div className={`p-3 w-100 h-100 ${chartData && !error ? "opacity-100" : 'opacity-0'}`}>
-                <Bar data={displayData} options={defaultOptions} />
+                <Doughnut data={displayData} options={defaultOptions} />
             </div>
         </>
     );
@@ -104,4 +94,4 @@ const BarChart = ({ apiPath, title, options, label = 'Data', colors = [], colorM
     );
 };
 
-export default BarChart;
+export default DonutChart;

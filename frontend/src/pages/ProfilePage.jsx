@@ -157,7 +157,7 @@ const ProfilePage = () => {
 
     return (
         <div className="container py-3">
-            <h2 className="h4 mb-3">My Account</h2>
+            <h2 className="h4 mb-3 fw-bold">User Profile</h2>
             <Row className="g-4 mb-4">
                 <Col md={4}>
                     <Card className='h-100 overflow-hidden shadow-sm'>
@@ -298,7 +298,7 @@ const ProfilePage = () => {
                                         Change Email
                                     </Button>
                                 </div>
-                                <Button variant="primary" className='mb-0' type="submit" disabled={updatingProfile}>
+                                <Button variant="primary" className='mb-0' onClick={handleUpdateName} disabled={updatingProfile}>
                                     {updatingProfile ? (
                                         <><span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Updating...</>
                                     ) : 'Update'}

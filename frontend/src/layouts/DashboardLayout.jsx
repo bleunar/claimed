@@ -17,7 +17,7 @@ const DashboardLayout = () => {
         { path: '/dashboard/laboratories', name: 'Laboratories', icon: <DoorClosed />, requiredRoles: ['admin', 'it_head', 'lab_head', 'it_technician', 'lab_assistant'] },
         { path: '/dashboard/components', name: 'PC Components', icon: <Keyboard />, requiredRoles: ['admin', 'it_head', 'lab_head'] },
         { path: '/dashboard/accounts', name: 'Accounts', icon: <People />, requiredRoles: ['admin', 'it_head', 'lab_head'] },
-        { path: '/dashboard/profile', name: 'My Account', icon: <Person />, requiredRoles: ['admin', 'it_head', 'it_technician', 'lab_head', 'lab_assistant'] },
+        { path: '/dashboard/profile', name: 'My Profile', icon: <Person />, requiredRoles: ['admin', 'it_head', 'it_technician', 'lab_head', 'lab_assistant'] },
 
     ];
 

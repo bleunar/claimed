@@ -305,28 +305,22 @@ def update_profile():
             
         db.commit()
         
-        # Log profile update - only include fields that actually changed
+        # Log profile update - track any fields that were provided for update
         update_details = {}
-        if name and name != current_profile.get('name'):
-            update_details['name'] = name
-        if school_id is not None and school_id != current_profile.get('school_id'):
-            update_details['school_id'] = school_id
+        if name:
+            update_details['name_updated'] = True
+        if school_id is not None:
+            update_details['school_id_updated'] = True
         if password:
             update_details['password_changed'] = True
+        if birth_date:
+            update_details['birth_date_updated'] = True
+        if gender:
+            update_details['gender_updated'] = True
+        if department_name is not None:
+            update_details['department_updated'] = True
         
-        # Convert current birth_date to string for comparison
-        current_birth_date = current_profile.get('birth_date')
-        if current_birth_date:
-            current_birth_date = str(current_birth_date)
-        if birth_date and birth_date != current_birth_date:
-            update_details['birth_date'] = birth_date
-            
-        if gender and gender != current_profile.get('gender'):
-            update_details['gender'] = gender
-        if department_name is not None and department_name != current_profile.get('department_name'):
-            update_details['department'] = department_name
-        
-        # Only log if something actually changed
+        # Always log activity if any field was submitted for update
         if update_details:
             log_activity(current_user_id, 'profile_updated', update_details)
         

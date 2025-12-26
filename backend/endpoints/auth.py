@@ -53,11 +53,18 @@ def login():
 @jwt_required(optional=True)
 def logout():
     from flask_jwt_extended import unset_jwt_cookies, get_jwt_identity
+    from utilities.activity_tracker import activity_tracker
     
     # Log logout activity if user is authenticated
     identity = get_jwt_identity()
     if identity:
         log_activity(identity, 'logout')
+        # Get client IP address for device-specific logout
+        ip_address = request.headers.get('X-Forwarded-For', request.remote_addr)
+        if ip_address and ',' in ip_address:
+            ip_address = ip_address.split(',')[0].strip()
+        # Remove this device from online tracking
+        activity_tracker.remove_activity(identity, ip_address)
     
     resp = jsonify({"msg": "Logout successful"})
     unset_jwt_cookies(resp)

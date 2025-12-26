@@ -11,7 +11,7 @@ const Breadcrumbs = () => {
         'accounts': 'Accounts',
         'laboratories': 'Laboratories',
         'components': 'PC Components',
-        'profile': 'My Account'
+        'profile': 'My Profile'
     };
 
     return (

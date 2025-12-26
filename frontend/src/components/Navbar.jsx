@@ -10,7 +10,7 @@ const Navbar = ({ onToggleSidebar, sideBarToggled }) => {
     const { theme, toggleTheme } = useTheme();
 
     return (
-        <nav className={`navbar navbar-expand-lg p-2 sticky-top navbar-frosted shadow`} style={{ height: '67px' }}>
+        <nav className={`navbar navbar-expand-lg p-2 sticky-top navbar-frosted`} style={{ height: '67px' }}>
             <div className="container-fluid p-0">
                 <div className="d-flex align-items-center d-md-none">
                     <div className="btn p-0">
@@ -36,6 +36,7 @@ const Navbar = ({ onToggleSidebar, sideBarToggled }) => {
                                 src={user?.profile_picture ? `${import.meta.env.VITE_API_URL}/accounts/${user.id}/picture?t=${user._picTimestamp || ''}` : null}
                                 size="48px"
                                 shape="circle"
+                                className='border'
                             />
                         </a>
                         <ul className={`dropdown-menu dropdown-menu-end dropdown-menu-${theme}`} aria-labelledby="dropdownUser1">
