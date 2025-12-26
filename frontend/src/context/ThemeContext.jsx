@@ -4,7 +4,7 @@ import { hasActiveSeasonalEffect } from '../components/SeasonalEffects';
 const ThemeContext = createContext();
 
 export const ThemeProvider = ({ children }) => {
-    const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
+    const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
     const [toastPosition, setToastPosition] = useState(localStorage.getItem('toastPosition') || 'top-center');
     const [seasonalEffects, setSeasonalEffects] = useState(() => {
         const saved = localStorage.getItem('seasonalEffects');
