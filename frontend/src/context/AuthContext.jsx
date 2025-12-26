@@ -2,6 +2,7 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 import api from '../api/axios';
 import { setAccessToken, clearAccessToken, hasAccessToken } from '../utils/tokenManager';
 import LoadingSpinner from '../components/LoadingSpinner';
+import { useTheme } from './ThemeContext';
 
 const AuthContext = createContext();
 
@@ -10,6 +11,7 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
     const [showOverlay, setShowOverlay] = useState(true);
     const [fadeOut, setFadeOut] = useState(false);
+    const { loadPreferencesFromUser, resetPreferences } = useTheme();
 
     useEffect(() => {
         const checkAuth = async () => {
@@ -19,16 +21,24 @@ export const AuthProvider = ({ children }) => {
             window.__initialAuthCheck = true;
             try {
                 const response = await api.get('/accounts/profile');
-                setUser({ ...response.data.user, _picTimestamp: Date.now() });
+                const userData = response.data.user;
+                setUser({ ...userData, _picTimestamp: Date.now() });
+                // Load user preferences into ThemeContext
+                if (userData.preferences) {
+                    loadPreferencesFromUser(userData.preferences);
+                } else {
+                    loadPreferencesFromUser(null);
+                }
             } catch (error) {
                 // Expected if truly logged out or refresh failed.
                 // Don't log this as it's expected behavior
+                loadPreferencesFromUser(null);
             }
             window.__initialAuthCheck = false;
             setLoading(false);
         };
         checkAuth();
-    }, []);
+    }, [loadPreferencesFromUser]);
 
     // Handle fade-out animation when loading completes
     useEffect(() => {
@@ -49,7 +59,15 @@ export const AuthProvider = ({ children }) => {
 
             // Fetch user profile (login endpoint only returns token, not user info)
             const profileResponse = await api.get('/accounts/profile');
-            setUser({ ...profileResponse.data.user, _picTimestamp: Date.now() });
+            const userData = profileResponse.data.user;
+            setUser({ ...userData, _picTimestamp: Date.now() });
+
+            // Load user preferences into ThemeContext
+            if (userData.preferences) {
+                loadPreferencesFromUser(userData.preferences);
+            } else {
+                loadPreferencesFromUser(null);
+            }
 
             return { success: true };
         } catch (error) {
@@ -67,6 +85,8 @@ export const AuthProvider = ({ children }) => {
             // Clear access token in memory
             clearAccessToken();
             setUser(null);
+            // Reset preferences state
+            resetPreferences();
             // Redirect to login page with full page reload to clear all state
             window.location.href = '/';
         }
@@ -104,4 +124,3 @@ export const AuthProvider = ({ children }) => {
 };
 
 export const useAuth = () => useContext(AuthContext);
-

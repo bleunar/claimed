@@ -38,3 +38,5 @@ backend_logs
 
 __pycache__
 
+!DATABASEv4b1.sql
+

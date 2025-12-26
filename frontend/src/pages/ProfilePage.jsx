@@ -5,24 +5,22 @@ import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
 import { Person, PersonCircle, Eye, EyeSlash } from 'react-bootstrap-icons';
 import ChangeEmailModal from '../components/modals/ChangeEmailModal';
+import ChangePasswordModal from '../components/modals/ChangePasswordModal';
 import toast from 'react-hot-toast';
 import ProfileImage from '../components/common/ProfileImage';
 import ActivityTimeline from '../components/common/ActivityTimeline';
 
 const ProfilePage = () => {
     const { user, refreshUser } = useAuth();
-    const { theme, toggleTheme, toastPosition, setToastPosition, seasonalEffects, toggleSeasonalEffects, hasActiveSeason } = useTheme();
+    const { theme, toggleTheme, toastPosition, setToastPosition, seasonalEffects, toggleSeasonalEffects, hasActiveSeason, savePreferences, savingPreferences, hasUnsavedChanges, effectiveTheme, effectiveToastPosition, effectiveSeasonalEffects } = useTheme();
     const [name, setName] = useState('');
-    const [password, setPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
     const [uploading, setUploading] = useState(false);
     const [imageTimestamp, setImageTimestamp] = useState(Date.now());
     const [showEmailModal, setShowEmailModal] = useState(false);
+    const [showPasswordModal, setShowPasswordModal] = useState(false);
     const [selectedFile, setSelectedFile] = useState(null);
     const [showPreviewModal, setShowPreviewModal] = useState(false);
     const [previewImage, setPreviewImage] = useState(null);
-    const [showNewPassword, setShowNewPassword] = useState(false);
-    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [schoolId, setSchoolId] = useState('');
     const [birthDate, setBirthDate] = useState('');
     const [gender, setGender] = useState('');
@@ -31,7 +29,6 @@ const ProfilePage = () => {
     const [activitiesLoading, setActivitiesLoading] = useState(true);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [updatingProfile, setUpdatingProfile] = useState(false);
-    const [updatingPassword, setUpdatingPassword] = useState(false);
 
     useEffect(() => {
         if (user) {
@@ -79,47 +76,6 @@ const ProfilePage = () => {
             toast.error(err.response?.data?.msg || "Failed to update profile");
         } finally {
             setUpdatingProfile(false);
-        }
-    };
-
-    const handleUpdatePassword = async (e) => {
-        e.preventDefault();
-
-        if (!password) {
-            toast.error("Password is required");
-            return;
-        }
-
-        if (password.length < 8) {
-            toast.error("Password must be at least 8 characters long");
-            return;
-        }
-
-        if (!/[A-Z]/.test(password)) {
-            toast.error("Password must contain at least one uppercase letter");
-            return;
-        }
-
-        if (!/\d/.test(password)) {
-            toast.error("Password must contain at least one digit");
-            return;
-        }
-
-        if (password !== confirmPassword) {
-            toast.error("Passwords do not match");
-            return;
-        }
-
-        setUpdatingPassword(true);
-        try {
-            await api.put('/accounts/profile', { password });
-            toast.success("Password updated successfully");
-            setPassword('');
-            setConfirmPassword('');
-        } catch (err) {
-            toast.error(err.response?.data?.msg || "Failed to update password");
-        } finally {
-            setUpdatingPassword(false);
         }
     };
 
@@ -217,26 +173,27 @@ const ProfilePage = () => {
                             <h4 className="mb-0">{user?.name}</h4>
                             <div className="text-muted mb-3 text-uppercase" style={{ fontSize: '0.75rem' }}>{user?.role.replace('_', ' ').toLowerCase()}</div>
                         </Card.Body>
-                        <Card.Footer className='d-flex justify-content-evenly p-0 m-0 border-top'>
-                            <Form.Label htmlFor="upload-photo" className={`btn btn-outline-primary flex-fill rounded-0 mb-0 ${user?.profile_picture ? "border-0 border-end" : "border-0"}`}>
-                                Update Photo
-                            </Form.Label>
-                            <Form.Control
-                                type="file"
-                                id="upload-photo"
-                                accept="image/*"
-                                onChange={handleFileSelect}
-                                style={{ display: 'none' }}
-                            />
-                            {user?.profile_picture && (
-                                <Button
-                                    variant="outline-danger"
-                                    className="w-50 rounded-0 border-0 mb-0"
-                                    onClick={handleRemovePhoto}
-                                >
-                                    Remove
-                                </Button>
-                            )}
+                        <Card.Footer>
+                            <div className="d-flex justify-content-end gap-2">
+                                <Form.Label htmlFor="upload-photo" className={`btn btn-primary mb-0`}>
+                                    Update Photo
+                                </Form.Label>
+                                <Form.Control
+                                    type="file"
+                                    id="upload-photo"
+                                    accept="image/*"
+                                    onChange={handleFileSelect}
+                                    style={{ display: 'none' }}
+                                />
+                                {user?.profile_picture && (
+                                    <Button
+                                        variant="danger"
+                                        onClick={handleRemovePhoto}
+                                    >
+                                        Remove
+                                    </Button>
+                                )}
+                            </div>
                         </Card.Footer>
                     </Card>
                 </Col>
@@ -246,20 +203,11 @@ const ProfilePage = () => {
                         <Card.Header className='text-body-secondary fw-bold'>Profile Information</Card.Header>
                         <Card.Body className='bg-body-tertiary'>
                             <Form onSubmit={handleUpdateName} className='row'>
-
-
                                 <div className="col-12 col-md-6">
                                     <Form.Group className="mb-3">
                                         <Form.Label>Email</Form.Label>
                                         <div className="d-flex gap-2">
                                             <Form.Control type="email" value={user?.email || ''} disabled />
-                                            <Button
-                                                variant="primary"
-                                                className='text-nowrap'
-                                                onClick={() => setShowEmailModal(true)}
-                                            >
-                                                Update
-                                            </Button>
                                         </div>
                                     </Form.Group>
                                 </div>
@@ -332,24 +280,37 @@ const ProfilePage = () => {
                                         </Form.Select>
                                     </Form.Group>
                                 </div>
-
-                                <div className="col-12">
-                                    <div className="text-end mt-3">
-                                        <Button variant="primary" className='mb-0' type="submit" disabled={updatingProfile}>
-                                            {updatingProfile ? (
-                                                <><span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Updating...</>
-                                            ) : 'Update Profile'}
-                                        </Button>
-                                    </div>
-                                </div>
                             </Form>
                         </Card.Body>
+                        <Card.Footer>
+                            <div className="d-flex justify-content-between align-items-center gap-2">
+                                <div className="d-flex gap-2 align-items-center">
+                                    <Button variant="primary" size='sm' onClick={() => setShowPasswordModal(true)}>
+                                        Change Password
+                                    </Button>
+
+                                    <Button
+                                        variant="primary"
+                                        size='sm'
+                                        className='text-nowrap'
+                                        onClick={() => setShowEmailModal(true)}
+                                    >
+                                        Change Email
+                                    </Button>
+                                </div>
+                                <Button variant="primary" className='mb-0' type="submit" disabled={updatingProfile}>
+                                    {updatingProfile ? (
+                                        <><span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Updating...</>
+                                    ) : 'Update'}
+                                </Button>
+                            </div>
+                        </Card.Footer>
                     </Card>
                 </Col>
             </Row>
 
-            <Row className='g-4'>
-                <Col md={4}>
+            <Row className='g-4 justify-content-end'>
+                <Col md={8}>
                     <Card className='mb-4 mb-md-0 h-100 shadow-sm overflow-hidden'>
                         <Card.Header className='text-body-secondary fw-bold'>Settings</Card.Header>
                         <Card.Body className='bg-body-tertiary'>
@@ -358,7 +319,7 @@ const ProfilePage = () => {
                                 <Form.Check
                                     type="switch"
                                     id="theme-switch"
-                                    checked={theme === 'dark'}
+                                    checked={effectiveTheme === 'dark'}
                                     onChange={toggleTheme}
                                 />
                             </Form.Group>
@@ -370,22 +331,18 @@ const ProfilePage = () => {
                                     <Form.Check
                                         type="switch"
                                         id="seasonal-effects-switch"
-                                        checked={seasonalEffects}
+                                        checked={effectiveSeasonalEffects}
                                         onChange={toggleSeasonalEffects}
                                     />
                                 </Form.Group>
                             )}
 
-                            <Form.Group className='mb-3 d-flex justify-content-between align-items-center'>
+                            <Form.Group className='d-flex justify-content-between align-items-center'>
                                 <Form.Label className='mb-0'>Notification Position</Form.Label>
                                 <Form.Select
                                     className='w-auto'
-                                    size='sm'
-                                    value={toastPosition}
-                                    onChange={(e) => {
-                                        setToastPosition(e.target.value);
-                                        toast.success("Toast position updated!");
-                                    }}
+                                    value={effectiveToastPosition}
+                                    onChange={(e) => setToastPosition(e.target.value)}
                                 >
                                     <option value="top-center">Top Center</option>
                                     <option value="bottom-center">Bottom Center</option>
@@ -393,77 +350,33 @@ const ProfilePage = () => {
                                 </Form.Select>
                             </Form.Group>
                         </Card.Body>
-                    </Card>
-                </Col>
-
-                <Col md={8}>
-                    <Card className='h-100 shadow-sm overflow-hidden'>
-                        <Card.Header className='text-body-secondary fw-bold'>Update Password</Card.Header>
-                        <Card.Body className='bg-body-tertiary'>
-                            <Form onSubmit={handleUpdatePassword} className='row'>
-
-                                <div className="col-12 col-md-6">
-                                    <Form.Group className="mb-3">
-                                        <Form.Label>New Password</Form.Label>
-                                        <div className="input-group bg-body rounded border">
-                                            <Form.Control
-                                                type={showNewPassword ? "text" : "password"}
-                                                value={password}
-                                                onChange={(e) => setPassword(e.target.value)}
-                                                placeholder="Enter new password"
-                                                className='border-0'
-                                                required
-                                            />
-                                            <div
-                                                className="btn"
-                                                onClick={() => setShowNewPassword(!showNewPassword)}
-                                            >
-                                                {showNewPassword ? <EyeSlash /> : <Eye />}
-                                            </div>
-                                        </div>
-                                    </Form.Group>
-                                </div>
-
-
-                                <div className="col-12 col-md-6">
-                                    <Form.Group className="mb-3">
-                                        <Form.Label>Confirm New Password</Form.Label>
-                                        <div className="input-group bg-body rounded border">
-                                            <Form.Control
-                                                type={showConfirmPassword ? "text" : "password"}
-                                                value={confirmPassword}
-                                                onChange={(e) => setConfirmPassword(e.target.value)}
-                                                placeholder="Confirm new password"
-                                                className='border-0'
-                                                required
-                                            />
-                                            <div
-                                                className="btn"
-                                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                            >
-                                                {showConfirmPassword ? <EyeSlash /> : <Eye />}
-                                            </div>
-                                        </div>
-                                    </Form.Group>
-                                </div>
-
-
-                                <div className="text-end">
-                                    <Button type="submit" disabled={updatingPassword}>
-                                        {updatingPassword ? (
-                                            <><span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Updating...</>
-                                        ) : 'Update'}
-                                    </Button>
-                                </div>
-                            </Form>
-                        </Card.Body>
+                        <Card.Footer>
+                            <div className='text-end'>
+                                <Button
+                                    variant="primary"
+                                    onClick={async () => {
+                                        const result = await savePreferences();
+                                        if (result.success) {
+                                            toast.success("Settings saved successfully");
+                                        } else {
+                                            toast.error(result.error || "Failed to save settings");
+                                        }
+                                    }}
+                                    disabled={savingPreferences || !hasUnsavedChanges}
+                                >
+                                    {savingPreferences ? (
+                                        <><span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Saving...</>
+                                    ) : 'Update'}
+                                </Button>
+                            </div>
+                        </Card.Footer>
                     </Card>
                 </Col>
             </Row>
 
             {/* Recent Activity Section */}
-            <Row className="mt-4">
-                <Col>
+            <Row className="mt-4 justify-content-end">
+                <Col md={8}>
                     <Card>
                         <Card.Header className="fw-bold text-body-secondary">
                             Recent Activity
@@ -483,6 +396,11 @@ const ProfilePage = () => {
             <ChangeEmailModal
                 show={showEmailModal}
                 onHide={() => setShowEmailModal(false)}
+            />
+
+            <ChangePasswordModal
+                show={showPasswordModal}
+                onHide={() => setShowPasswordModal(false)}
             />
 
             {/* Profile Picture, upload preview modal */}

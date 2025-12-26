@@ -69,9 +69,10 @@ def initialize_admin(app):
 
 def print_config(app):
     print("\n--- System Configuration ---")
+    import os
     for key, value in app.config.items():
         if key.isupper():
-            if any(secret in key.upper() for secret in ['KEY', 'PASSWORD', 'SECRET', 'TOKEN']):
+            if any(secret in key.upper() for secret in ['KEY', 'PASSWORD', 'SECRET', 'TOKEN']) and os.getenv('APP_ENV', 'development') == "production":
                 print(f"\t> {key}: [######## REDACTED BY KAI SOTTO ########]")
             else:
                 print(f"\t> {key}: {value}")

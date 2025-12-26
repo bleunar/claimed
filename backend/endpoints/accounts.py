@@ -34,7 +34,7 @@ def profile():
     
     db = get_db()
     cursor = db.cursor(dictionary=True)
-    cursor.execute("SELECT id, name, email, school_id, role, suspended_at, deleted_at, profile_picture, birth_date, gender, department_name, password_reset_required FROM accounts WHERE id = %s", (current_user_id,))
+    cursor.execute("SELECT id, name, email, school_id, role, suspended_at, deleted_at, profile_picture, birth_date, gender, department_name, password_reset_required, preferences FROM accounts WHERE id = %s", (current_user_id,))
     user = cursor.fetchone()
     cursor.close()
     
@@ -224,8 +224,9 @@ def update_profile():
     birth_date = data.get('birth_date')
     gender = data.get('gender')
     department_name = data.get('department_name')
+    preferences = data.get('preferences')  # JSON object: {theme, toastPosition, seasonalEffects}
     
-    if not any([name, password, school_id, birth_date, gender, department_name]):
+    if not any([name, password, school_id, birth_date, gender, department_name, preferences is not None]):
         return jsonify({"msg": "Nothing to update"}), 400
         
     db = get_db()
@@ -290,6 +291,12 @@ def update_profile():
         if department_name is not None:
             fields.append("department_name = %s")
             values.append(department_name or None)
+        
+        if preferences is not None:
+            import json
+            # Store as JSON string
+            fields.append("preferences = %s")
+            values.append(json.dumps(preferences) if preferences else None)
             
         values.append(current_user_id)
         
@@ -329,6 +336,60 @@ def update_profile():
         logger.exception("Failed to update profile")
         cursor.close()
         return jsonify({"msg": "Failed to update profile. Please try again."}), 500
+
+
+@accounts_bp.route('/profile/password', methods=['PUT'])
+@jwt_required()
+def update_password():
+    """Update password with current password verification."""
+    current_user_id = get_jwt_identity()
+    
+    data = request.json
+    current_password = data.get('current_password')
+    new_password = data.get('new_password')
+    
+    if not current_password or not new_password:
+        return jsonify({"msg": "Current password and new password are required"}), 400
+    
+    # Validate new password
+    from utilities.user_validators import validate_password
+    is_valid, error = validate_password(new_password)
+    if not is_valid:
+        return jsonify({"msg": error}), 400
+    
+    db = get_db()
+    cursor = db.cursor(dictionary=True)
+    
+    try:
+        # Verify current password
+        cursor.execute("SELECT password_hash FROM accounts WHERE id = %s", (current_user_id,))
+        user = cursor.fetchone()
+        
+        if not user:
+            cursor.close()
+            return jsonify({"msg": "User not found"}), 404
+        
+        if not check_password(current_password, user['password_hash']):
+            cursor.close()
+            return jsonify({"msg": "Current password is incorrect"}), 401
+        
+        # Update password
+        new_hash = hash_password(new_password)
+        cursor.execute(
+            "UPDATE accounts SET password_hash = %s, password_reset_required = 0 WHERE id = %s",
+            (new_hash, current_user_id)
+        )
+        db.commit()
+        
+        # Log activity
+        log_activity(current_user_id, 'password_changed')
+        
+        cursor.close()
+        return jsonify({"msg": "Password updated successfully"}), 200
+    except Exception as e:
+        logger.exception("Failed to update password")
+        cursor.close()
+        return jsonify({"msg": "Failed to update password. Please try again."}), 500
 
 
 @accounts_bp.route('/profile/email/request', methods=['POST'])
