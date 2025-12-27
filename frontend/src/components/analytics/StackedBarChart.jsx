@@ -42,7 +42,6 @@ const StackedBarChart = ({ apiPath, title, options, colors = [], colorMap = null
     const defaultOptions = {
         responsive: true,
         maintainAspectRatio: false,
-        maxBarThickness: 100,
         plugins: {
             legend: { position: 'top' },
             title: { display: !!title, text: title },
@@ -90,8 +89,10 @@ const StackedBarChart = ({ apiPath, title, options, colors = [], colorMap = null
                     <span className="text-danger small">{error}</span>
                 </div>
             )}
-            <div className={`p-3 w-100 h-100 ${chartData && !error ? "opacity-100" : 'opacity-0'}`}>
-                <Bar data={displayData} options={defaultOptions} />
+            <div className="w-100 h-100 d-flex justify-content-center">
+                <div className={`p-3 w-100 h-100 ${chartData && !error ? "opacity-100" : 'opacity-0'}`} style={{ maxWidth: "800px" }}>
+                    <Bar data={displayData} options={defaultOptions} />
+                </div>
             </div>
         </>
     );

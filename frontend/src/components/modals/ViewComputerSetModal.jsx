@@ -3,6 +3,11 @@ import { Modal, Button, Form } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
 
+// Natural sort comparator for names with numbers (Lab 1, Lab 2... Lab 10, not Lab 1, Lab 10, Lab 2)
+const naturalSort = (a, b, key) => {
+    return a[key].localeCompare(b[key], undefined, { numeric: true, sensitivity: 'base' });
+};
+
 const ViewComputerSetModal = ({ show, onHide }) => {
     const navigate = useNavigate();
     const [laboratories, setLaboratories] = useState([]);
@@ -33,7 +38,8 @@ const ViewComputerSetModal = ({ show, onHide }) => {
         setLoading(true);
         try {
             const response = await api.get('/laboratories');
-            setLaboratories(response.data.laboratories || []);
+            // API returns array directly, not {laboratories: [...]}
+            setLaboratories(Array.isArray(response.data) ? response.data : []);
         } catch (err) {
             console.error('Failed to fetch laboratories', err);
         } finally {
@@ -44,8 +50,10 @@ const ViewComputerSetModal = ({ show, onHide }) => {
     const fetchComputerSets = async (labId) => {
         setLoadingComputerSets(true);
         try {
-            const response = await api.get(`/laboratories/${labId}/computer-sets`);
-            setComputerSets(response.data.computer_sets || []);
+            // Use query parameter, not nested route
+            const response = await api.get(`/computer-sets?laboratory_id=${labId}`);
+            // API returns array directly
+            setComputerSets(Array.isArray(response.data) ? response.data : []);
         } catch (err) {
             console.error('Failed to fetch computer sets', err);
         } finally {
@@ -56,7 +64,7 @@ const ViewComputerSetModal = ({ show, onHide }) => {
     const handleSubmit = (e) => {
         e.preventDefault();
         if (selectedLab && selectedComputerSet) {
-            navigate(`/dashboard/laboratories/${selectedLab}/computer-sets/${selectedComputerSet}`);
+            navigate(`/dashboard/laboratories/${selectedLab}?set=${selectedComputerSet}&components=true`);
             handleClose();
         }
     };
@@ -69,7 +77,7 @@ const ViewComputerSetModal = ({ show, onHide }) => {
     };
 
     return (
-        <Modal centered show={show} onHide={handleClose}>
+        <Modal show={show} onHide={handleClose}>
             <Modal.Header closeButton>
                 <Modal.Title>View Computer Set</Modal.Title>
             </Modal.Header>
@@ -86,7 +94,7 @@ const ViewComputerSetModal = ({ show, onHide }) => {
                             <option value="" hidden>
                                 {loading ? 'Loading...' : 'Select a laboratory'}
                             </option>
-                            {laboratories.map((lab) => (
+                            {[...laboratories].sort((a, b) => naturalSort(a, b, 'name')).map((lab) => (
                                 <option key={lab.id} value={lab.id}>
                                     {lab.name}
                                 </option>
@@ -109,9 +117,9 @@ const ViewComputerSetModal = ({ show, onHide }) => {
                                         ? 'Select a computer set'
                                         : 'Select a laboratory first'}
                             </option>
-                            {computerSets.map((cs) => (
+                            {[...computerSets].sort((a, b) => naturalSort(a, b, 'set_name')).map((cs) => (
                                 <option key={cs.id} value={cs.id}>
-                                    {cs.name}
+                                    {cs.set_name}
                                 </option>
                             ))}
                         </Form.Select>

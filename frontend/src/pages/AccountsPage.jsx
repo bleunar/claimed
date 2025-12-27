@@ -165,6 +165,18 @@ const AccountsPage = () => {
         }
     };
 
+    const handleRestore = async (account) => {
+        if (!window.confirm(`Are you sure you want to restore account "${account.name}"?`)) return;
+
+        try {
+            await api.post(`/accounts/${account.id}/restore`);
+            toast.success(`Account "${account.name}" restored successfully`);
+            fetchAccounts();
+        } catch (err) {
+            toast.error(err.response?.data?.msg || 'Failed to restore account');
+        }
+    };
+
     // Password Management Handlers
     const handleOpenPasswordModal = (account) => {
         setPasswordFormData({
@@ -487,6 +499,11 @@ const AccountsPage = () => {
                                                                 <button className="btn btn-outline-primary btn-sm border-0" onClick={() => handleOpenActivityModal(account)} title="View Activity">
                                                                     <ClockHistory />
                                                                 </button>
+                                                                {account.deleted_at && (
+                                                                    <button className="btn btn-outline-success btn-sm border-0" onClick={() => handleRestore(account)} title="Restore Account">
+                                                                        <ArrowClockwise />
+                                                                    </button>
+                                                                )}
                                                                 <button className="btn btn-outline-danger btn-sm border-0" onClick={() => handleDelete(account)} title={account.deleted_at ? "Permanently Delete" : "Delete Account"}>
                                                                     <Trash />
                                                                 </button>
@@ -592,21 +609,6 @@ const AccountsPage = () => {
                                     )}
                                 </select>
                             </div>
-
-                            {editingId && (
-                                <div className="mb-3 form-check">
-                                    <input
-                                        type="checkbox"
-                                        className="form-check-input"
-                                        id="suspendedCheck"
-                                        checked={formData.suspended}
-                                        onChange={(e) => setFormData({ ...formData, suspended: e.target.checked })}
-                                    />
-                                    <label className="form-check-label" htmlFor="suspendedCheck">
-                                        Suspend Account
-                                    </label>
-                                </div>
-                            )}
 
                             <div className="row mb-3">
                                 <div className="col-md-6">
@@ -763,10 +765,10 @@ const AccountsPage = () => {
                                 Min 8 chars, 1 Uppercase, 1 Digit.
                             </Form.Text>
                         </Form.Group>
-                        <Form.Group className="mb-3">
+                        <Form.Group className="mb-5">
                             <Form.Check
                                 type="checkbox"
-                                label="Force user to change password on next login"
+                                label="Change password on next login"
                                 checked={passwordFormData.forceReset}
                                 onChange={(e) => setPasswordFormData({ ...passwordFormData, forceReset: e.target.checked })}
                             />

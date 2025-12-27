@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 ACTIVITY_ACTIONS = [
     'login', 'logout', 'password_reset', 'password_changed',
     'email_updated', 'school_id_updated', 'role_changed',
-    'suspended', 'activated', 'deleted', 'profile_updated'
+    'suspended', 'activated', 'deleted', 'restored', 'profile_updated'
 ]
 
 

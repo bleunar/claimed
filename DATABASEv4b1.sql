@@ -25,7 +25,7 @@ CREATE TABLE account_activities (
     account_id CHAR(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
     action ENUM('login', 'logout', 'password_reset', 'password_changed', 
                 'email_updated', 'school_id_updated', 'role_changed', 
-                'suspended', 'activated', 'deleted', 'profile_updated') NOT NULL,
+                'suspended', 'activated', 'deleted', 'restored', 'profile_updated') NOT NULL,
     details JSON NULL,
     ip_address VARCHAR(45) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

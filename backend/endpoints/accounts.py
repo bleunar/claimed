@@ -829,6 +829,39 @@ def delete_account(id):
         return jsonify({"msg": "Failed to delete account. Please try again."}), 500
 
 
+@accounts_bp.route('/<id>/restore', methods=['POST'])
+@jwt_required()
+@verify_role_freshness
+@role_required(['admin'])
+def restore_account(id):
+    """Restore a soft-deleted account (admin only)."""
+    db = get_db()
+    cursor = db.cursor(dictionary=True)
+    
+    # Check if account exists and is deleted
+    cursor.execute("SELECT id, name, deleted_at FROM accounts WHERE id = %s", (id,))
+    account = cursor.fetchone()
+    
+    if not account:
+        cursor.close()
+        return jsonify({"msg": "Account not found"}), 404
+        
+    if not account['deleted_at']:
+        cursor.close()
+        return jsonify({"msg": "Account is not deleted"}), 400
+    
+    try:
+        cursor.execute("UPDATE accounts SET deleted_at = NULL WHERE id = %s", (id,))
+        db.commit()
+        cursor.close()
+        log_activity(id, 'restored')
+        return jsonify({"msg": f"Account '{account['name']}' restored successfully"}), 200
+    except Exception as e:
+        logger.exception("Failed to restore account")
+        cursor.close()
+        return jsonify({"msg": "Failed to restore account. Please try again."}), 500
+
+
 @accounts_bp.route('/<id>/activities', methods=['GET'])
 @jwt_required()
 def get_account_activities(id):

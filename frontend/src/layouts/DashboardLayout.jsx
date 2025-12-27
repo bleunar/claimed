@@ -59,7 +59,7 @@ const DashboardLayout = () => {
             <div className="d-flex flex-column flex-grow-1" style={{ width: '100%', overflow: 'hidden' }}>
                 <main className="flex-grow-1 p-0 m-0 d-flex flex-column" style={{ overflowY: 'auto' }}>
                     <Navbar onToggleSidebar={toggleSidebar} sideBarToggled={isSidebarOpen} />
-                    <div className="container-fluid flex-grow-1 px-0 px-md-3 pb-5">
+                    <div className="container-fluid flex-grow-1 px-2 px-md-3 pb-5">
                         <Breadcrumbs />
                         <Outlet />
                     </div>

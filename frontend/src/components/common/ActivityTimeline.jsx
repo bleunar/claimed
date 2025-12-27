@@ -5,7 +5,8 @@ import {
     PersonBadge, ShieldCheck, PersonDash, PersonCheck,
     Trash, PersonGear, PersonFill, ChevronDown, ChevronRight,
     GlobeAmericas, Clock, ArrowRight,
-    GlobeAmericasFill
+    GlobeAmericasFill,
+    ArrowClockwise
 } from 'react-bootstrap-icons';
 
 // Action icon mapping
@@ -20,36 +21,39 @@ const ACTION_ICONS = {
     suspended: PersonDash,
     activated: PersonCheck,
     deleted: Trash,
+    restored: ArrowClockwise,
     profile_updated: PersonGear
 };
 
 // Action labels
 const ACTION_LABELS = {
-    login: 'Logged in',
-    logout: 'Logged out',
+    login: 'Logged In',
+    logout: 'Logged Out',
     password_reset: 'Password reset via email',
-    password_changed: 'Password changed',
-    email_updated: 'Email updated',
-    school_id_updated: 'School ID updated',
-    role_changed: 'Role changed',
-    suspended: 'Account suspended',
-    activated: 'Account activated',
-    deleted: 'Account deleted',
-    profile_updated: 'Profile updated'
+    password_changed: 'Password Changed',
+    email_updated: 'Email Updated',
+    school_id_updated: 'School ID Updated',
+    role_changed: 'Role Changed',
+    suspended: 'Account Suspended',
+    activated: 'Account Activated',
+    deleted: 'Account Deleted',
+    restored: 'Account Restored',
+    profile_updated: 'Profile Updated'
 };
 
 // Action colors
 const ACTION_COLORS = {
     login: 'success',
     logout: 'secondary',
-    password_reset: 'warning',
-    password_changed: 'warning',
+    password_reset: 'success',
+    password_changed: 'success',
     email_updated: 'info',
     school_id_updated: 'info',
     role_changed: 'primary',
     suspended: 'danger',
     activated: 'success',
     deleted: 'danger',
+    restored: 'success',
     profile_updated: 'primary'
 };
 
