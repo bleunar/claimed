@@ -6,18 +6,18 @@
 
 // Computer Set Status Colors
 export const COMPUTER_SET_STATUS_COLORS = {
-    operational: '#28a745',  // Green
-    active: '#28a745',       // Green (alias)
-    maintenance: '#17a2b8',  // Cyan
+    operational: '#006633',  // Green
+    active: '#006633',       // Green (alias)
+    maintenance: '#0dcaf0',  // Cyan
 };
 
 // Component Status Colors
 export const COMPONENT_STATUS_COLORS = {
-    good: '#28a745',         // Green
-    working: '#28a745',      // Green (alias)
+    good: '#006633',         // Green
+    working: '#006633',      // Green (alias)
     bad: '#fd7e14',          // Orange
     defective: '#fd7e14',    // Orange (alias)
-    maintenance: '#17a2b8',  // Cyan
+    maintenance: '#0dcaf0',  // Cyan
     missing: '#dc3545',      // Red
 };
 

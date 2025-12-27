@@ -60,7 +60,7 @@ const DashboardPage = () => {
 
     return (
         <>
-            <div className="container-fluid py-3">
+            <div className="container-fluid">
                 <ForceChangePasswordModal show={!!user?.password_reset_required} />
 
                 {/* KPI Cards - Top Section */}
@@ -73,19 +73,13 @@ const DashboardPage = () => {
 
                 {/* ==================== LABORATORIES SECTION ==================== */}
                 <div className="mb-4">
-                    <h6 className="fw-bold mb-3 text-muted text-uppercase small">
-                        Laboratories
+                    <h6 className="fw-bold mb-2 text-muted text-uppercase small">
+                        Computer Laboratory
                     </h6>
                     <div className="row">
                         {/* Left: Quick Actions */}
-                        <div className="col-lg-8 mb-3">
+                        <div className="col-lg-6 p-2">
                             <div className="card shadow bg-body-tertiary h-100">
-                                <div className="card-header bg-transparent border-0 p-3 px-0">
-                                    <div className="d-flex flex-wrap justify-content-center align-items-center gap-5 row-gap-3">
-                                        <MiniKPI label="Labs" value={kpiData?.total_labs} icon={<DoorClosed />} color="primary" />
-                                        <MiniKPI label="Computer Sets" value={kpiData?.total_computers} icon={<PcDisplay />} color="success" />
-                                    </div>
-                                </div>
                                 <div className="card-body pt-3">
                                     {/* Ratiolytic for Computer Status */}
                                     <Ratiolytic
@@ -97,13 +91,8 @@ const DashboardPage = () => {
                                         bare={true}
                                     />
                                 </div>
-                                <div className="card-footer bg-transparent border-top-0">
+                                <div className="card-footer bg-transparent border-top-0 p-2">
                                     <div className="d-flex flex-wrap gap-2 justify-content-end">
-                                        {user?.role === 'admin' && (
-                                            <Link to="/dashboard/laboratories" className="btn btn-sm btn-outline-primary d-flex align-items-center gap-2">
-                                                Manage Laboratories
-                                            </Link>
-                                        )}
                                         <Button
                                             variant="outline-primary"
                                             size="sm"
@@ -118,46 +107,12 @@ const DashboardPage = () => {
                                 </div>
                             </div>
                         </div>
-                        {/* Right: Donut Chart */}
-                        <div className="col-lg-4 mb-3">
-                            <DonutChart
-                                title="Computer Status"
-                                apiPath="/analytics/pie/computers-by-status"
-                                colorMap={computerSetColorMap}
-                            />
-                        </div>
-                    </div>
-                    {/* Bottom: Stacked Bar Chart */}
-                    <div className="row d-none">
-                        <div className="col-12">
-                            <StackedBarChart
-                                title="Computer Sets per Laboratory"
-                                apiPath="/analytics/bar/computers-by-lab"
-                                colorMap={computerSetColorMap}
-                            />
-                        </div>
-                    </div>
-                </div>
-
-                {/* ==================== COMPONENTS SECTION ==================== */}
-                <div className="mb-4">
-                    <h6 className="fw-bold mb-3 text-muted text-uppercase small">
-                        Computer Set Components
-                    </h6>
-                    <div className="row flex-row-reverse">
-                        {/* Left: Quick Actions */}
-                        <div className="col-lg-8 mb-3">
+                        <div className="col-lg-6 p-2">
                             <div className="card shadow bg-body-tertiary h-100">
-                                <div className="card-header bg-transparent border-0 p-3 px-0">
-                                    <div className="d-flex flex-wrap justify-content-center align-items-center gap-5 row-gap-3">
-                                        <MiniKPI label="Total" value={kpiData?.total_components} icon={<Keyboard />} color="primary" />
-                                        <MiniKPI label="Issues" value={kpiData?.components_with_issues} icon={<ExclamationTriangle />} color="warning" />
-                                    </div>
-                                </div>
                                 <div className="card-body pt-3">
                                     {/* Ratiolytic for Component Status */}
                                     <Ratiolytic
-                                        title="Component Status"
+                                        title="Computer Components Status"
                                         apiPath="/analytics/pie/components-by-status"
                                         colorMap={componentColorMap}
                                         height={32}
@@ -165,7 +120,7 @@ const DashboardPage = () => {
                                         bare={true}
                                     />
                                 </div>
-                                <div className="card-footer bg-transparent border-top-0">
+                                <div className="card-footer bg-transparent border-top-0 p-2">
                                     <div className="d-flex flex-wrap gap-2 justify-content-end">
                                         <Link to="/dashboard/components" className="btn btn-sm btn-primary d-flex align-items-center gap-2 shadow-sm">
                                             View Components
@@ -174,12 +129,13 @@ const DashboardPage = () => {
                                 </div>
                             </div>
                         </div>
-                        {/* Right: Donut Chart */}
-                        <div className="col-lg-4 mb-3">
-                            <DonutChart
-                                title="Component Status"
-                                apiPath="/analytics/pie/components-by-status"
-                                colorMap={componentColorMap}
+
+
+                        <div className="col-12 p-2">
+                            <StackedBarChart
+                                title="Computer Sets per Laboratory"
+                                apiPath="/analytics/bar/computers-by-lab"
+                                colorMap={computerSetColorMap}
                             />
                         </div>
                     </div>
@@ -210,26 +166,26 @@ const DashboardPage = () => {
                                             bare={true}
                                         />
                                     </div>
-                                    <div className="card-footer bg-transparent border-top-0">
+                                    <div className="card-footer bg-transparent border-top-0 p-2">
                                         <div className="d-flex flex-wrap gap-2 justify-content-end">
+                                            <Link to="/dashboard/profile" className="btn btn-sm btn-outline-primary d-flex align-items-center gap-2 shadow-sm">
+                                                My Profile
+                                            </Link>
                                             {user?.role === 'admin' && (
-                                                <Link to="/dashboard/accounts" className="btn btn-sm btn-outline-primary d-flex align-items-center gap-2">
+                                                <Link to="/dashboard/accounts" className="btn btn-sm btn-primary d-flex align-items-center gap-2">
                                                     Manage Accounts
                                                 </Link>
                                             )}
                                             {user?.role === 'it_head' && (
-                                                <Link to="/dashboard/accounts?role=it_technician" className="btn btn-sm btn-outline-primary d-flex align-items-center gap-2">
+                                                <Link to="/dashboard/accounts?role=it_technician" className="btn btn-sm btn-primary d-flex align-items-center gap-2">
                                                     Manage Technicians
                                                 </Link>
                                             )}
                                             {user?.role === 'lab_head' && (
-                                                <Link to="/dashboard/accounts?role=lab_assistant" className="btn btn-sm btn-outline-primary d-flex align-items-center gap-2">
+                                                <Link to="/dashboard/accounts?role=lab_assistant" className="btn btn-sm btn-primary d-flex align-items-center gap-2">
                                                     Manage Assistants
                                                 </Link>
                                             )}
-                                            <Link to="/dashboard/profile" className="btn btn-sm btn-primary d-flex align-items-center gap-2 shadow-sm">
-                                                My Profile
-                                            </Link>
                                         </div>
                                     </div>
                                 </div>
@@ -239,11 +195,11 @@ const DashboardPage = () => {
                 )}
             </div>
 
-            {/* View Computer Set Modal */ }
+            {/* View Computer Set Modal */}
             < ViewComputerSetModal
-    show = { showComputerSetModal }
-    onHide = {() => setShowComputerSetModal(false)}
-        />
+                show={showComputerSetModal}
+                onHide={() => setShowComputerSetModal(false)}
+            />
         </>
     );
 };

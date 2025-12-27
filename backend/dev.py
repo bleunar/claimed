@@ -2,9 +2,7 @@ from core.instance import create_app
 from core.database import init_app
 from endpoints import register_blueprints
 from core.startup import perform_startup_checks
-from utilities.activity_tracker import activity_tracker
 from flask import jsonify, send_from_directory
-from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
 import os
 
 app = create_app()
@@ -15,26 +13,6 @@ perform_startup_checks(app)
 # Ensure uploads directory exists
 UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads', 'profile')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-@app.after_request
-def track_user_activity(response):
-    """Track user activity for online status detection."""
-    from flask import request
-    
-    # Only track on successful responses
-    if response.status_code >= 200 and response.status_code < 400:
-        try:
-            verify_jwt_in_request(optional=True)
-            identity = get_jwt_identity()
-            if identity:
-                # Get client IP address (handles proxies)
-                ip_address = request.headers.get('X-Forwarded-For', request.remote_addr)
-                if ip_address and ',' in ip_address:
-                    ip_address = ip_address.split(',')[0].strip()
-                activity_tracker.update_activity(identity, ip_address)
-        except Exception:
-            pass
-    return response
 
 @app.route('/uploads/<path:filename>')
 def serve_uploads(filename):

@@ -85,7 +85,7 @@ const Ratiolytic = ({
                 <>
                     <div
                         className="d-flex rounded overflow-hidden"
-                        style={{ height: `${height}px` }}
+                        style={{ height: `${height}px`, border: '1px solid #6c757d', }}
                     >
                         {chartData.map((item, index) => {
                             const percentage = (item.data / total) * 100;
@@ -103,7 +103,6 @@ const Ratiolytic = ({
                                     style={{
                                         width: `${percentage}%`,
                                         backgroundColor: color,
-                                        border: '1px solid #6c757d',
                                         transition: 'all 0.2s ease-in-out',
                                         transform: isHovered ? 'scaleY(1.1)' : 'scaleY(1)',
                                         zIndex: isHovered ? 10 : 1,
@@ -132,7 +131,7 @@ const Ratiolytic = ({
 
                     {/* Legend */}
                     {showLegend && (
-                        <div className="d-flex flex-wrap gap-3 mt-3">
+                        <div className="d-flex flex-wrap justify-content-evenly gap-4 mt-3">
                             {chartData.map((item, index) => {
                                 const percentage = (item.data / total) * 100;
                                 const color = getColor(item.labels, index);
@@ -143,7 +142,7 @@ const Ratiolytic = ({
                                 return (
                                     <div
                                         key={index}
-                                        className="d-flex align-items-center gap-2"
+                                        className="d-flex align-items-center justify-content-start flex-fill gap-1"
                                         style={{ cursor: 'default' }}
                                         onMouseEnter={() => setHoveredIndex(index)}
                                         onMouseLeave={() => setHoveredIndex(null)}
@@ -151,20 +150,20 @@ const Ratiolytic = ({
                                         <span
                                             className="d-inline-flex align-items-center justify-content-center rounded"
                                             style={{
-                                                width: 16,
+                                                width: 8,
                                                 height: 16,
                                                 backgroundColor: color,
-                                                minWidth: 16
+                                                minWidth: 8
                                             }}
                                         >
                                             {icon && (
-                                                <span className="text-white" style={{ fontSize: 10 }}>
+                                                <span className="text-white" style={{ fontSize: 12 }}>
                                                     {icon}
                                                 </span>
                                             )}
                                         </span>
                                         <span className="small text-muted">
-                                            {formatLabel(item.labels)}: <strong>{percentage.toFixed(1)}%</strong> ({item.data})
+                                            <strong>{formatLabel(item.labels)}</strong>: {percentage.toFixed(1)}% ({item.data})
                                         </span>
                                     </div>
                                 );

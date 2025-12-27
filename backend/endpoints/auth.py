@@ -83,6 +83,13 @@ def refresh():
     
     if not user or user['suspended_at'] is not None or user['deleted_at'] is not None:
         return jsonify({"msg": "Account is not active"}), 401
+    
+    # Update activity tracker for online status
+    from utilities.activity_tracker import activity_tracker
+    ip_address = request.headers.get('X-Forwarded-For', request.remote_addr)
+    if ip_address and ',' in ip_address:
+        ip_address = ip_address.split(',')[0].strip()
+    activity_tracker.update_activity(identity, ip_address)
         
     additional_claims = {"role": user['role']}
     access_token = create_access_token(identity=identity, additional_claims=additional_claims)

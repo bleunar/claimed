@@ -15,7 +15,7 @@ const Breadcrumbs = () => {
     };
 
     return (
-        <div className="border-bottom py-2">
+        <div className="border-bottom my-2 pb-2">
             <nav aria-label="breadcrumb">
                 <ol
                     className="breadcrumb p-0 m-0 rounded"
