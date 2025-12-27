@@ -1,17 +1,73 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Confetti from 'react-confetti';
 import { Modal, Button } from 'react-bootstrap';
 import { useAuth } from '../context/AuthContext';
 import { isBirthdayEnabled } from '../utils/effectsConfig';
+import api from '../api/axios';
 
 /**
- * Generate a unique key for the current year's birthday celebration per user
- * Format: birthday_celebrated_USERID_YYYY (e.g., birthday_celebrated_abc123_2024)
- * This ensures each user has their own celebration tracking
+ * Birthday messages - one will be picked at random
  */
-const getBirthdayCelebratedKey = (userId) => {
-    const currentYear = new Date().getFullYear();
-    return `birthday_celebrated_${userId}_${currentYear}`;
+const BIRTHDAY_MESSAGES = [
+    "Wishing you a day filled with love, laughter, and all your favorite things!",
+    "May this year bring you endless joy and amazing adventures!",
+    "Another year older, another year wiser, and still absolutely wonderful!",
+    "Here's to a year of dreams coming true and goals being crushed!",
+    "May your birthday be as bright and beautiful as your smile!",
+    "Today is your day to shine—enjoy every moment of it!",
+    "Cheers to you and the incredible person you are!",
+    "May this birthday mark the beginning of your best chapter yet!",
+    "You deserve all the happiness in the world today and always!",
+    "Life is a gift, and so are you—happy birthday!",
+    "Keep being amazing, and have the most wonderful birthday!",
+    "Another trip around the sun, and you're still as awesome as ever!",
+    "Here's to celebrating YOU and all the joy you bring to others!",
+    "May your day be sweeter than cake and brighter than candles!",
+    "You make the world a better place just by being in it. Happy birthday!",
+];
+
+/**
+ * Get a random birthday message
+ */
+const getRandomMessage = () => {
+    const index = Math.floor(Math.random() * BIRTHDAY_MESSAGES.length);
+    return BIRTHDAY_MESSAGES[index];
+};
+
+/**
+ * LocalStorage key for storing celebrated birthday tokens
+ */
+const BIRTHDAY_TOKENS_KEY = 'birthday_celebrated_tokens';
+
+/**
+ * Get the list of celebrated birthday tokens from localStorage
+ */
+const getCelebratedTokens = () => {
+    try {
+        const stored = localStorage.getItem(BIRTHDAY_TOKENS_KEY);
+        return stored ? JSON.parse(stored) : [];
+    } catch {
+        return [];
+    }
+};
+
+/**
+ * Add a token to the celebrated list
+ */
+const addCelebratedToken = (token) => {
+    const tokens = getCelebratedTokens();
+    if (!tokens.includes(token)) {
+        tokens.push(token);
+        localStorage.setItem(BIRTHDAY_TOKENS_KEY, JSON.stringify(tokens));
+    }
+};
+
+/**
+ * Check if a token has already been celebrated
+ */
+const isTokenCelebrated = (token) => {
+    const tokens = getCelebratedTokens();
+    return tokens.includes(token);
 };
 
 /**
@@ -32,12 +88,13 @@ const BirthdayGreeting = () => {
     const [showModal, setShowModal] = useState(false);
     const [showConfetti, setShowConfetti] = useState(false);
     const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
-    const [configEnabled, setConfigEnabled] = useState(null);
+    const [birthdayToken, setBirthdayToken] = useState(null);
 
-    // Load config on mount
-    useEffect(() => {
-        isBirthdayEnabled().then(setConfigEnabled);
-    }, []);
+    // Check if enabled via environment variable
+    const configEnabled = isBirthdayEnabled();
+
+    // Pick a random message once when component mounts
+    const birthdayMessage = useMemo(() => getRandomMessage(), []);
 
     // Get window dimensions for confetti
     useEffect(() => {
@@ -53,30 +110,42 @@ const BirthdayGreeting = () => {
         return () => window.removeEventListener('resize', updateSize);
     }, []);
 
-    // Check if it's the user's birthday and hasn't been celebrated yet this year
+    // Check if it's the user's birthday and fetch token to verify celebration status
     useEffect(() => {
-        // Don't proceed until config is loaded and enabled
-        if (configEnabled === null || configEnabled === false) return;
+        // Don't proceed if not enabled
+        if (!configEnabled) return;
         if (!user?.id || !user?.birth_date) return;
+        if (!isBirthdayToday(user.birth_date)) return;
 
-        const celebratedKey = getBirthdayCelebratedKey(user.id);
-        const alreadyCelebrated = localStorage.getItem(celebratedKey) === 'true';
+        // Fetch birthday token from backend
+        const checkBirthday = async () => {
+            try {
+                const response = await api.get('/auth/birthday-token');
+                const { token } = response.data;
 
-        if (isBirthdayToday(user.birth_date) && !alreadyCelebrated) {
-            // Delay slightly to ensure page is loaded
-            const timer = setTimeout(() => {
-                setShowModal(true);
-                setShowConfetti(true);
-            }, 1000);
+                setBirthdayToken(token);
 
-            return () => clearTimeout(timer);
-        }
+                // Check if already celebrated
+                if (!isTokenCelebrated(token)) {
+                    // Delay slightly to ensure page is loaded
+                    setTimeout(() => {
+                        setShowModal(true);
+                        setShowConfetti(true);
+                    }, 1000);
+                }
+            } catch (error) {
+                console.error('Failed to fetch birthday token:', error);
+            }
+        };
+
+        checkBirthday();
     }, [user?.id, user?.birth_date, configEnabled]);
 
     const handleClose = () => {
-        // Mark as celebrated for this year
-        const celebratedKey = getBirthdayCelebratedKey(user.id);
-        localStorage.setItem(celebratedKey, 'true');
+        // Mark as celebrated by storing the encrypted token
+        if (birthdayToken) {
+            addCelebratedToken(birthdayToken);
+        }
 
         setShowModal(false);
 
@@ -87,7 +156,7 @@ const BirthdayGreeting = () => {
     };
 
     // Don't render if config is disabled
-    if (configEnabled === null || configEnabled === false) {
+    if (!configEnabled) {
         return null;
     }
 
@@ -117,13 +186,13 @@ const BirthdayGreeting = () => {
                 backdrop="static"
                 style={{ zIndex: 10001 }}
             >
-                <Modal.Body className="text-center py-5">
+                <Modal.Body className="text-center p-5">
                     <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🎂</div>
-                    <h2 className="fw-bold mb-3">Happy Birthday, {firstName}! 🎉</h2>
+                    <h4 className="fw-bold mb-3">Happy Birthday {firstName}!</h4>
                     <p className="text-muted mb-4">
-                        Wishing you a fantastic day filled with joy, laughter, and wonderful memories!
+                        {birthdayMessage}
                     </p>
-                    <Button variant="primary" size="lg" onClick={handleClose}>
+                    <Button variant="primary" onClick={handleClose}>
                         Confirm
                     </Button>
                 </Modal.Body>

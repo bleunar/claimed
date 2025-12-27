@@ -178,7 +178,7 @@ const Ratiolytic = ({
                                             )}
                                         </span>
                                         <span className="small text-muted">
-                                            <strong>{formatLabel(item.labels)}</strong>: {percentage.toFixed(1)}% ({item.data})
+                                            <strong>{formatLabel(item.labels)}</strong> ({item.data})
                                         </span>
                                     </div>
                                 );

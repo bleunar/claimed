@@ -219,3 +219,24 @@ def reset_password():
         logger.exception("Failed to reset password")
         cursor.close()
         return jsonify({"msg": "Failed to reset password. Please try again."}), 500
+
+
+@auth_bp.route('/birthday-token', methods=['GET'])
+@jwt_required()
+def get_birthday_token():
+    """
+    Generate an encrypted birthday token for the current user and year.
+    Used to track birthday celebrations without exposing account IDs.
+    """
+    from utilities.birthday_token import generate_birthday_token
+    from datetime import datetime
+    
+    account_id = get_jwt_identity()
+    current_year = datetime.now().year
+    
+    token = generate_birthday_token(account_id, current_year)
+    
+    return jsonify({
+        "token": token,
+        "year": current_year
+    }), 200

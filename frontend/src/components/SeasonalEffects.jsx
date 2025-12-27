@@ -77,12 +77,9 @@ export const hasActiveSeasonalEffect = (date = new Date()) => {
 
 const SeasonalEffects = () => {
     const { seasonalEffects } = useTheme();
-    const [configEnabled, setConfigEnabled] = useState(null);
 
-    // Load config on mount
-    useEffect(() => {
-        isSeasonalEffectsEnabled().then(setConfigEnabled);
-    }, []);
+    // Check if enabled via environment variable
+    const configEnabled = isSeasonalEffectsEnabled();
 
     // Memoize active effects check
     const activeEffects = useMemo(() => getActiveEffects(), []);
@@ -93,12 +90,7 @@ const SeasonalEffects = () => {
     // Check if we're on the login page - effects are always enabled there
     const isLoginPage = location.pathname === '/';
 
-    // Don't render until config is loaded
-    if (configEnabled === null) {
-        return null;
-    }
-
-    // Don't render if disabled in config.yml
+    // Don't render if disabled in environment
     if (!configEnabled) {
         return null;
     }
