@@ -281,16 +281,31 @@ const ProfilePage = () => {
                                     </Form.Group>
                                 </div>
                             </Form>
-                        </Card.Body>
-                        <Card.Footer>
-                            <div className="d-flex justify-content-between align-items-center gap-2">
-                                <div className="d-flex gap-2 align-items-center">
-                                    <Button variant="primary" size='sm' onClick={() => setShowPasswordModal(true)}>
+
+                                <div className="d-flex d-lg-none flex-wrap gap-2 align-items-center justify-content-start mt-3">
+                                    <Button variant="link" size='sm' className='text-nowrap' onClick={() => setShowPasswordModal(true)}>
                                         Change Password
                                     </Button>
 
                                     <Button
-                                        variant="primary"
+                                        variant="link"
+                                        size='sm'
+                                        className='text-nowrap'
+                                        onClick={() => setShowEmailModal(true)}
+                                    >
+                                        Change Email
+                                    </Button>
+                                </div>
+                        </Card.Body>
+                        <Card.Footer>
+                            <div className="d-flex justify-content-end justify-content-lg-between align-items-center gap-2">
+                                <div className="d-none d-lg-flex flex-wrap gap-2 align-items-center justify-content-start">
+                                    <Button variant="link" size='sm' className='text-nowrap' onClick={() => setShowPasswordModal(true)}>
+                                        Change Password
+                                    </Button>
+
+                                    <Button
+                                        variant="link"
                                         size='sm'
                                         className='text-nowrap'
                                         onClick={() => setShowEmailModal(true)}

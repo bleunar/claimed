@@ -7,37 +7,44 @@ import api from '../api/axios';
 
 /**
  * Birthday messages - one will be picked at random
+ * Use {name} for user's first name and {age} for their new age
  */
 const BIRTHDAY_MESSAGES = [
-    "Wishing you a day filled with love, laughter, and all your favorite things!",
-    "May this year bring you endless joy and amazing adventures!",
-    "Another year older, another year wiser, and still absolutely wonderful!",
-    "Here's to a year of dreams coming true and goals being crushed!",
-    "May your birthday be as bright and beautiful as your smile!",
-    "Today is your day to shine—enjoy every moment of it!",
-    "Cheers to you and the incredible person you are!",
-    "May this birthday mark the beginning of your best chapter yet!",
-    "You deserve all the happiness in the world today and always!",
-    "Life is a gift, and so are you—happy birthday!",
-    "Keep being amazing, and have the most wonderful birthday!",
-    "Another trip around the sun, and you're still as awesome as ever!",
-    "Here's to celebrating YOU and all the joy you bring to others!",
-    "May your day be sweeter than cake and brighter than candles!",
-    "You make the world a better place just by being in it. Happy birthday!",
+    "You've successfully been updated to the best and latest version!",
+    'Level Up! reached Level {age}!',
+    'Version {age} Updated',
+    '{name}: Season {age}',
 ];
 
 /**
- * Get a random birthday message
+ * Calculate age from birth date
  */
-const getRandomMessage = () => {
+const calculateAge = (birthDate) => {
+    if (!birthDate) return '??';
+    const today = new Date();
+    const birth = new Date(birthDate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+        age--;
+    }
+    return age;
+};
+
+/**
+ * Get a random birthday message with name and age substituted
+ */
+const getRandomMessage = (name, age) => {
     const index = Math.floor(Math.random() * BIRTHDAY_MESSAGES.length);
-    return BIRTHDAY_MESSAGES[index];
+    return BIRTHDAY_MESSAGES[index]
+        .replace(/{name}/g, name)
+        .replace(/{age}/g, age);
 };
 
 /**
  * LocalStorage key for storing celebrated birthday tokens
  */
-const BIRTHDAY_TOKENS_KEY = 'birthday_celebrated_tokens';
+const BIRTHDAY_TOKENS_KEY = 'bday_tkns';
 
 /**
  * Get the list of celebrated birthday tokens from localStorage
@@ -93,8 +100,15 @@ const BirthdayGreeting = () => {
     // Check if enabled via environment variable
     const configEnabled = isBirthdayEnabled();
 
-    // Pick a random message once when component mounts
-    const birthdayMessage = useMemo(() => getRandomMessage(), []);
+    // Get first name for personalized greeting
+    const firstName = user?.name?.split(' ')[0] || 'there';
+    const userAge = calculateAge(user?.birth_date);
+
+    // Pick a random message once when user data is available
+    const birthdayMessage = useMemo(
+        () => getRandomMessage(firstName, userAge),
+        [firstName, userAge]
+    );
 
     // Get window dimensions for confetti
     useEffect(() => {
@@ -159,9 +173,6 @@ const BirthdayGreeting = () => {
     if (!configEnabled) {
         return null;
     }
-
-    // Get first name for personalized greeting
-    const firstName = user?.name?.split(' ')[0] || 'there';
 
     return (
         <>
