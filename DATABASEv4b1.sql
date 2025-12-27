@@ -67,5 +67,4 @@ CREATE TABLE computer_set_components (
     INDEX idx_serial (serial_number)
 );
 
-
 -- New Tables: laboratory_activities and laboratory_issues

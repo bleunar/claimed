@@ -54,7 +54,7 @@ const KeyValues = ({ data, emptyMessage = "No properties defined" }) => {
                         </button>
                     </div>
                     <div className="d-flex align-items-center gap-2">
-                        <span className="fw-medium small text-end">{value || '-'}</span>
+                        <span className="fw-medium small text-end text-muted">{value || 'N/A'}</span>
                         {value && (
                             <button
                                 className="btn btn-link btn-sm p-0 text-muted opacity-50"

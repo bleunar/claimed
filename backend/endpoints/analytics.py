@@ -210,47 +210,49 @@ def get_weekly_activities():
             # Non-head roles shouldn't access this endpoint
             return jsonify({"error": "Access denied"}), 403
         
-        # Build query with optional role filter
+        # Build query for past 7 days (including today)
         # Note: Activities are stored in UTC, convert to local timezone (UTC+8) for accurate day grouping
         local_tz_offset = '+08:00'  # Asia/Manila timezone
         
         if role_filter:
             cursor.execute(f"""
                 SELECT 
-                    DAYOFWEEK(CONVERT_TZ(aa.created_at, '+00:00', '{local_tz_offset}')) as day_num,
-                    DAYNAME(CONVERT_TZ(aa.created_at, '+00:00', '{local_tz_offset}')) as day_name,
+                    DATE(CONVERT_TZ(aa.created_at, '+00:00', '{local_tz_offset}')) as activity_date,
                     COUNT(*) as count
                 FROM account_activities aa
                 JOIN accounts a ON aa.account_id = a.id
                 WHERE 
-                    YEARWEEK(CONVERT_TZ(aa.created_at, '+00:00', '{local_tz_offset}'), 1) = YEARWEEK(CONVERT_TZ(NOW(), '+00:00', '{local_tz_offset}'), 1)
+                    DATE(CONVERT_TZ(aa.created_at, '+00:00', '{local_tz_offset}')) >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
                     AND a.role IN (%s, %s)
-                GROUP BY day_num, day_name
-                ORDER BY day_num
+                GROUP BY activity_date
+                ORDER BY activity_date
             """, role_filter)
         else:
             cursor.execute(f"""
                 SELECT 
-                    DAYOFWEEK(CONVERT_TZ(created_at, '+00:00', '{local_tz_offset}')) as day_num,
-                    DAYNAME(CONVERT_TZ(created_at, '+00:00', '{local_tz_offset}')) as day_name,
+                    DATE(CONVERT_TZ(created_at, '+00:00', '{local_tz_offset}')) as activity_date,
                     COUNT(*) as count
                 FROM account_activities
                 WHERE 
-                    YEARWEEK(CONVERT_TZ(created_at, '+00:00', '{local_tz_offset}'), 1) = YEARWEEK(CONVERT_TZ(NOW(), '+00:00', '{local_tz_offset}'), 1)
-                GROUP BY day_num, day_name
-                ORDER BY day_num
+                    DATE(CONVERT_TZ(created_at, '+00:00', '{local_tz_offset}')) >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
+                GROUP BY activity_date
+                ORDER BY activity_date
             """)
         
         results = cursor.fetchall()
         
-        # Create a complete week structure (Monday to Sunday)
-        day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-        day_map = {row['day_name']: row['count'] for row in results}
+        # Create a complete 7-day structure (past 7 days including today)
+        from datetime import datetime, timedelta
+        today = datetime.now()
+        date_labels = [(today - timedelta(days=6-i)).strftime('%b %d') for i in range(7)]
+        date_keys = [(today - timedelta(days=6-i)).strftime('%Y-%m-%d') for i in range(7)]
+        
+        date_map = {str(row['activity_date']): row['count'] for row in results}
         
         # Format for line chart (labels/data format)
         chart_data = [
-            {'labels': day, 'data': day_map.get(day, 0)}
-            for day in day_order
+            {'labels': date_labels[i], 'data': date_map.get(date_keys[i], 0)}
+            for i in range(7)
         ]
         
         return jsonify(chart_data)
