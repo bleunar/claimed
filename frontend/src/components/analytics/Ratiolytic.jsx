@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from 'react-bootstrap';
 import useChartData from '../../hooks/useChartData';
 import { ExclamationTriangle } from 'react-bootstrap-icons';
@@ -19,6 +19,20 @@ const Ratiolytic = ({
 }) => {
     const { chartData, error } = useChartData(apiPath);
     const [hoveredIndex, setHoveredIndex] = useState(null);
+    const [isAnimated, setIsAnimated] = useState(false);
+
+    // Trigger animation when data is received
+    useEffect(() => {
+        if (chartData && !error) {
+            // Small delay to ensure DOM is ready, then animate
+            const timer = setTimeout(() => {
+                setIsAnimated(true);
+            }, 50);
+            return () => clearTimeout(timer);
+        } else {
+            setIsAnimated(false);
+        }
+    }, [chartData, error]);
 
     // Default colors for fallback
     const defaultColors = ['#28a745', '#ffc107', '#dc3545', '#6c757d', '#17a2b8', '#6610f2'];
@@ -84,7 +98,7 @@ const Ratiolytic = ({
             {chartData && !error && total > 0 && (
                 <>
                     <div
-                        className="d-flex rounded overflow-hidden"
+                        className="d-flex rounded overflow-hidden bg-body"
                         style={{ height: `${height}px`, border: '1px solid #6c757d', }}
                     >
                         {chartData.map((item, index) => {
@@ -101,13 +115,14 @@ const Ratiolytic = ({
                                     className="d-flex align-items-center justify-content-center position-relative"
                                     title={getTooltipText(item, percentage)}
                                     style={{
-                                        width: `${percentage}%`,
+                                        width: isAnimated ? `${percentage}%` : '0%',
                                         backgroundColor: color,
-                                        transition: 'all 0.2s ease-in-out',
+                                        transition: 'width 0.6s ease-out, transform 0.2s ease-in-out',
                                         transform: isHovered ? 'scaleY(1.1)' : 'scaleY(1)',
                                         zIndex: isHovered ? 10 : 1,
                                         cursor: 'pointer',
-                                        minWidth: percentage > 5 ? 'auto' : '8px'
+                                        minWidth: isAnimated ? '8px' : '0px',
+                                        overflow: 'hidden'
                                     }}
                                     onMouseEnter={() => setHoveredIndex(index)}
                                     onMouseLeave={() => setHoveredIndex(null)}

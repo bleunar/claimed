@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Modal, Button, Form } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
+import { useTitle } from '../../context/TitleContext';
 
 // Natural sort comparator for names with numbers (Lab 1, Lab 2... Lab 10, not Lab 1, Lab 10, Lab 2)
 const naturalSort = (a, b, key) => {
@@ -16,6 +17,15 @@ const ViewComputerSetModal = ({ show, onHide }) => {
     const [selectedComputerSet, setSelectedComputerSet] = useState('');
     const [loading, setLoading] = useState(false);
     const [loadingComputerSets, setLoadingComputerSets] = useState(false);
+    const { setTitle, resetTitle } = useTitle()
+
+    useEffect(() => {
+        if (show) {
+            setTitle("Computer Set")
+        } else {
+            resetTitle()
+        }
+    }, [show])
 
     // Fetch laboratories on mount
     useEffect(() => {

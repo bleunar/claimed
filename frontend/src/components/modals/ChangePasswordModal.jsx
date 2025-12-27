@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Modal, Button, Form } from 'react-bootstrap';
 import { Eye, EyeSlash } from 'react-bootstrap-icons';
 import toast from 'react-hot-toast';
 import api from '../../api/axios';
+import { useTitle } from '../../context/TitleContext';
 
 const ChangePasswordModal = ({ show, onHide }) => {
     const [currentPassword, setCurrentPassword] = useState('');
@@ -12,6 +13,15 @@ const ChangePasswordModal = ({ show, onHide }) => {
     const [showNewPassword, setShowNewPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [loading, setLoading] = useState(false);
+    const { setTitle, resetTitle } = useTitle()
+
+    useEffect(() => {
+        if (show) {
+            setTitle("Update Password")
+        } else {
+            resetTitle()
+        }
+    }, [show])
 
     const handleSubmit = async (e) => {
         e.preventDefault();

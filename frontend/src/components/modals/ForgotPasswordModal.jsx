@@ -3,6 +3,7 @@ import { Modal, Button, Form, InputGroup } from 'react-bootstrap';
 import { Eye, EyeSlash } from 'react-bootstrap-icons';
 import toast from 'react-hot-toast';
 import api from '../../api/axios';
+import { useTitle } from '../../context/TitleContext';
 
 const ForgotPasswordModal = ({ show, onHide }) => {
     const [step, setStep] = useState(1); // 1: Email, 2: OTP + New Password
@@ -12,6 +13,15 @@ const ForgotPasswordModal = ({ show, onHide }) => {
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [timer, setTimer] = useState(0);
+    const { setTitle, resetTitle } = useTitle()
+
+    useEffect(() => {
+        if (show) {
+            setTitle("Account Recovery")
+        } else {
+            resetTitle()
+        }
+    }, [show])
 
     useEffect(() => {
         let interval;
@@ -147,7 +157,7 @@ const ForgotPasswordModal = ({ show, onHide }) => {
                                 </Button>
                             </div>
                         </Form.Group>
-                        <Form.Group className="mb-3">
+                        <Form.Group className="mb-5">
                             <Form.Label>New Password</Form.Label>
                             <div className="input-group bg-body rounded border">
                                 <Form.Control

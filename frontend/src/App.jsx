@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { TitleProvider } from './context/TitleContext';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import AccountsPage from './pages/AccountsPage';
@@ -27,31 +28,33 @@ function App() {
         <ReauthProvider>
           <ThemedToaster />
           <Router>
-            <SeasonalEffects />
-            <Routes>
-              <Route path="/" element={<LoginPage />} />
-              <Route path='/dashboard' element={<DashboardLayout />}>
-                <Route index element={<DashboardPage />} />
-                <Route element={<ProtectedRoute allowedRoles={['admin', 'it_head', 'lab_head']} />}>
-                  <Route path='accounts' element={<AccountsPage />} />
-                </Route>
-                <Route element={<ProtectedRoute allowedRoles={['admin', 'it_head', 'lab_head']} />}>
-                  <Route path='components' element={<ComponentsPage />} />
-                </Route>
-                <Route element={<ProtectedRoute allowedRoles={['admin', 'it_head', 'lab_head', 'it_technician', 'lab_assistant']} />}>
-                  <Route path='laboratories' element={<LaboratoriesPage />} />
-                  <Route path='laboratories/:id' element={<LaboratoryComputersPage />} />
-                  <Route path='lab-resources' element={<LabResourcesPage />} />
-                </Route>
+            <TitleProvider>
+              <SeasonalEffects />
+              <Routes>
+                <Route path="/" element={<LoginPage />} />
+                <Route path='/dashboard' element={<DashboardLayout />}>
+                  <Route index element={<DashboardPage />} />
+                  <Route element={<ProtectedRoute allowedRoles={['admin', 'it_head', 'lab_head']} />}>
+                    <Route path='accounts' element={<AccountsPage />} />
+                  </Route>
+                  <Route element={<ProtectedRoute allowedRoles={['admin', 'it_head', 'lab_head']} />}>
+                    <Route path='components' element={<ComponentsPage />} />
+                  </Route>
+                  <Route element={<ProtectedRoute allowedRoles={['admin', 'it_head', 'lab_head', 'it_technician', 'lab_assistant']} />}>
+                    <Route path='laboratories' element={<LaboratoriesPage />} />
+                    <Route path='laboratories/:id' element={<LaboratoryComputersPage />} />
+                    <Route path='lab-resources' element={<LabResourcesPage />} />
+                  </Route>
 
-                <Route path='profile' element={<ProfilePage />} />
+                  <Route path='profile' element={<ProfilePage />} />
+
+                  <Route path="*" element={<ErrorPage />} />
+
+                </Route>
 
                 <Route path="*" element={<ErrorPage />} />
-
-              </Route>
-
-              <Route path="*" element={<ErrorPage />} />
-            </Routes>
+              </Routes>
+            </TitleProvider>
           </Router>
         </ReauthProvider>
       </AuthProvider>

@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Modal, Button, Form, InputGroup } from 'react-bootstrap';
 import { Eye, EyeSlash } from 'react-bootstrap-icons';
 import toast from 'react-hot-toast';
 import api from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
+import { useTitle } from '../../context/TitleContext';
 
 const ChangeEmailModal = ({ show, onHide, onSuccess }) => {
     const { refreshUser } = useAuth();
@@ -13,6 +14,15 @@ const ChangeEmailModal = ({ show, onHide, onSuccess }) => {
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
+    const { setTitle, resetTitle } = useTitle()
+
+    useEffect(() => {
+        if(show) {
+            setTitle("Update Email")
+        } else {
+            resetTitle()
+        }
+    }, [show])
 
     const handleSendOtp = async (e) => {
         e.preventDefault();

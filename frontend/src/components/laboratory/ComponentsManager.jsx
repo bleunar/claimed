@@ -10,6 +10,7 @@ import api from '../../api/axios';
 import { useTheme } from '../../context/ThemeContext';
 import { COMPONENT_TYPES, getLabelByValue, getDefaultPropertiesForType } from '../../utils/componentTypes';
 import { getComponentIcon } from '../../utils/componentIcons';
+import { getComponentStatusVariant } from '../../utils/statusColors';
 
 // Role-based access control helpers
 const canEditComponentDetails = (user) => ['admin', 'it_head', 'lab_head', 'it_technician'].includes(user?.role);
@@ -73,14 +74,7 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
     };
 
     const getStatusColor = (status) => {
-        switch (status) {
-            case 'good': return 'text-success';
-            case 'bad': return 'text-secondary';
-            case 'maintenance': return 'text-info';
-            case 'missing': return 'text-danger';
-            case 'active': return 'text-success';
-            default: return 'text-secondary';
-        }
+        return `text-${getComponentStatusVariant(status)}`;
     };
 
     const copyToClipboard = async (text) => {
@@ -567,7 +561,7 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                                                     <ToggleButton
                                                         id={`tbg-btn-bad-${comp.id}`}
                                                         value="bad"
-                                                        variant={comp.status === 'bad' ? 'secondary' : 'outline-secondary'}
+                                                        variant={comp.status === 'bad' ? 'warning' : 'outline-warning'}
                                                         disabled={!canEditComponentStatus(user)}
                                                         className="p-0 py-1 d-flex align-items-center cursor-pointer justify-content-center border-0"
                                                         title="Bad"
@@ -643,7 +637,7 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                                 <Check2 className="text-success me-2" size={16} /> Good
                             </div>
                             <div className="d-flex align-items-center cursor-pointer" title='Component has unresolved issues'>
-                                <XLg className="text-secondary me-2" size={16} /> Bad
+                                <XLg className="text-warning me-2" size={16} /> Bad
                             </div>
                             <div className="d-flex align-items-center cursor-pointer" title='Component is under maintenance'>
                                 <Tools className="text-info me-2" size={13} /> Maintenance

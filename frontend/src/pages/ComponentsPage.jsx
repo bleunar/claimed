@@ -11,6 +11,7 @@ import KeyValues from '../components/common/KeyValues';
 import BarcodeScanner from '../components/common/BarcodeScanner';
 import { COMPONENT_TYPES } from '../utils/componentTypes';
 import { getComponentIcon } from '../utils/componentIcons';
+import { getComponentStatusVariant } from '../utils/statusColors';
 
 const ComponentsPage = () => {
     const { user } = useAuth();
@@ -341,13 +342,7 @@ const ComponentsPage = () => {
     };
 
     const getStatusBadgeClass = (status) => {
-        switch (status) {
-            case 'good': return 'badge bg-primary';
-            case 'bad': return 'badge bg-warning text-dark';
-            case 'maintenance': return 'badge bg-info text-dark';
-            case 'missing': return 'badge bg-danger';
-            default: return 'badge bg-secondary';
-        }
+        return `badge bg-${getComponentStatusVariant(status)}`;
     };
 
     return (

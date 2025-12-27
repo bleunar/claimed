@@ -1,10 +1,53 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 
 const KPICard = ({ title, value, icon, color = 'primary', trend, link }) => {
     const navigate = useNavigate();
-    const [isHovered, setHovered] = useState(false)
+    const [isHovered, setHovered] = useState(false);
+    const [displayValue, setDisplayValue] = useState(0);
+    const animationRef = useRef(null);
+
+    // Animate value from 0 to target
+    useEffect(() => {
+        if (value === undefined || value === null) {
+            setDisplayValue(0);
+            return;
+        }
+
+        const targetValue = typeof value === 'number' ? value : parseInt(value, 10);
+        if (isNaN(targetValue)) {
+            setDisplayValue(value); // Non-numeric, show as-is
+            return;
+        }
+
+        const duration = 1000; // Animation duration in ms
+        const startTime = performance.now();
+        const startValue = 0;
+
+        const animate = (currentTime) => {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+
+            // Ease-out curve for smooth deceleration (stronger effect)
+            const easeOut = 1 - Math.pow(1 - progress, 5);
+            const currentValue = Math.round(startValue + (targetValue - startValue) * easeOut);
+
+            setDisplayValue(currentValue);
+
+            if (progress < 1) {
+                animationRef.current = requestAnimationFrame(animate);
+            }
+        };
+
+        animationRef.current = requestAnimationFrame(animate);
+
+        return () => {
+            if (animationRef.current) {
+                cancelAnimationFrame(animationRef.current);
+            }
+        };
+    }, [value]);
 
     const handleClick = () => {
         if (link) {
@@ -28,7 +71,7 @@ const KPICard = ({ title, value, icon, color = 'primary', trend, link }) => {
                             {
                                 value !== undefined && value !== null ? (
                                     <>
-                                        <div className="h3 mb-1 fw-bold text-gray-800">{value}</div>
+                                        <div className="h3 mb-1 fw-bold text-gray-800">{displayValue}</div>
                                         <div className="text-uppercase text-muted small mb-0">{title}</div>
                                     </>
                                 ) : (
@@ -68,4 +111,3 @@ const KPICard = ({ title, value, icon, color = 'primary', trend, link }) => {
 };
 
 export default KPICard;
-

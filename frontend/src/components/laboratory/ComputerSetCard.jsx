@@ -1,18 +1,13 @@
 import React, { useState } from 'react';
 import { getComponentIcon } from '../../utils/componentIcons';
+import { getComponentStatusVariant } from '../../utils/statusColors';
 
 const ComputerSetCard = ({ set, components, onView }) => {
     const [isHovered, setIsHovered] = useState(false);
     const [showMobilePreview, setShowMobilePreview] = useState(false);
 
     const getStatusColor = (status) => {
-        switch (status) {
-            case 'good': return 'text-white';
-            case 'bad': return 'text-secondary';
-            case 'maintenance': return 'text-info';
-            case 'missing': return 'text-danger';
-            default: return 'text-secondary';
-        }
+        return `text-${getComponentStatusVariant(status)}`;
     }
 
     const goodCount = components.filter(c => c.status === 'good').length;
@@ -40,13 +35,13 @@ const ComputerSetCard = ({ set, components, onView }) => {
                         {set.status === 'active' ? (
                             // 1. Check if ALL components are Good
                             totalCount === goodCount ? (
-                                <span className="badge bg-primary rounded-pill mt-2" title={`${goodCount} Good Components`}>
+                                <span className="badge bg-success rounded-pill mt-2" title={`${goodCount} Good Components`}>
                                     {goodCount} Operational
                                 </span>
                             ) :
                                 // 2. Check if ALL components are Bad
                                 totalCount === badCount ? (
-                                    <span className="badge bg-secondary rounded-pill mt-2" title={`${badCount} Bad Components`}>
+                                    <span className="badge bg-warning rounded-pill mt-2" title={`${badCount} Bad Components`}>
                                         {badCount} Bad
                                     </span>
                                 ) :
@@ -64,8 +59,8 @@ const ComputerSetCard = ({ set, components, onView }) => {
                                         ) : (
                                             // 5. Mixed Status: Show individual badges
                                             <>
-                                                {goodCount > 0 && <span className="badge bg-primary rounded-pill mt-2 me-1" title={`${goodCount} Good Components`}>{goodCount}</span>}
-                                                {badCount > 0 && <span className="badge bg-secondary rounded-pill mt-2 me-1" title={`${badCount} Bad Components`}>{badCount}</span>}
+                                                {goodCount > 0 && <span className="badge bg-success rounded-pill mt-2 me-1" title={`${goodCount} Good Components`}>{goodCount}</span>}
+                                                {badCount > 0 && <span className="badge bg-warning rounded-pill mt-2 me-1" title={`${badCount} Bad Components`}>{badCount}</span>}
                                                 {maintCount > 0 && <span className="badge bg-info rounded-pill mt-2 me-1" title={`${maintCount} Maintenance Components`}>{maintCount}</span>}
                                                 {missingCount > 0 && <span className="badge bg-danger rounded-pill mt-2 me-1" title={`${missingCount} Missing Components`}>{missingCount}</span>}
                                             </>
@@ -86,7 +81,7 @@ const ComputerSetCard = ({ set, components, onView }) => {
                     >
                         <div className='d-flex flex-wrap justify-content-center c-hover'>
                             {components.map(comp => (
-                                <div key={comp.id} className={`m-1 fs-5 ${getStatusColor(comp.status)}`} title={`${comp.brand_name} (${comp.status})`}>
+                                <div key={comp.id} className={`m-1 fs-5 ${comp.status == 'good' ? 'text-white' : getStatusColor(comp.status) }`} title={`${comp.brand_name} (${comp.status})`}>
                                     {getComponentIcon(comp.component_type)}
                                 </div>
                             ))}

@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Modal, Button, Form, InputGroup } from 'react-bootstrap';
 import { Eye, EyeSlash } from 'react-bootstrap-icons';
 import toast from 'react-hot-toast';
 import api from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
+import { useTitle } from '../../context/TitleContext';
 
 const ForceChangePasswordModal = ({ show }) => {
     const { refreshUser } = useAuth();
@@ -12,6 +13,15 @@ const ForceChangePasswordModal = ({ show }) => {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [loading, setLoading] = useState(false);
+    const { setTitle, resetTitle } = useTitle()
+
+    useEffect(() => {
+        if (show) {
+            setTitle("Update Password")
+        } else {
+            resetTitle()
+        }
+    }, [show])
 
     const validatePassword = (pwd) => {
         if (pwd.length < 8) return "Password must be at least 8 characters long";
