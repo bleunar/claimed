@@ -715,7 +715,9 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                     )}
                 </div>
                 <div className="d-flex gap-2 align-items-center">
-
+                    <Button variant="secondary" onClick={onClose}>
+                        Close
+                    </Button>
                     {(canEditComponentDetails(user) || canEditComponentStatus(user)) && (
                         isEditMode ? (
                             <Button variant="primary" onClick={handleSave} disabled={isSaving}>

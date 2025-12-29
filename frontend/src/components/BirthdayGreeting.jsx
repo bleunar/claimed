@@ -21,8 +21,9 @@ const BIRTHDAY_MESSAGES = [
  */
 const calculateAge = (birthDate) => {
     if (!birthDate) return '??';
-    const today = new Date();
-    const birth = new Date(birthDate);
+    const now = new Date();
+    const today = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+    const birth = new Date(birthDate.toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
     let age = today.getFullYear() - birth.getFullYear();
     const monthDiff = today.getMonth() - birth.getMonth();
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
@@ -79,15 +80,26 @@ const isTokenCelebrated = (token) => {
 
 /**
  * Check if today matches the user's birthday (month and day)
+ * Uses Philippine timezone (Asia/Manila, UTC+8)
  */
 const isBirthdayToday = (birthDate) => {
     if (!birthDate) return false;
 
-    const today = new Date();
+    // Get today's date in Philippine timezone
+    const now = new Date();
+    const phTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+
+    // Parse birth date - handle both ISO string and date-only formats
     const birth = new Date(birthDate);
 
-    return today.getMonth() === birth.getMonth() &&
-        today.getDate() === birth.getDate();
+    console.log('[BirthdayGreeting] Date comparison:', {
+        todayPH: `${phTime.getMonth() + 1}/${phTime.getDate()}`,
+        birthDate: `${birth.getMonth() + 1}/${birth.getDate()}`,
+        rawBirthDate: birthDate
+    });
+
+    return phTime.getMonth() === birth.getMonth() &&
+        phTime.getDate() === birth.getDate();
 };
 
 const BirthdayGreeting = () => {
@@ -126,7 +138,7 @@ const BirthdayGreeting = () => {
 
     // Check if it's the user's birthday and fetch token to verify celebration status
     useEffect(() => {
-        // Don't proceed if not enabled
+        // Don't proceed if not enabled or missing user data
         if (!configEnabled) return;
         if (!user?.id || !user?.birth_date) return;
         if (!isBirthdayToday(user.birth_date)) return;
@@ -139,8 +151,10 @@ const BirthdayGreeting = () => {
 
                 setBirthdayToken(token);
 
+                const alreadyCelebrated = isTokenCelebrated(token);
+
                 // Check if already celebrated
-                if (!isTokenCelebrated(token)) {
+                if (!alreadyCelebrated) {
                     // Delay slightly to ensure page is loaded
                     setTimeout(() => {
                         setShowModal(true);
@@ -148,7 +162,10 @@ const BirthdayGreeting = () => {
                     }, 1000);
                 }
             } catch (error) {
-                console.error('Failed to fetch birthday token:', error);
+                // Silently ignore 401 errors (happens during initial auth before token is available)
+                if (error?.response?.status !== 401) {
+                    console.error('[BirthdayGreeting] Failed to fetch birthday token:', error);
+                }
             }
         };
 

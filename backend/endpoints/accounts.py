@@ -544,8 +544,21 @@ def list_accounts():
     role = request.args.get('role', '')
     status = request.args.get('status', '')
     include_deleted = request.args.get('include_deleted', 'false').lower() == 'true'
+    
+    # Sorting parameters
+    sort_by = request.args.get('sort_by', 'created_at')
+    sort_order = request.args.get('sort_order', 'desc')
+    
+    # Validate sort_by to prevent SQL injection
+    allowed_sort_fields = ['created_at', 'updated_at', 'name', 'email', 'school_id']
+    if sort_by not in allowed_sort_fields:
+        sort_by = 'created_at'
+    
+    # Validate sort_order
+    if sort_order.lower() not in ['asc', 'desc']:
+        sort_order = 'desc'
 
-    query = "SELECT id, name, email, school_id, role, suspended_at, deleted_at, created_at, profile_picture, birth_date, gender, department_name FROM accounts WHERE id != %s"
+    query = "SELECT id, name, email, school_id, role, suspended_at, deleted_at, created_at, updated_at, profile_picture, birth_date, gender, department_name FROM accounts WHERE id != %s"
     params = [current_user_id]
 
     if not include_deleted or current_role != 'admin':
@@ -561,18 +574,31 @@ def list_accounts():
 
     # User Filters
     if search:
-        query += " AND (name LIKE %s OR email LIKE %s)"
-        params.extend([f"%{search}%", f"%{search}%"])
+        query += " AND (name LIKE %s OR email LIKE %s OR school_id LIKE %s OR role LIKE %s OR department_name LIKE %s)"
+        params.extend([f"%{search}%", f"%{search}%", f"%{search}%", f"%{search}%", f"%{search}%"])
     
+    # Role filter - supports comma-separated values for multi-select
     if role:
-        query += " AND role = %s"
-        params.append(role)
-        
+        roles = [r.strip() for r in role.split(',') if r.strip()]
+        if roles:
+            placeholders = ', '.join(['%s'] * len(roles))
+            query += f" AND role IN ({placeholders})"
+            params.extend(roles)
+    
+    # Status filter - supports comma-separated values for multi-select
     if status:
-        query += " AND status = %s"
-        params.append(status)
-        
-    query += " ORDER BY created_at DESC"
+        statuses = [s.strip() for s in status.split(',') if s.strip()]
+        status_conditions = []
+        for s in statuses:
+            if s == 'active':
+                status_conditions.append("(suspended_at IS NULL AND deleted_at IS NULL)")
+            elif s == 'suspended':
+                status_conditions.append("suspended_at IS NOT NULL")
+        if status_conditions:
+            query += f" AND ({' OR '.join(status_conditions)})"
+    
+    # Dynamic sorting
+    query += f" ORDER BY {sort_by} {sort_order.upper()}"
     
     db = get_db()
     cursor = db.cursor(dictionary=True)

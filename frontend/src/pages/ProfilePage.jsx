@@ -159,7 +159,7 @@ const ProfilePage = () => {
         <div className="container py-3">
             <h2 className="h4 mb-3 fw-bold">User Profile</h2>
             <Row className="g-4 mb-4">
-                <Col md={4}>
+                <Col lg={4}>
                     <Card className='h-100 overflow-hidden shadow-sm'>
                         <Card.Header className='text-body-secondary fw-bold'>Profile Picture</Card.Header>
                         <Card.Body className="d-flex flex-column justify-content-center align-items-center bg-body-tertiary">
@@ -198,7 +198,7 @@ const ProfilePage = () => {
                     </Card>
                 </Col>
 
-                <Col md={8}>
+                <Col lg={8}>
                     <Card className='h-100 shadow-sm overflow-hidden'>
                         <Card.Header className='text-body-secondary fw-bold'>Profile Information</Card.Header>
                         <Card.Body className='bg-body-tertiary'>
@@ -325,7 +325,7 @@ const ProfilePage = () => {
             </Row>
 
             <Row className='g-4 justify-content-end'>
-                <Col md={8}>
+                <Col lg={8}>
                     <Card className='mb-4 mb-md-0 h-100 shadow-sm overflow-hidden'>
                         <Card.Header className='text-body-secondary fw-bold'>Settings</Card.Header>
                         <Card.Body className='bg-body-tertiary'>
@@ -391,7 +391,7 @@ const ProfilePage = () => {
 
             {/* Recent Activity Section */}
             <Row className="mt-4 justify-content-end">
-                <Col md={8}>
+                <Col lg={8}>
                     <Card>
                         <Card.Header className="fw-bold text-body-secondary">
                             Recent Activity

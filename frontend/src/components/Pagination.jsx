@@ -1,10 +1,10 @@
 import React from 'react';
 import { ChevronLeft, ChevronRight, ChevronDoubleLeft, ChevronDoubleRight } from 'react-bootstrap-icons';
 
-const Pagination = ({ itemsPerPage, totalItems, paginate, currentPage }) => {
+const Pagination = ({ itemsPerPage, totalItems, paginate, currentPage, alwaysShow = false }) => {
     const totalPages = Math.ceil(totalItems / itemsPerPage);
 
-    if (totalPages <= 1) return null;
+    if (totalPages <= 1 || !alwaysShow) return null;
 
     let startPage, endPage;
     if (totalPages <= 5) {

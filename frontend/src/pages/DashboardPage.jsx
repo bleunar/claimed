@@ -73,8 +73,8 @@ const DashboardPage = () => {
 
                 {/* ==================== LABORATORIES SECTION ==================== */}
                 <div className="mb-4">
-                    <h6 className="fw-bold mb-2 text-muted text-uppercase small">
-                        Computer Laboratory
+                    <h6 className="fw-bold mb-2 text-muted small">
+                        Computer Laboratory Information
                     </h6>
                     <div className="row">
                         {/* Left: Quick Actions */}
@@ -132,8 +132,8 @@ const DashboardPage = () => {
 
 
                         <div className="col-12 p-2">
+                            <div className="h6 small text-muted fw-bold mb-2">Computers per Laboratory</div>
                             <StackedBarChart
-                                title="Computer Sets per Laboratory"
                                 apiPath="/analytics/bar/computers-by-lab"
                                 colorMap={computerSetColorMap}
                             />
@@ -143,7 +143,7 @@ const DashboardPage = () => {
 
                 {/* ==================== ACCOUNTS SECTION (Head Roles Only) ==================== */}
                 {['admin', 'it_head', 'lab_head'].includes(user?.role) && (
-                    <div className="mb-4">
+                    <div className="mb-4 d-none">
                         <h6 className="fw-bold mb-3 text-muted text-uppercase small">
                             Accounts
                         </h6>
@@ -159,10 +159,10 @@ const DashboardPage = () => {
                                         </div>
                                     </div>
                                     <div className="card-body pt-3">
+                                    <h6 className="mb-0 fw-bold">Account Activities this week</h6>
                                         <LineChart
-                                            title="Account Activities This Week"
                                             apiPath="/analytics/line/weekly-activities"
-                                            label="Activities"
+                                            label="Account Activities"
                                             bare={true}
                                         />
                                     </div>
