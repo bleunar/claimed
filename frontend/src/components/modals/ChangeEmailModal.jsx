@@ -125,12 +125,12 @@ const ChangeEmailModal = ({ show, onHide, onSuccess }) => {
                                 </div>
                             </div>
                         </Form.Group>
-                        <div className="d-grid gap-2">
+                        <div className="d-flex justify-content-end gap-2">
+                            <Button variant="secondary" onClick={() => setStep(1)} disabled={loading}>
+                                Cancel
+                            </Button>
                             <Button variant="primary" type="submit" disabled={loading}>
                                 {loading ? 'Verifying...' : 'Confirm Change'}
-                            </Button>
-                            <Button variant="secondary" onClick={() => setStep(1)} disabled={loading}>
-                                Back
                             </Button>
                         </div>
                     </Form>

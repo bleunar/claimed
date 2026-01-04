@@ -97,7 +97,7 @@ const LoginPage = () => {
                                     <label className="form-label">Email or School ID</label>
                                     <input
                                         type="text"
-                                        className="form-control bg-body-secondary rounded bg-primary-subtle border border-primary"
+                                        className="form-control bg-body-secondary rounded bg-claims-primary-subtle border border-primary"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
                                         required
@@ -106,7 +106,7 @@ const LoginPage = () => {
                                 </div>
                                 <div className="mb-4">
                                     <label className="form-label">Password</label>
-                                    <div className="input-group bg-body-secondary rounded border bg-primary-subtle border-primary">
+                                    <div className="input-group bg-body-secondary rounded border bg-claims-primary-subtle border-primary">
                                         <input
                                             type={showPassword ? "text" : "password"}
                                             className="form-control border-0 bg-transparent"

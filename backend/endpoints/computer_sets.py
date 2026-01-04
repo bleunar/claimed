@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from core.database import get_db
 from utilities.decorators import role_required, verify_role_freshness
 import logging
@@ -12,18 +12,21 @@ computer_sets_bp = Blueprint('computer_sets', __name__, url_prefix='/computer-se
 @computer_sets_bp.route('/', methods=['GET'])
 @jwt_required()
 def list_computer_sets():
-    laboratory_id = request.args.get('laboratory_id')
+    location_id = request.args.get('location_id')
+    # Support legacy parameter name for backward compatibility
+    if not location_id:
+        location_id = request.args.get('laboratory_id')
     search = request.args.get('search')
     
     db = get_db()
     cursor = db.cursor(dictionary=True)
     
-    query = "SELECT id, laboratory_id, set_name, status, created_at, updated_at FROM computer_sets WHERE 1=1"
+    query = "SELECT id, location_id, set_name, status, created_at, updated_at FROM computer_sets WHERE 1=1"
     params = []
     
-    if laboratory_id:
-        query += " AND laboratory_id = %s"
-        params.append(laboratory_id)
+    if location_id:
+        query += " AND location_id = %s"
+        params.append(location_id)
         
     if search:
         query += " AND set_name LIKE %s"
@@ -39,7 +42,7 @@ def list_computer_sets():
 def get_computer_set(id):
     db = get_db()
     cursor = db.cursor(dictionary=True)
-    cursor.execute("SELECT id, laboratory_id, set_name, status, created_at, updated_at FROM computer_sets WHERE id = %s", (id,))
+    cursor.execute("SELECT id, location_id, set_name, status, created_at, updated_at FROM computer_sets WHERE id = %s", (id,))
     computer_set = cursor.fetchone()
     cursor.close()
     
@@ -54,7 +57,7 @@ def get_computer_set(id):
 @role_required(['admin', 'it_head', 'lab_head'])
 def create_computer_set():
     data = request.json
-    laboratory_id = data.get('laboratory_id')
+    location_id = data.get('location_id') or data.get('laboratory_id')  # Support legacy
     
     # Check for batch config
     batch_config = data.get('batch_config')
@@ -62,12 +65,12 @@ def create_computer_set():
     db = get_db()
     cursor = db.cursor(dictionary=True)
     
-    # Verify laboratory exists and get name for log context
-    cursor.execute("SELECT id, name FROM laboratories WHERE id = %s", (laboratory_id,))
-    lab_data = cursor.fetchone()
-    if not lab_data:
+    # Verify location exists and get name for log context
+    cursor.execute("SELECT id, name FROM locations WHERE id = %s", (location_id,))
+    loc_data = cursor.fetchone()
+    if not loc_data:
         cursor.close()
-        return jsonify({"msg": "Laboratory not found"}), 404
+        return jsonify({"msg": "Location not found"}), 404
 
     try:
         if batch_config:
@@ -85,13 +88,13 @@ def create_computer_set():
             intended_names = [f"{prefix}{start_number + i}" for i in range(count)]
             if intended_names:
                 placeholders = ', '.join(['%s'] * len(intended_names))
-                query = f"SELECT set_name FROM computer_sets WHERE laboratory_id = %s AND set_name IN ({placeholders})"
-                cursor.execute(query, (laboratory_id, *intended_names))
+                query = f"SELECT set_name FROM computer_sets WHERE location_id = %s AND set_name IN ({placeholders})"
+                cursor.execute(query, (location_id, *intended_names))
                 existing_names = [row['set_name'] for row in cursor.fetchall()]
                 
                 if existing_names:
                     cursor.close()
-                    return jsonify({"msg": f"The following computer set names already exist in this laboratory: {', '.join(existing_names)}"}), 409
+                    return jsonify({"msg": f"The following computer set names already exist in this location: {', '.join(existing_names)}"}), 409
 
             created_ids = []
             
@@ -101,8 +104,8 @@ def create_computer_set():
                 
                 # Create Computer Set
                 cursor.execute(
-                    "INSERT INTO computer_sets (id, laboratory_id, set_name, status) VALUES (%s, %s, %s, %s)",
-                    (set_id, laboratory_id, set_name, 'active')
+                    "INSERT INTO computer_sets (id, location_id, set_name, status) VALUES (%s, %s, %s, %s)",
+                    (set_id, location_id, set_name, 'active')
                 )
                 created_ids.append(set_id)
                 
@@ -133,17 +136,17 @@ def create_computer_set():
                 return jsonify({"msg": "Set Name is required"}), 400
 
             # Check for name collision
-            cursor.execute("SELECT id FROM computer_sets WHERE laboratory_id = %s AND set_name = %s", (laboratory_id, set_name))
+            cursor.execute("SELECT id FROM computer_sets WHERE location_id = %s AND set_name = %s", (location_id, set_name))
             if cursor.fetchone():
                 cursor.close()
-                return jsonify({"msg": f"Computer set '{set_name}' already exists in this laboratory."}), 409
+                return jsonify({"msg": f"Computer set '{set_name}' already exists in this location."}), 409
 
             set_id = uuid.uuid4().hex[:16]
             
             # Create Computer Set
             cursor.execute(
-                "INSERT INTO computer_sets (id, laboratory_id, set_name, status) VALUES (%s, %s, %s, %s)",
-                (set_id, laboratory_id, set_name, status)
+                "INSERT INTO computer_sets (id, location_id, set_name, status) VALUES (%s, %s, %s, %s)",
+                (set_id, location_id, set_name, status)
             )
             
             # Create Components
@@ -170,41 +173,58 @@ def create_computer_set():
 @computer_sets_bp.route('/<id>', methods=['PUT'])
 @jwt_required()
 @verify_role_freshness
-@role_required(['admin', 'it_head', 'lab_head', 'it_technician'])
+@role_required(['admin', 'it_head', 'lab_head', 'it_technician', 'department_head', 'department_staff', 'lab_assistant'])
 def update_computer_set(id):
     data = request.json
-    laboratory_id = data.get('laboratory_id')
+    location_id = data.get('location_id') or data.get('laboratory_id')  # Support legacy
     set_name = data.get('set_name')
     status = data.get('status')
 
-    if not all([laboratory_id, set_name, status]):
-        return jsonify({"msg": "Laboratory ID, Set Name, and Status are required"}), 400
+    # RBAC Field-Level Validation
+    current_claims = get_jwt()
+    role = current_claims.get("role")
+    full_ops = ['admin', 'it_head', 'it_technician', 'lab_head']
 
     db = get_db()
     cursor = db.cursor(dictionary=True)
     
     # Check if exists
-    cursor.execute("SELECT id FROM computer_sets WHERE id = %s", (id,))
-    if not cursor.fetchone():
+    cursor.execute("SELECT id, location_id, set_name FROM computer_sets WHERE id = %s", (id,))
+    existing_set = cursor.fetchone()
+    if not existing_set:
         cursor.close()
         return jsonify({"msg": "Computer set not found"}), 404
 
-    # Verify laboratory exists
-    cursor.execute("SELECT id FROM laboratories WHERE id = %s", (laboratory_id,))
-    if not cursor.fetchone():
-        cursor.close()
-        return jsonify({"msg": "Laboratory not found"}), 404
+    # Validate permissions based on what is changing
+    if role not in full_ops:
+        if location_id is not None and location_id != existing_set['location_id']:
+             cursor.close()
+             return jsonify({"msg": "Access Denied: You are not authorized to move computer sets"}), 403
+        if set_name is not None and set_name != existing_set['set_name']:
+             cursor.close()
+             return jsonify({"msg": "Access Denied: You are not authorized to rename computer sets"}), 403
 
-    # Check for name collision (excluding self)
-    cursor.execute("SELECT id FROM computer_sets WHERE laboratory_id = %s AND set_name = %s AND id != %s", (laboratory_id, set_name, id))
-    if cursor.fetchone():
-        cursor.close()
-        return jsonify({"msg": f"Computer set '{set_name}' already exists in this laboratory."}), 409
+    # If full ops, verify location exists (only if changing)
+    if location_id and location_id != existing_set['location_id']:
+        cursor.execute("SELECT id FROM locations WHERE id = %s", (location_id,))
+        if not cursor.fetchone():
+            cursor.close()
+            return jsonify({"msg": "Location not found"}), 404
+
+    # Check for name collision (only if changing name or location)
+    if (set_name and set_name != existing_set['set_name']) or (location_id and location_id != existing_set['location_id']):
+        check_loc = location_id if location_id else existing_set['location_id']
+        check_name = set_name if set_name else existing_set['set_name']
+        
+        cursor.execute("SELECT id FROM computer_sets WHERE location_id = %s AND set_name = %s AND id != %s", (check_loc, check_name, id))
+        if cursor.fetchone():
+            cursor.close()
+            return jsonify({"msg": f"Computer set '{check_name}' already exists in this location."}), 409
 
     try:
         cursor.execute(
-            "UPDATE computer_sets SET laboratory_id = %s, set_name = %s, status = %s WHERE id = %s",
-            (laboratory_id, set_name, status, id)
+            "UPDATE computer_sets SET location_id = %s, set_name = %s, status = %s WHERE id = %s",
+            (location_id, set_name, status, id)
         )
         db.commit()
         cursor.close()
@@ -224,9 +244,9 @@ def delete_computer_set(id):
     
     # Check if exists
     cursor.execute("""
-        SELECT cs.id, cs.laboratory_id, cs.set_name, l.name as lab_name 
+        SELECT cs.id, cs.location_id, cs.set_name, l.name as location_name 
         FROM computer_sets cs 
-        JOIN laboratories l ON cs.laboratory_id = l.id 
+        JOIN locations l ON cs.location_id = l.id 
         WHERE cs.id = %s
     """, (id,))
     computer_set = cursor.fetchone()
@@ -261,7 +281,7 @@ def batch_delete_computer_sets():
     try:
         # Fetch details to verify existence
         placeholders = ', '.join(['%s'] * len(ids))
-        query = f"SELECT id, set_name, laboratory_id FROM computer_sets WHERE id IN ({placeholders})"
+        query = f"SELECT id, set_name, location_id FROM computer_sets WHERE id IN ({placeholders})"
         cursor.execute(query, tuple(ids))
         sets_to_delete = cursor.fetchall()
         

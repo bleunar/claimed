@@ -74,11 +74,11 @@ const Ratiolytic = ({
                     ></span>
                     {/* Legend placeholders */}
                     {showLegend && (
-                        <div className="d-flex flex-wrap gap-3 mt-3">
+                        <div className="d-flex flex-wrap justify-content-start gap-4 mt-3">
                             {[1, 2, 3].map((i) => (
-                                <div key={i} className="d-flex align-items-center gap-2">
-                                    <span className="placeholder rounded" style={{ width: 16, height: 16 }}></span>
-                                    <span className="placeholder rounded" style={{ width: 80, height: 14 }}></span>
+                                <div key={i} className="d-flex align-items-center gap-1">
+                                    <span className="placeholder rounded" style={{ width: 8, height: 16 }}></span>
+                                    <span className="placeholder rounded" style={{ width: 60, height: 14 }}></span>
                                 </div>
                             ))}
                         </div>
@@ -121,7 +121,7 @@ const Ratiolytic = ({
                                         transform: isHovered ? 'scaleY(1.1)' : 'scaleY(1)',
                                         zIndex: isHovered ? 10 : 1,
                                         cursor: 'pointer',
-                                        minWidth: isAnimated ? '8px' : '0px',
+                                        minWidth: isAnimated ? '4px' : '0px',
                                         overflow: 'hidden'
                                     }}
                                     onMouseEnter={() => setHoveredIndex(index)}
@@ -145,7 +145,7 @@ const Ratiolytic = ({
                     </div>
 
                     {/* Legend */}
-                    {showLegend && (
+                    {showLegend && false && (
                         <div className="d-flex flex-wrap justify-content-evenly gap-4 mt-3">
                             {chartData.map((item, index) => {
                                 const percentage = (item.data / total) * 100;
@@ -204,7 +204,7 @@ const Ratiolytic = ({
     if (bare) {
         return (
             <div>
-                {title && <h6 className="mb-2 fw-bold">{title}</h6>}
+                {title && <h6 className="mb-1 text-muted">{title}</h6>}
                 {ratiolyticContent}
             </div>
         );

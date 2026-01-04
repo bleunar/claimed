@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Button, ToggleButton, ToggleButtonGroup, Form } from 'react-bootstrap';
-import { PencilSquare, Trash, Copy, Check2, XLg, QuestionLg, ListUl, Tools } from 'react-bootstrap-icons';
+import { PencilSquare, Trash, Copy, Check2, XLg, QuestionLg, ListUl, Tools, BoxArrowRight } from 'react-bootstrap-icons';
 import KeyValueEditor from '../common/KeyValueEditor';
 import KeyValues from '../common/KeyValues';
 import ConfirmModal, { useConfirmModal } from '../common/ConfirmModal';
+import ComponentConflictModal from '../modals/ComponentConflictModal';
 import BarcodeScanner from '../common/BarcodeScanner';
 import toast from 'react-hot-toast';
 import api from '../../api/axios';
@@ -13,10 +14,15 @@ import { getComponentIcon } from '../../utils/componentIcons';
 import { getComponentStatusVariant } from '../../utils/statusColors';
 
 // Role-based access control helpers
+// Role-based access control helpers
 const canEditComponentDetails = (user) => ['admin', 'it_head', 'lab_head', 'it_technician'].includes(user?.role);
+const canManageComponents = (user) => ['admin', 'it_head', 'lab_head', 'it_technician'].includes(user?.role);
 const canDeleteComponent = (user) => ['admin', 'it_head', 'lab_head', 'it_technician'].includes(user?.role);
 const canAddComponent = (user) => ['admin', 'it_head', 'lab_head', 'it_technician'].includes(user?.role);
-const canEditComponentStatus = () => true;
+const canEditComponentStatus = (user) => ['admin', 'it_head', 'lab_head', 'it_technician', 'department_head', 'department_staff', 'lab_assistant'].includes(user?.role); // All roles
+const canEditProperties = (user) => ['admin', 'it_head', 'lab_head', 'it_technician', 'department_head'].includes(user?.role);
+const canEditSetInfo = (user) => ['admin', 'it_head', 'lab_head', 'it_technician'].includes(user?.role);
+const canEditSetStatus = (user) => ['admin', 'it_head', 'lab_head', 'it_technician', 'department_head', 'department_staff', 'lab_assistant'].includes(user?.role); // All roles
 
 const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUpdate, user, onDelete }) => {
     const [components, setComponents] = useState(JSON.parse(JSON.stringify(initialComponents)));
@@ -31,6 +37,8 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
     const [pendingDeletes, setPendingDeletes] = useState([]);
     const [pendingUnlinks, setPendingUnlinks] = useState([]);
     const [propertiesModal, setPropertiesModal] = useState({ show: false, componentId: null, mode: 'view', valid: true });
+
+    const [conflictModal, setConflictModal] = useState({ show: false, data: null, actionType: null, tempComp: null });
 
     const { theme } = useTheme();
 
@@ -145,7 +153,6 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
 
             const existing = checkRes.data.component;
 
-            // If already in THIS set
             if (existing.computer_set_id === set.id) {
                 toast.success("Component is already in this set.");
                 setShowSerialModal(false);
@@ -153,34 +160,13 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                 return;
             }
 
-            let confirmMsg = '';
-            let isMove = false;
-
-            if (existing.computer_set_name) {
-                // Assigned to another set
-                confirmMsg = `Component "${existing.brand_name}"(${existing.component_type}) is currently assigned to set "${existing.computer_set_name}" in "${existing.laboratory_name}".\n\nDo you want to MOVE it to this set ? `;
-                isMove = true;
-            } else {
-                // Rogue
-                confirmMsg = `Component "${existing.brand_name}"(${existing.component_type}) is currently UNASSIGNED.\n\nDo you want to LINK it to this set ? `;
-            }
-
-            const confirmed = await showConfirm(
-                isMove ? "Move Component" : "Link Component",
-                confirmMsg
-            );
-
-            if (confirmed) {
-
-                await api.put(`/components/${existing.id}`, { ...existing, computer_set_id: set.id });
-                toast.success(isMove ? "Component moved successfully" : "Component linked successfully");
-
-                setShowSerialModal(false);
-                setSerialInput('');
-
-                // Refresh components
-                onUpdate(); // Triggers parent refresh -> triggers useEffect here
-            }
+            setConflictModal({
+                show: true,
+                data: { existing, currentInput: null },
+                actionType: 'add_serial',
+                tempComp: existing
+            });
+            return;
 
         } catch (err) {
             console.error(err);
@@ -232,21 +218,20 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                         const check = await api.get(`/components/check-serial?serial_number=${encodeURIComponent(comp.serial_number)}`);
                         if (check.data.exists) {
                             const existing = check.data.component;
-                            let msg = `Serial Number "${comp.serial_number}" is already currently used by a ${existing.component_type} (${existing.brand_name}).\n\n`;
 
-                            if (existing.computer_set) {
-                                msg += `It is currently assigned to "${existing.computer_set.set_name}" in "${existing.laboratory.name}".\n`;
-                            } else {
-                                msg += `It is currently a ROGUE component(Unassigned).\n`;
-                            }
-                            msg += `\nDo you want to MOVE/UPDATE that component to this computer set?`;
+                            // Check if this existing component is ALREADY in our list (maybe added twice?)
+                            // or if it replaces another pending 'new-' component?
+                            // For now, just show conflict.
 
-                            if (await showConfirm("Serial Number Conflict", msg)) {
-                                targetId = existing.id;
-                            } else {
-                                conflictFoundAndCancelled = true;
-                                break;
-                            }
+                            setConflictModal({
+                                show: true,
+                                data: { existing, currentInput: comp },
+                                actionType: 'save_loop',
+                                tempComp: comp
+                            });
+
+                            setIsSaving(false);
+                            return; // Stop save, wait for user
                         }
                     }
 
@@ -387,17 +372,91 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
             return;
         }
 
-        if (await showConfirm("Delete Component", "This component will be permanently DELETED when you likely 'Save Changes'.\n\nIs this okay?")) {
-            setPendingDeletes([...pendingDeletes, comp.id]);
+        if (await showConfirm("Unlink Component", "This component will be UNLINKED from this computer set.\n\nIt will remain in the system as an 'Unassigned' component.\n\nIs this okay?")) {
+            setPendingUnlinks([...pendingUnlinks, comp.id]);
             setComponents(components.filter(c => c.id !== comp.id));
         }
     };
 
 
+
+    const handleConflictResolve = async (strategy) => {
+        const { actionType, data, tempComp } = conflictModal;
+        const existing = data.existing;
+
+        if (actionType === 'add_serial') {
+            // Direct API Call (similar to original handleAddBySerial logic)
+            // Add by serial always uses EXISTING data structure (we just input the serial)
+            try {
+                await api.put(`/components/${existing.id}`, { ...existing, computer_set_id: set.id });
+                toast.success("Component moved/linked successfully");
+                setShowSerialModal(false);
+                setSerialInput('');
+                onUpdate();
+            } catch (err) {
+                toast.error("Failed to move/link component");
+            }
+        } else if (actionType === 'save_loop') {
+            // We are inside handleSave loop
+
+            // Strategy: 'existing' means we discard our local changes (in `tempComp`) and use `existing`
+            // Strategy: 'new' means we use `tempComp` but steal `existing.id`
+
+            const updatedComponents = components.map(c => {
+                if (c.id === tempComp.id) {
+                    if (strategy === 'existing') {
+                        return {
+                            ...existing,
+                            id: existing.id,
+                            computer_set_id: set.id, // Ensure it points to current set
+                            // We might need to ensure is_core logic is preserved if it was intended to be core?
+                            // If we are adding a 'new' monitor, but we picked an existing monitor, it becomes core if type matches?
+                            // Let's trust existing.component_type vs tempComp.component_type.
+                            // If types mismatch (e.g. I try to add Monitor but reuse a Keyboard serial), that's weird.
+                            // But let's assume valid swap.
+                        };
+                    } else {
+                        // Strategy 'new': Overwrite existing with our Form Data
+                        return {
+                            ...c,
+                            id: existing.id, // Take over ID
+                            // Keep other UI values (brand, type, serial, properties, status)
+                        };
+                    }
+                }
+                return c;
+            });
+
+            setComponents(updatedComponents);
+
+            // 2. Add 'existing' to originalComponents so the differ sees it as an update
+            // origin has old set_id. new has current set_id. Differ will see change.
+            // If strategy is existing, we effectively just moved it.
+            // If strategy is new, we moved AND updated it. 
+            // In both cases, the 'original' was the fetched state (remote).
+            setOriginalComponents([...originalComponents, existing]);
+
+            // 3. Close modal
+            setConflictModal({ show: false, data: null, actionType: null, tempComp: null });
+
+            toast.success("Conflict resolved. Component linked. Resuming save...");
+
+            setTimeout(() => {
+                document.querySelector('.btn-primary[disabled=false]?.contains("Save")')?.click();
+            }, 100);
+        }
+
+        setConflictModal({ show: false, data: null, actionType: null, tempComp: null });
+    };
+
+    // Note: handleSave dependency on state 'components' means we can't easily auto-retry without arguments.
+    // For now, I will let the user click save again, or I can refactor handleSave to accept an argument.
+    // Let's just notify user.
+
     return (
         <>
             <div className="p-3 pb-0">
-                {isEditMode && canManage ? (
+                {isEditMode && canEditSetInfo(user) ? (
                     <div className="d-flex flex-column align-items-center gap-2 p-3 py-3 rounded">
                         <div className='row'>
                             <div className="col-12 col-md-8 p-1">
@@ -431,7 +490,7 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                         <div className="d-flex flex-column align-items-center gap-2 p-3 py-4 bg-body-s rounded">
                             <h5 className="mb-0 text-center fw-bold">{set.set_name}</h5>
                             <div className="d-flex align-items-center cursor-pointer gap-2">
-                                {(canManage || user?.role === 'it_technician') ? (
+                                {(canEditSetStatus(user)) ? (
                                     <ToggleButtonGroup type="radio" name="set-status-toggle" value={setStatus} onChange={setSetStatus} size="sm" className='bg-body-secondary'>
                                         <ToggleButton id="tbg-set-active" value="active" variant={setStatus === 'active' ? 'success' : 'outline-success'} title="Active" className='border-0'>
                                             <span className='ms-1'>Active</span>
@@ -453,7 +512,8 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                             </div>
                         </div>
                     </>
-                )}
+                )
+                }
 
 
                 {
@@ -490,12 +550,9 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                                             <input type="text" className="form-control form-control-sm p-1 bg-body-secondary p-0" value={comp.brand_name} onChange={(e) => handleLocalChange(comp.id, 'brand_name', e.target.value)} placeholder="Brand Name" maxLength={36} />
                                         </div>
                                     ) : (
-                                        <div className="col-12 col-lg-4 p-1 d-flex align-items-center cursor-pointer py-0 pe-0 pe-md-2">
-                                            <span title={getLabelByValue(comp.component_type)} className='btn bg-body-secondary me-2' disabled>{getComponentIcon(comp.component_type, "16px")}</span>
-                                            <span className="cursor-pointer me-1 text-nowrap text-truncate text-uppercase" title={comp.brand_name} onClick={() => copyToClipboard(comp.brand_name)} >{comp.brand_name}</span>
-                                            <button className="btn btn-link p-0 text-muted" onClick={() => copyToClipboard(comp.brand_name)} title="Copy Name/Brand">
-                                                <Copy style={{ fontSize: "0.75rem", marginLeft: '4px' }} />
-                                            </button>
+                                        <div className="col-12 col-lg-4 p-1 d-flex align-items-center justify-content-between justify-content-lg-end flex-row flex-lg-row-reverse cursor-pointer py-0 pe-0 pe-md-2 gap-2">
+                                            <span className="cursor-pointer me-1 text-nowrap text-truncate fw-semibold" title={comp.brand_name} onClick={() => copyToClipboard(comp.brand_name)} >{comp.brand_name}</span>
+                                            <span title={getLabelByValue(comp.component_type)} className='btn bg-body-secondary' disabled>{getComponentIcon(comp.component_type, "16px")}</span>
                                         </div>
                                     )
                                 }
@@ -515,13 +572,13 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                                             </div>
                                         </div>
                                     ) : (
-                                        <div className="col-12 col-lg-4 p-1 d-flex align-items-center cursor-pointer mb-2 mb-lg-0 py-0 pe-0 pe-md-2">
-                                            <span className={`me-1 rounded text-nowrap text-truncate ${comp.serial_number ? "cursor-pointer" : "cursor-help"} `} title={comp.serial_number ? comp.serial_number : "Serial Number not set"} onClick={() => comp.serial_number && copyToClipboard(comp.serial_number)} >
+                                        <div className="col-12 col-lg-4 p-1 gap-1 d-flex align-items-center cursor-pointer mb-2 mb-lg-0 py-0 pe-0 pe-md-2">
+                                            <span className={`text-nowrap text-truncate ${comp.serial_number ? "cursor-pointer font-monospace p-0 pt-1 px-2 bg-body-secondary rounded" : "cursor-help fst-italic"} `} title={comp.serial_number ? comp.serial_number : "Serial Number not set"} onClick={() => comp.serial_number && copyToClipboard(comp.serial_number)} >
                                                 {comp.serial_number || <span className="text-muted fst-italic">Serial not set</span>}
                                             </span>
-                                            <div className={`d-flex justify-content-start flex-fill `}>
+                                            <div className={`d-flex justify-content-start flex-fill`}>
                                                 {comp.serial_number && (
-                                                    <button className="btn btn-link p-0 text-muted" onClick={() => copyToClipboard(comp.serial_number)} title="Copy Serial">
+                                                    <button className="btn btn-link p-0 text-muted opacity-50" onClick={() => copyToClipboard(comp.serial_number)} title="Copy serial number">
                                                         <Copy style={{ fontSize: "0.75rem", marginLeft: '4px' }} />
                                                     </button>
                                                 )}
@@ -536,7 +593,7 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
 
                                         {
                                             isEditMode && canEditComponentStatus(user) ? (
-                                                <select className={`form-select form-select-sm border bg-body-secondary p-1 ${getStatusColor(comp.status)}`} value={comp.status} onChange={(e) => handleLocalChange(comp.id, 'status', e.target.value)}>
+                                                <select className={`form-select form-select-sm border bg-body-secondary p-1`} value={comp.status} onChange={(e) => handleLocalChange(comp.id, 'status', e.target.value)}>
                                                     <option value="good">Good</option><option value="bad">Bad</option><option value="maintenance">Maintenance</option><option value="missing">Missing</option>
                                                 </select>
                                             ) : (
@@ -597,8 +654,8 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                                                 <>
                                                     {canDeleteComponent(user) && (
                                                         <div className="bg-body-secondary rounded">
-                                                            <button className="btn btn-sm btn-outline-danger border-0 h-100" title='Delete Component' onClick={() => handleRemove(comp)}>
-                                                                <Trash />
+                                                            <button className="btn btn-sm btn-outline-danger border-0 h-100" title='Unlink Component' onClick={() => handleRemove(comp)}>
+                                                                <BoxArrowRight />
                                                             </button>
                                                         </div>
                                                     )}
@@ -607,8 +664,8 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                                                 <div className={`bg-body-secondary rounded ${isEditMode ? "border" : ""}`}>
                                                     <button
                                                         className={`btn btn-sm border-0 h-100 ${comp.properties && Object.keys(comp.properties).length > 0 ? '' : ''}`}
-                                                        title='Edit Properties'
-                                                        onClick={() => setPropertiesModal({ show: true, componentId: comp.id, componentName: comp.brand_name, mode: isEditMode ? 'edit' : 'view' })}
+                                                        title='View Properties'
+                                                        onClick={() => setPropertiesModal({ show: true, componentId: comp.id, componentName: comp.brand_name, mode: (isEditMode && canEditProperties(user)) ? 'edit' : 'view' })}
                                                     >
                                                         <ListUl />
                                                     </button>
@@ -623,11 +680,13 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                 }
 
 
-                {components.length === 0 && (
-                    <div className="row">
-                        <div className="text-center text-muted">No components found.</div>
-                    </div>
-                )}
+                {
+                    components.length === 0 && (
+                        <div className="row">
+                            <div className="text-center text-muted">No components found.</div>
+                        </div>
+                    )
+                }
 
 
                 {
@@ -648,11 +707,11 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                         </div>
                     )
                 }
-            </div>
+            </div >
 
 
             {isEditMode && canAddComponent(user) && (
-                <div className="d-flex justify-content-start px-3 gap-2">
+                <div className="d-flex justify-content-start px-3 gap-2 mb-4">
                     <button className="btn btn-sm btn-link" onClick={addNewRow}>
                         Add New Component
                     </button>
@@ -671,10 +730,10 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                     <Modal.Body>
                         <div className="mb-3">
                             <label className="form-label">Serial Number</label>
-                            <div className="input-group rounded border-0">
+                            <div className="input-group rounded border bg-body-secondary">
                                 <input
                                     type="text"
-                                    className="form-control bg-body-secondary"
+                                    className="form-control bg-transparent border-0"
                                     value={serialInput}
                                     onChange={(e) => setSerialInput(e.target.value)}
                                     placeholder="Enter or scan serial number..."
@@ -685,7 +744,7 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                                     onScan={(value) => setSerialInput(value)}
                                     buttonIconOnly={true}
                                     buttonVariant=""
-                                    className="d-lg-none border-0 bg-body-secondary"
+                                    className="d-lg-none border-0 bg-transparent"
                                 />
                             </div>
                             <div className="form-text">
@@ -706,10 +765,10 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
             <div className={`modal-footer border-0 d-flex align-items-center justify-content-${isEditMode ? "edit" : "between"} justify-content-md-between`}>
                 <div className={`d-flex justify-content-center justify-content-md-start ${isEditMode ? "mb-4" : "mb-0"} mb-md-0 gap-2 flex-wrap`}>
                     {/* Edit Mode Toggle */}
-                    {(canEditComponentDetails(user) || canEditComponentStatus(user)) && (
+                    {(canEditComponentDetails(user) || canEditComponentStatus(user) || canEditProperties(user) || canEditSetInfo(user) || canEditSetStatus(user)) && (
                         !isEditMode && (
-                            <button className="btn btn-primary" onClick={() => setIsEditMode(true)} title="Enter Edit Mode">
-                                <PencilSquare className="me-1" /> Edit Mode
+                            <button className="btn btn-sm btn-primary" onClick={() => setIsEditMode(true)} title="Enter Edit Mode">
+                                <PencilSquare className="me-1" /> Edit
                             </button>
                         )
                     )}
@@ -733,12 +792,14 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
             </div>
 
             {/* Background Overlay for Serial Modal */}
-            {showSerialModal && (
-                <div
-                    className="position-absolute w-100 h-100 start-0 top-0 bg-dark"
-                    style={{ opacity: 0.5, zIndex: 1040 }}
-                ></div>
-            )}
+            {
+                showSerialModal && (
+                    <div
+                        className="position-absolute w-100 h-100 start-0 top-0 bg-dark"
+                        style={{ opacity: 0.5, zIndex: 1040 }}
+                    ></div>
+                )
+            }
 
             {/* Properties Modal */}
             <Modal show={propertiesModal.show} onHide={() => setPropertiesModal({ ...propertiesModal, show: false })} style={{ zIndex: 1260 }} centered backdrop="static" backdropClassName="stacked-modal-backdrop">
@@ -758,6 +819,7 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                                 properties={comp.properties || {}}
                                 onChange={(newProps) => handlePropertiesChange(comp.id, newProps)}
                                 readOnly={propertiesModal.mode === 'view'}
+                                canEdit={canEditProperties(user)}
                                 setPropertiesModal={(key, value) => setPropertiesModal({ ...propertiesModal, [key]: value })}
                                 componentType={comp.component_type}
                             />
@@ -779,6 +841,16 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
 
                 </Modal.Footer>
             </Modal>
+
+            {/* Conflict Modal */}
+            <ComponentConflictModal
+                show={conflictModal.show}
+                onHide={() => setConflictModal({ ...conflictModal, show: false })}
+                conflictData={conflictModal.data}
+                onResolve={handleConflictResolve}
+                onCancel={() => setConflictModal({ ...conflictModal, show: false })}
+                style={{ zIndex: 1400 }}
+            />
         </>
     );
 };

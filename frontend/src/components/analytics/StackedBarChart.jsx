@@ -5,7 +5,19 @@ import { Card } from 'react-bootstrap';
 import useChartData from '../../hooks/useChartData';
 import { ExclamationTriangle } from 'react-bootstrap-icons';
 
-const StackedBarChart = ({ apiPath, title, options, colors = [], colorMap = null, bare = false }) => {
+const StackedBarChart = ({
+    apiPath,
+    title,
+    options,
+    colors = [],
+    colorMap = null,
+    bare = false,
+    showTitle = true,
+    showLegend = true,
+    legendPosition = 'top',
+    height = '300px',
+    className = ''
+}) => {
     const { chartData, error } = useChartData(apiPath);
 
     // Default colors if none provided (matching PieChart defaults)
@@ -43,8 +55,8 @@ const StackedBarChart = ({ apiPath, title, options, colors = [], colorMap = null
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-            legend: { position: 'top' },
-            title: { display: !!title, text: title },
+            legend: { display: showLegend, position: legendPosition },
+            title: { display: showTitle && !!title, text: title },
             tooltip: {
                 callbacks: {
                     footer: (tooltipItems) => {
@@ -100,7 +112,7 @@ const StackedBarChart = ({ apiPath, title, options, colors = [], colorMap = null
     // Bare mode: return chart only without Card wrapper
     if (bare) {
         return (
-            <div className="position-relative w-100" style={{ height: '300px' }}>
+            <div className={`position-relative w-100 ${className}`} style={{ height: height }}>
                 {chartContent}
             </div>
         );
@@ -108,8 +120,8 @@ const StackedBarChart = ({ apiPath, title, options, colors = [], colorMap = null
 
     // Wrapped mode: return full Card with styling
     return (
-        <Card className="shadow bg-body-tertiary h-100">
-            <Card.Body className='p-0 relative w-100' style={{ height: '300px' }}>
+        <Card className={`shadow bg-body-tertiary h-100 ${className}`}>
+            <Card.Body className='p-0 relative w-100' style={{ height: height }}>
                 {chartContent}
             </Card.Body>
         </Card>

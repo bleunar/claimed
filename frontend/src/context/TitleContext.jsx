@@ -8,7 +8,9 @@ const routeTitles = {
     '/': 'Login',
     '/dashboard': 'Dashboard',
     '/dashboard/accounts': 'Accounts',
+    '/dashboard/locations': 'Locations',
     '/dashboard/laboratories': 'Laboratories',
+    '/dashboard/departments': 'Departments',
     '/dashboard/components': 'Components',
     '/dashboard/profile': 'My Profile',
     '/dashboard/lab-resources': 'Lab Resources',
@@ -42,7 +44,7 @@ export const TitleProvider = ({ children }) => {
 
     // Current title (override takes priority)
     const currentTitle = overrideTitle || getRouteTitle();
-    const fullTitle = `${currentTitle} • ${APP_NAME}`;
+    const fullTitle = `${APP_NAME} | ${currentTitle}`;
 
     // Update document.title when title changes
     useEffect(() => {

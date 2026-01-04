@@ -162,7 +162,7 @@ const ActivityItem = ({ activity, showIpAddress = false }) => {
             {/* Expanded Details */}
             <Collapse in={expanded && canExpand}>
                 <div>
-                    <div className="ms-4 ps-3 border-start border-2 border-primary-subtle">
+                    <div className="ms-4 ps-3 border-start border-2 border-claims-primary-subtle">
                         {/* Activity-specific details */}
                         {activity.details && (
                             <div className="mt-2">
@@ -173,7 +173,7 @@ const ActivityItem = ({ activity, showIpAddress = false }) => {
                                             {activity.details.old_role.replace('_', ' ')}
                                         </span>
                                         <ArrowRight size={12} className="mx-2 text-muted" />
-                                        <span className="badge bg-primary-subtle text-primary text-capitalize">
+                                        <span className="badge bg-claims-primary-subtle text-claims-primary text-capitalize">
                                             {activity.details.new_role?.replace('_', ' ')}
                                         </span>
                                     </div>
@@ -240,7 +240,7 @@ const ActivityTimeline = ({ activities, loading, maxItems = 20, userRole = '' })
     if (loading) {
         return (
             <div className="text-center py-4">
-                <div className="spinner-border spinner-border-sm text-primary" role="status">
+                <div className="spinner-border spinner-border-sm text-claims-primary" role="status">
                     <span className="visually-hidden">Loading...</span>
                 </div>
             </div>

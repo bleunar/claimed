@@ -15,7 +15,7 @@ import { UpcScan, XCircle, Camera } from 'react-bootstrap-icons';
 const BarcodeScanner = ({
     onScan,
     buttonText = "Scan",
-    buttonVariant = "outline-primary",
+    buttonVariant = "",
     buttonIconOnly = false,
     className = ""
 }) => {
@@ -55,6 +55,7 @@ const BarcodeScanner = ({
                 onClick={openScanner}
                 className={className}
                 title="Scan barcode or QR code"
+                tabIndex={-1}
             >
                 <UpcScan />
                 {!buttonIconOnly && <span className="ms-2">{buttonText}</span>}

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Card } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 
-const KPICard = ({ title, value, icon, color = 'primary', trend, link }) => {
+const KPICard = ({ title, value, icon, color = 'body', trend, link }) => {
     const navigate = useNavigate();
     const [isHovered, setHovered] = useState(false);
     const [displayValue, setDisplayValue] = useState(0);
@@ -58,7 +58,7 @@ const KPICard = ({ title, value, icon, color = 'primary', trend, link }) => {
     return (
         <div className='col p-1'>
             <Card
-                className={`h-100 border-2 border hover-raised shadow-sm ${link ? 'cursor-pointer' : ''} ${isHovered ? "bg-primary-subtle" : " bg-body-secondary"}`}
+                className={`h-100 border-2 border hover-raised shadow-sm ${link ? 'cursor-pointer' : ''} ${isHovered ? " bg-primary-subtle" : " bg-body-secondary"}`}
                 onClick={handleClick}
                 onMouseEnter={() => setHovered(true)}
                 onMouseLeave={() => setHovered(false)}
@@ -66,13 +66,13 @@ const KPICard = ({ title, value, icon, color = 'primary', trend, link }) => {
                 title={`View ${title}`}
             >
                 <Card.Body>
-                    <div className="d-flex align-items-center justify-content-between">
+                    <div className="d-flex align-items-center justify-content-center text-center">
                         <div>
                             {
                                 value !== undefined && value !== null ? (
                                     <>
                                         <div className="h3 mb-1 fw-bold text-gray-800">{displayValue}</div>
-                                        <div className="text-uppercase text-muted small mb-0">{title}</div>
+                                        <div className="text-capitalize text-muted small mb-0 text-truncate">{title}</div>
                                     </>
                                 ) : (
                                     <>
@@ -91,15 +91,6 @@ const KPICard = ({ title, value, icon, color = 'primary', trend, link }) => {
                                         {trend.direction === 'up' ? '↑' : '↓'} {trend.value}
                                     </span>
                                     <span className="text-muted">{trend.label}</span>
-                                </div>
-                            )}
-                        </div>
-                        <div className={`fs-1 opacity-75 d-none d-md-inline`}>
-                            {value !== undefined && value !== null ? (
-                                <span className={`text-${color}`}>{icon}</span>
-                            ) : (
-                                <div className="placeholder-glow">
-                                    <span className="placeholder rounded" style={{ width: '40px', height: '40px', display: 'inline-block' }}></span>
                                 </div>
                             )}
                         </div>

@@ -25,7 +25,7 @@ const Sidebar = ({ isOpen, isMobile, options, onClose, onToggle }) => {
         textDecoration: 'none',
         display: 'flex',
         alignItems: 'center',
-        padding: '10px 20px',
+        padding: isOpen ? '10px 20px' : '0px',
         justifyContent: !isOpen && !isMobile ? 'center' : 'flex-start',
         height: '50px',
         fontWeight: isActive ? "600" : "400",
@@ -51,12 +51,29 @@ const Sidebar = ({ isOpen, isMobile, options, onClose, onToggle }) => {
                             <Link
                                 to={option.path}
                                 style={linkStyle({ isActive })}
-                                className={isActive ? "bg-secondary text-dark" : "bg-primary text-light"}
+                                className={
+                                    `
+                                    ${isActive ? "bg-claims-secondary text-dark" : "bg-claims-primary text-light"}
+                                    ${
+                                        isOpen || isMobile ? "d-flex flex-row" : "d-flex flex-column"
+                                    }
+                                    `
+                            }
                                 onClick={isMobile ? onClose : undefined}
                                 title={!isOpen && !isMobile ? option.name : ''}
                             >
-                                <span className="fs-5">{option.icon}</span>
-                                {(isOpen || isMobile) && <span className="ms-3">{option.name}</span>}
+                                {
+                                    (isOpen || isMobile) ? (
+                                        <>
+                                            <span className="fs-5">{option.icon}</span>
+                                            <span className="ms-3">{option.name}</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span className="">{option.icon}</span>
+                                            <span style={{ fontSize: '0.5rem' }}>{option.name}</span>
+                                        </>
+                                    )}
                             </Link>
                         </li>
                     </RoleBasedContent>
@@ -67,7 +84,7 @@ const Sidebar = ({ isOpen, isMobile, options, onClose, onToggle }) => {
 
     if (isMobile) {
         return (
-            <Offcanvas show={isOpen} onHide={onClose} className="text-white" style={{ backgroundColor: "#006633", maxWidth: "250px" }}>
+            <Offcanvas show={isOpen} onHide={onClose} className="text-white bg-claims-primary" style={{ maxWidth: "250px" }}>
                 <Offcanvas.Header closeButton closeVariant="white">
                     <Offcanvas.Title>Menu</Offcanvas.Title>
                 </Offcanvas.Header>
@@ -93,8 +110,8 @@ const Sidebar = ({ isOpen, isMobile, options, onClose, onToggle }) => {
 
 
     return (
-        <div style={sidebarStyle} className="d-flex flex-column flex-shrink-0 bg-primary">
-            <div onClick={() => navigate("/dashboard")} className={`d-flex align-items-center justify-content-center w-100 mb-md-0 text-decoration-none bg-primary ${!isOpen ? 'justify-content-center' : 'me-md-auto'}`} style={{ height: '67px' }}>
+        <div style={sidebarStyle} className="d-flex flex-column flex-shrink-0 bg-claims-primary">
+            <div onClick={() => navigate("/dashboard")} className={`d-flex align-items-center justify-content-center w-100 mb-md-0 text-decoration-none bg-claims-primary ${!isOpen ? 'justify-content-center' : 'me-md-auto'}`} style={{ height: '67px' }}>
                 <img className="fs-4" style={{ height: '36px' }} src={isOpen ? Logo : LogoShrinked} />
             </div>
             <NavItems />

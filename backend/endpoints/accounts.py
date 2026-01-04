@@ -34,7 +34,14 @@ def profile():
     
     db = get_db()
     cursor = db.cursor(dictionary=True)
-    cursor.execute("SELECT id, name, email, school_id, role, suspended_at, deleted_at, profile_picture, birth_date, gender, department_name, password_reset_required, preferences FROM accounts WHERE id = %s", (current_user_id,))
+    cursor.execute("""
+        SELECT a.id, a.name, a.email, a.school_id, a.role, a.suspended_at, a.deleted_at, 
+               a.profile_picture, a.birth_date, a.gender, a.department_id, 
+               d.name as department_name, a.password_reset_required, a.preferences 
+        FROM accounts a
+        LEFT JOIN departments d ON a.department_id = d.id
+        WHERE a.id = %s
+    """, (current_user_id,))
     user = cursor.fetchone()
     cursor.close()
     
@@ -223,10 +230,10 @@ def update_profile():
     school_id = data.get('school_id')
     birth_date = data.get('birth_date')
     gender = data.get('gender')
-    department_name = data.get('department_name')
+    # department_id is managed by admin only via /accounts/<id> endpoint
     preferences = data.get('preferences')  # JSON object: {theme, toastPosition, seasonalEffects}
     
-    if not any([name, password, school_id, birth_date, gender, department_name, preferences is not None]):
+    if not any([name, password, school_id, birth_date, gender, preferences is not None]):
         return jsonify({"msg": "Nothing to update"}), 400
         
     db = get_db()
@@ -235,7 +242,7 @@ def update_profile():
     try:
         # Fetch current profile for comparison
         cursor.execute(
-            "SELECT name, school_id, birth_date, gender, department_name FROM accounts WHERE id = %s",
+            "SELECT name, school_id, birth_date, gender FROM accounts WHERE id = %s",
             (current_user_id,)
         )
         current_profile = cursor.fetchone()
@@ -288,10 +295,6 @@ def update_profile():
             fields.append("gender = %s")
             values.append(gender)
         
-        if department_name is not None:
-            fields.append("department_name = %s")
-            values.append(department_name or None)
-        
         if preferences is not None:
             import json
             # Store as JSON string
@@ -317,8 +320,7 @@ def update_profile():
             update_details['birth_date_updated'] = True
         if gender:
             update_details['gender_updated'] = True
-        if department_name is not None:
-            update_details['department_updated'] = True
+
         
         # Always log activity if any field was submitted for update
         if update_details:
@@ -471,7 +473,7 @@ def confirm_email_change():
 @accounts_bp.route('/', methods=['POST'])
 @jwt_required()
 @verify_role_freshness
-@role_required(['admin', 'it_head', 'lab_head'])
+@role_required(['admin', 'it_head', 'lab_head', 'department_head'])
 def create_account():
     current_claims = get_jwt()
     current_role = current_claims.get("role")
@@ -484,7 +486,20 @@ def create_account():
     role = data.get('role')
     birth_date = data.get('birth_date') or None
     gender = data.get('gender') or None
-    department_name = data.get('department_name') or None
+    department_id = data.get('department_id') or None
+    
+    # Enforce Department for Heads
+    if current_role in ['it_head', 'lab_head', 'department_head']:
+        db = get_db()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT department_id FROM accounts WHERE id = %s", (get_jwt_identity(),))
+        user_dept = cursor.fetchone()
+        cursor.close()
+        
+        if user_dept and user_dept['department_id']:
+            department_id = user_dept['department_id']
+        else:
+            return jsonify({"msg": "Your account is not assigned to a department, cannot create users"}), 403
 
     if not all([name, email, password, role]):
         return jsonify({"msg": "Missing required fields"}), 400
@@ -494,6 +509,8 @@ def create_account():
         return jsonify({"msg": "Protection Policy: IT Head can only create IT Technicians"}), 403
     if current_role == 'lab_head' and role != 'lab_assistant':
         return jsonify({"msg": "Protection Policy: Lab Head can only create Lab Assistants"}), 403
+    if current_role == 'department_head' and role not in ['department_staff', 'department_assistant', 'lab_head', 'lab_assistant']:
+        return jsonify({"msg": "Protection Policy: Department Head can only create Department Staff, Department Assistants, Lab Heads and Lab Assistants"}), 403
     
     # Policy: Only Admin can create Head roles
     if role in ['admin', 'it_head', 'lab_head'] and current_role != 'admin':
@@ -518,10 +535,12 @@ def create_account():
     account_id = uuid.uuid4().hex[:16]
     hashed_pw = hash_password(password)
     
+    password_reset_required = 1 if data.get('password_reset_required') else 0
+
     try:
         cursor.execute(
-            "INSERT INTO accounts (id, name, email, school_id, password_hash, role, birth_date, gender, department_name) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
-            (account_id, name, email, school_id or None, hashed_pw, role, birth_date, gender, department_name)
+            "INSERT INTO accounts (id, name, email, school_id, password_hash, role, birth_date, gender, department_id, password_reset_required) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+            (account_id, name, email, school_id or None, hashed_pw, role, birth_date, gender, department_id, password_reset_required)
         )
         db.commit()
         cursor.close()
@@ -534,7 +553,7 @@ def create_account():
 
 @accounts_bp.route('/', methods=['GET'])
 @jwt_required()
-@role_required(['admin', 'it_head', 'lab_head'])
+@role_required(['admin', 'it_head', 'lab_head', 'department_head'])
 def list_accounts():
     current_claims = get_jwt()
     current_role = current_claims.get("role")
@@ -558,23 +577,47 @@ def list_accounts():
     if sort_order.lower() not in ['asc', 'desc']:
         sort_order = 'desc'
 
-    query = "SELECT id, name, email, school_id, role, suspended_at, deleted_at, created_at, updated_at, profile_picture, birth_date, gender, department_name FROM accounts WHERE id != %s"
+    query = """
+        SELECT a.id, a.name, a.email, a.school_id, a.role, a.suspended_at, a.deleted_at, 
+               a.created_at, a.updated_at, a.profile_picture, a.birth_date, a.gender, 
+               a.department_id, d.name as department_name 
+        FROM accounts a
+        LEFT JOIN departments d ON a.department_id = d.id
+        WHERE a.id != %s
+    """
     params = [current_user_id]
 
-    if not include_deleted or current_role != 'admin':
-         query += " AND deleted_at IS NULL"
+    allowed_to_view_deleted = ['admin', 'it_head', 'lab_head', 'department_head']
+    if not include_deleted or current_role not in allowed_to_view_deleted:
+         query += " AND a.deleted_at IS NULL"
     
     # RBAC Filtering
     if current_role == 'it_head':
-        query += " AND role = %s"
+        query += " AND a.role = %s"
         params.append('it_technician')
     elif current_role == 'lab_head':
-        query += " AND role = %s"
+        query += " AND a.role = %s"
         params.append('lab_assistant')
+    elif current_role == 'department_head':
+        placeholders = ','.join(['%s'] * 4)
+        query += f" AND a.role IN ({placeholders})"
+        params.extend(['department_staff', 'department_assistant', 'lab_head', 'lab_assistant'])
+
+    # Department Filtering for Heads
+    if current_role in ['it_head', 'lab_head', 'department_head']:
+        db = get_db()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT department_id FROM accounts WHERE id = %s", (current_user_id,))
+        user_dept = cursor.fetchone()
+        cursor.close()
+        
+        if user_dept and user_dept['department_id']:
+             query += " AND a.department_id = %s"
+             params.append(user_dept['department_id'])
 
     # User Filters
     if search:
-        query += " AND (name LIKE %s OR email LIKE %s OR school_id LIKE %s OR role LIKE %s OR department_name LIKE %s)"
+        query += " AND (a.name LIKE %s OR a.email LIKE %s OR a.school_id LIKE %s OR a.role LIKE %s OR d.name LIKE %s)"
         params.extend([f"%{search}%", f"%{search}%", f"%{search}%", f"%{search}%", f"%{search}%"])
     
     # Role filter - supports comma-separated values for multi-select
@@ -582,7 +625,7 @@ def list_accounts():
         roles = [r.strip() for r in role.split(',') if r.strip()]
         if roles:
             placeholders = ', '.join(['%s'] * len(roles))
-            query += f" AND role IN ({placeholders})"
+            query += f" AND a.role IN ({placeholders})"
             params.extend(roles)
     
     # Status filter - supports comma-separated values for multi-select
@@ -619,6 +662,10 @@ def list_accounts():
     elif current_role == 'lab_head':
         stats_query += " AND role = %s"
         stats_params.append('lab_assistant')
+    elif current_role == 'department_head':
+        placeholders = ','.join(['%s'] * 4)
+        stats_query += f" AND role IN ({placeholders})"
+        stats_params.extend(['department_staff', 'department_assistant', 'lab_head', 'lab_assistant'])
         
     stats_query += " GROUP BY role"
     
@@ -636,7 +683,7 @@ def list_accounts():
 @accounts_bp.route('/<id>', methods=['PUT'])
 @jwt_required()
 @verify_role_freshness
-@role_required(['admin', 'it_head', 'lab_head'])
+@role_required(['admin', 'it_head', 'lab_head', 'department_head'])
 def update_account(id):
     current_claims = get_jwt()
     current_role = current_claims.get("role")
@@ -668,6 +715,27 @@ def update_account(id):
         if target_role != 'lab_assistant':
              cursor.close()
              return jsonify({"msg": "Access Denied: You can only manage Lab Assistants"}), 403
+
+    if current_role == 'department_head':
+        if target_role not in ['department_staff', 'department_assistant', 'lab_head', 'lab_assistant']:
+             cursor.close()
+             return jsonify({"msg": "Access Denied: You can only manage Department Staff, Assistants, Lab Heads, and Lab Assistants"}), 403
+
+    # Department Verification for Heads
+    if current_role in ['it_head', 'lab_head', 'department_head']:
+        # Fetch current user's department
+        cursor.execute("SELECT department_id FROM accounts WHERE id = %s", (current_id,))
+        current_user_dept = cursor.fetchone()
+        
+        # Check if target account is in the same department
+        # We need to fetch target's department_id if not already fetched?
+        # target_account only has 'role' fetched above. Let's fetch department_id too.
+        cursor.execute("SELECT department_id FROM accounts WHERE id = %s", (id,))
+        target_details = cursor.fetchone()
+        
+        if not current_user_dept['department_id'] or current_user_dept['department_id'] != target_details['department_id']:
+             cursor.close()
+             return jsonify({"msg": "Access Denied: You can only manage accounts within your department"}), 403
              
     data = request.json
     
@@ -713,11 +781,13 @@ def update_account(id):
         # Validate role assignment based on current user's role
         allowed_roles = []
         if current_role == 'admin':
-            allowed_roles = ['admin', 'it_head', 'it_technician', 'lab_head', 'lab_assistant']
+            allowed_roles = ['admin', 'it_head', 'it_technician', 'lab_head', 'lab_assistant', 'department_head', 'department_staff', 'department_assistant']
         elif current_role == 'it_head':
             allowed_roles = ['it_technician']
         elif current_role == 'lab_head':
             allowed_roles = ['lab_assistant']
+        elif current_role == 'department_head':
+            allowed_roles = ['department_staff', 'department_assistant', 'lab_head', 'lab_assistant']
         
         if new_role not in allowed_roles:
             cursor.close()
@@ -748,9 +818,12 @@ def update_account(id):
         update_fields.append("gender = %s")
         params.append(data['gender'] or None)
     
-    if 'department_name' in data:
-        update_fields.append("department_name = %s")
-        params.append(data['department_name'] or None)
+    if 'department_id' in data:
+        if current_role != 'admin':
+             cursor.close()
+             return jsonify({"msg": "Only administrators can change department assignment"}), 403
+        update_fields.append("department_id = %s")
+        params.append(data['department_id'] or None)
     
     if 'password_reset_required' in data:
         password_reset_required = 1 if data['password_reset_required'] else 0
@@ -794,28 +867,45 @@ def update_account(id):
 @accounts_bp.route('/<id>', methods=['DELETE'])
 @jwt_required()
 @verify_role_freshness
-@role_required(['admin', 'it_head', 'lab_head'])
+@role_required(['admin', 'it_head', 'lab_head', 'department_head'])
 def delete_account(id):
     current_claims = get_jwt()
     current_role = current_claims.get("role")
+    current_user_id = get_jwt_identity()
+
+    if current_user_id == id:
+        return jsonify({"msg": "You cannot delete your own account"}), 403
     
     db = get_db()
     cursor = db.cursor(dictionary=True)
     
     # check if exists, and role hirarchy
-    cursor.execute("SELECT id, role FROM accounts WHERE id = %s", (id,))
+    cursor.execute("SELECT id, role, deleted_at, profile_picture, department_id FROM accounts WHERE id = %s", (id,))
     target_account = cursor.fetchone()
     
     if not target_account:
         cursor.close()
         return jsonify({"msg": "Account not found"}), 404
         
+    # Hierarchy Checks
     if current_role == 'it_head' and target_account['role'] != 'it_technician':
         cursor.close()
         return jsonify({"msg": "IT Head can only delete IT Technicians"}), 403
     if current_role == 'lab_head' and target_account['role'] != 'lab_assistant':
         cursor.close()
         return jsonify({"msg": "Lab Head can only delete Lab Assistants"}), 403
+    if current_role == 'department_head':
+        allowed_targets = ['department_staff', 'department_assistant', 'lab_head', 'lab_assistant']
+        if target_account['role'] not in allowed_targets:
+             cursor.close()
+             return jsonify({"msg": "Department Head can only delete Department Staff/Assistants and Lab Heads/Assistants"}), 403
+        
+        # Check Department
+        cursor.execute("SELECT department_id FROM accounts WHERE id = %s", (current_user_id,))
+        me = cursor.fetchone()
+        if not me or me['department_id'] != target_account['department_id']:
+             cursor.close()
+             return jsonify({"msg": "You can only delete accounts in your department"}), 403
 
     if target_account['role'] == 'admin':
          cursor.execute("SELECT COUNT(*) as count FROM accounts WHERE role = 'admin' AND deleted_at IS NULL")
@@ -824,10 +914,14 @@ def delete_account(id):
              cursor.close()
              return jsonify({"msg": "Cannot delete the only admin account"}), 400
 
-    hard = request.args.get('hard', 'false').lower() == 'true'
+    force = request.args.get('force', 'false').lower() == 'true'
 
     try:
-        if hard and current_role == 'admin':
+        if force:
+             if current_role not in ['admin', 'it_head', 'department_head']:
+                  cursor.close()
+                  return jsonify({"msg": "Only Admin, IT Head, and Department Head can permanently delete accounts"}), 403
+
              # check if profile picture exists and delete it
              if target_account.get('profile_picture'):
                  uploads_dir = os.path.join(os.getcwd(), 'uploads')
@@ -840,11 +934,16 @@ def delete_account(id):
 
              cursor.execute("DELETE FROM accounts WHERE id = %s", (id,))
              msg = "Account permanently deleted"
+             log_activity(current_user_id, 'deleted', {'target_id': id, 'type': 'hard_delete'})
         else:
             # Soft delete
+            if target_account['deleted_at']:
+                cursor.close()
+                return jsonify({"msg": "Account is already deleted"}), 400
+
             cursor.execute("UPDATE accounts SET deleted_at = NOW() WHERE id = %s", (id,))
-            log_activity(id, 'deleted')
-            msg = "Account deleted successfully"
+            msg = "Account soft deleted successfully"
+            log_activity(current_user_id, 'deleted', {'target_id': id, 'type': 'soft_delete'})
 
         db.commit()
         cursor.close()
@@ -858,27 +957,53 @@ def delete_account(id):
 @accounts_bp.route('/<id>/restore', methods=['POST'])
 @jwt_required()
 @verify_role_freshness
-@role_required(['admin'])
+@role_required(['admin', 'it_head', 'lab_head', 'department_head'])
 def restore_account(id):
-    """Restore a soft-deleted account (admin only)."""
+    current_claims = get_jwt()
+    current_role = current_claims.get("role")
+    current_user_id = get_jwt_identity()
+
     db = get_db()
     cursor = db.cursor(dictionary=True)
     
     # Check if account exists and is deleted
-    cursor.execute("SELECT id, name, deleted_at FROM accounts WHERE id = %s", (id,))
-    account = cursor.fetchone()
+    cursor.execute("SELECT id, name, role, deleted_at, department_id FROM accounts WHERE id = %s", (id,))
+    target = cursor.fetchone()
     
-    if not account:
+    if not target:
         cursor.close()
         return jsonify({"msg": "Account not found"}), 404
         
-    if not account['deleted_at']:
+    if not target['deleted_at']:
         cursor.close()
         return jsonify({"msg": "Account is not deleted"}), 400
+        
+    # Hierarchy Checks (Copy of delete logic)
+    if current_role == 'it_head' and target['role'] != 'it_technician':
+        cursor.close()
+        return jsonify({"msg": "Access Denied"}), 403
+    if current_role == 'lab_head' and target['role'] != 'lab_assistant':
+        cursor.close()
+        return jsonify({"msg": "Access Denied"}), 403
+    if current_role == 'department_head':
+        allowed_targets = ['department_staff', 'department_assistant', 'lab_head', 'lab_assistant']
+        if target['role'] not in allowed_targets:
+             cursor.close()
+             return jsonify({"msg": "Access Denied"}), 403
+        
+        # Check Department
+        cursor.execute("SELECT department_id FROM accounts WHERE id = %s", (current_user_id,))
+        me = cursor.fetchone()
+        if not me or me['department_id'] != target['department_id']:
+             cursor.close()
+             return jsonify({"msg": "Access Denied"}), 403
     
     try:
         cursor.execute("UPDATE accounts SET deleted_at = NULL WHERE id = %s", (id,))
         db.commit()
+        cursor.close()
+        log_activity(current_user_id, 'restored', {'target_id': id})
+        return jsonify({"msg": f"Account '{target['name']}' restored successfully"}), 200
         cursor.close()
         log_activity(id, 'restored')
         return jsonify({"msg": f"Account '{account['name']}' restored successfully"}), 200
@@ -896,9 +1021,55 @@ def get_account_activities(id):
     current_claims = get_jwt()
     current_role = current_claims.get("role")
     
-    # Users can only view their own activities, admins can view any
-    if id != current_user_id and current_role != 'admin':
-        return jsonify({"msg": "Access denied"}), 403
+    # RBAC: Allow Admins, or Managers viewing their subordinates
+    # Check if target account is within my management scope
+    
+    # Simple self-check
+    if id == current_user_id:
+        pass # Allow
+    elif current_role == 'admin':
+        pass # Allow
+    elif current_role == 'it_head':
+        # Check if target is it_technician
+        db = get_db()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT role FROM accounts WHERE id = %s", (id,))
+        target = cursor.fetchone()
+        cursor.close()
+        if not target or target['role'] != 'it_technician':
+            return jsonify({"msg": "Access denied"}), 403
+            
+    elif current_role == 'lab_head':
+        db = get_db()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT role, department_id FROM accounts WHERE id = %s", (id,))
+        target = cursor.fetchone()
+        
+        # Also check department match
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT department_id FROM accounts WHERE id = %s", (current_user_id,))
+        me = cursor.fetchone()
+        cursor.close()
+        
+        if not target or target['role'] != 'lab_assistant' or target['department_id'] != me['department_id']:
+            return jsonify({"msg": "Access denied"}), 403
+
+    elif current_role == 'department_head':
+        db = get_db()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT role, department_id FROM accounts WHERE id = %s", (id,))
+        target = cursor.fetchone()
+        
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT department_id FROM accounts WHERE id = %s", (current_user_id,))
+        me = cursor.fetchone()
+        cursor.close()
+        
+        allowed_targets = ['department_staff', 'department_assistant', 'lab_head', 'lab_assistant']
+        if not target or target['role'] not in allowed_targets or target['department_id'] != me['department_id']:
+            return jsonify({"msg": "Access denied"}), 403
+    else:
+         return jsonify({"msg": "Access denied"}), 403
     
     limit = request.args.get('limit', 20, type=int)
     limit = min(limit, 100)  # Max 100 items
@@ -934,3 +1105,5 @@ def get_account_activities(id):
         logger.exception("Failed to get account activities")
         cursor.close()
         return jsonify({"msg": "Failed to get activities. Please try again."}), 500
+
+

@@ -10,25 +10,7 @@ const ReauthContext = createContext(null);
 
 export const useReauth = () => useContext(ReauthContext);
 
-// Event emitter for triggering modal from axios interceptor
-class ReauthEventEmitter {
-    constructor() {
-        this.listeners = [];
-    }
-
-    subscribe(callback) {
-        this.listeners.push(callback);
-        return () => {
-            this.listeners = this.listeners.filter(cb => cb !== callback);
-        };
-    }
-
-    emit(data) {
-        this.listeners.forEach(callback => callback(data));
-    }
-}
-
-export const reauthEmitter = new ReauthEventEmitter();
+import { reauthEmitter } from '../utils/reauthEmitter';
 
 /**
  * ReauthModal Provider - Wrap your app with this to enable re-authentication modals

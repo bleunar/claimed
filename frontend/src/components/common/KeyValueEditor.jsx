@@ -3,7 +3,7 @@ import { Plus, Trash, ExclamationCircle, Copy, Exclamation } from 'react-bootstr
 import toast from 'react-hot-toast';
 import { SUGGESTED_KEYS_BY_TYPE, DEFAULT_KEYS } from '../../utils/componentTypes';
 
-const KeyValueEditor = ({ properties, onChange, readOnly = false, setPropertiesModal = () => { }, showInfo = false, componentType = null }) => {
+const KeyValueEditor = ({ maxHeight = "300px", properties, onChange, readOnly = false, canEdit = true, setPropertiesModal = () => { }, showInfo = false, componentType = null }) => {
     // Properties object to array of {key, value}
     const [pairs, setPairs] = useState([]);
     const [focusedKeyIndex, setFocusedKeyIndex] = useState(null);
@@ -129,16 +129,11 @@ const KeyValueEditor = ({ properties, onChange, readOnly = false, setPropertiesM
 
     if (readOnly) {
         if (!properties || Object.keys(properties).length === 0) {
-            return <div className="text-muted small fst-italic text-center my-3">No properties defined for this component. <span className='text-primary fst-normal cursor-pointer' onClick={() => toggleModalReadOnly()}>Add One</span></div>;
+            return <div className="text-muted small fst-italic text-center my-3">No properties defined for this component.{canEdit && <> <span className='text-claims-primary fst-normal cursor-pointer' onClick={() => toggleModalReadOnly()}>Add One</span></>}</div>;
         }
         return (
             <>
                 <div className="">
-
-                    <div className="d-flex justify-content-end mb-2">
-                        <div className="btn btn-sm btn-primary" onClick={() => toggleModalReadOnly()}>Edit Properties</div>
-                    </div>
-
                     <div className="table-responsive mb-3">
                         <table className="table table-sm border table-striped mb-0">
                             <thead>
@@ -153,7 +148,7 @@ const KeyValueEditor = ({ properties, onChange, readOnly = false, setPropertiesM
                                         <td className="fw-medium border-end" style={{ width: "50%" }}>
                                             <div className="d-flex align-items-center justify-content-start px-2 cursor-pointer" onClick={() => copyToClipboard(k)} title={k}>
                                                 <span className="text-truncate me-2">{k}</span>
-                                                <button className="btn btn-link btn-sm p-0 text-muted" title="Click to copy the key">
+                                                <button className="btn btn-link btn-sm p-0 text-muted opacity-50" title="Copy the property key">
                                                     <Copy style={{ fontSize: '0.75rem' }} />
                                                 </button>
                                             </div>
@@ -163,7 +158,7 @@ const KeyValueEditor = ({ properties, onChange, readOnly = false, setPropertiesM
                                                 <span className="text-truncate me-2">{v}</span>
                                                 {
                                                     v ? (
-                                                        <button className="btn btn-link btn-sm p-0 text-muted" title="Click to copy the value">
+                                                        <button className="btn btn-link btn-sm p-0 text-muted opacity-50" title="Copy the property value">
                                                             <Copy style={{ fontSize: '0.75rem' }} />
                                                         </button>
                                                     ) : (
@@ -177,6 +172,13 @@ const KeyValueEditor = ({ properties, onChange, readOnly = false, setPropertiesM
                             </tbody>
                         </table>
                     </div>
+
+
+                    {canEdit && (
+                        <div className="d-flex justify-content-end mb-2">
+                            <div className="btn btn-sm btn-link" onClick={() => toggleModalReadOnly()}>Edit Properties</div>
+                        </div>
+                    )}
                 </div>
             </>
         );
@@ -184,15 +186,6 @@ const KeyValueEditor = ({ properties, onChange, readOnly = false, setPropertiesM
 
     return (
         <>
-            <div className="mb-2 d-flex justify-content-end">
-                <button
-                    type="button"
-                    className="btn btn-sm btn-link"
-                    onClick={handleAddPair}
-                >
-                    Add Property
-                </button>
-            </div>
 
             {hasDuplicates && (
                 <div className="alert alert-danger py-2 px-3 small d-flex align-items-center gap-2">
@@ -201,7 +194,7 @@ const KeyValueEditor = ({ properties, onChange, readOnly = false, setPropertiesM
                 </div>
             )}
 
-            <div style={{ maxHeight: '300px', overflowY: 'auto', overflowX: 'visible' }} className="position-relative">
+            <div style={{ maxHeight: maxHeight, overflowY: 'auto', overflowX: 'visible' }} className="position-relative">
                 <div className="d-flex flex-column gap-2 shadow-sm p-2" style={{ paddingBottom: '160px' }}>
                     {
                         pairs.length > 0 && pairs.map((pair, index) => {
@@ -213,7 +206,7 @@ const KeyValueEditor = ({ properties, onChange, readOnly = false, setPropertiesM
                                             ref={el => inputRefs.current[index] = el}
                                             type="text"
                                             className={`form-control form-control-sm`}
-                                            placeholder="Property Name"
+                                            placeholder="Name"
                                             value={pair.key}
                                             onFocus={(e) => {
                                                 const rect = e.target.getBoundingClientRect();
@@ -239,7 +232,7 @@ const KeyValueEditor = ({ properties, onChange, readOnly = false, setPropertiesM
                                                         top: dropdownPosition.top,
                                                         left: dropdownPosition.left,
                                                         width: dropdownPosition.width,
-                                                        maxHeight: '150px',
+                                                        maxHeight: '120px',
                                                         overflowY: 'auto',
                                                         zIndex: 9999
                                                     }}
@@ -300,6 +293,17 @@ const KeyValueEditor = ({ properties, onChange, readOnly = false, setPropertiesM
                     )
                 }
             </div >
+
+
+            <div className="mb-2 d-flex justify-content-end">
+                <button
+                    type="button"
+                    className="btn btn-sm btn-link"
+                    onClick={handleAddPair}
+                >
+                    Add Property
+                </button>
+            </div>
         </>
     );
 };

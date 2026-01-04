@@ -21,12 +21,12 @@
 }
 
 .navbar-frosted {
-    background-color: rgba(var(--bs-primary-rgb), 0.25) !important;
+    background-color: rgba(var(--bs-claims-primary-rgb), 0.25) !important;
     backdrop-filter: blur(10px);
     transition: background-color 0.3s ease, border-color 0.3s ease;
 
     [data-bs-theme="dark"] & {
-        background-color: rgba(var(--bs-primary-rgb), 0.25) !important;
+        background-color: rgba(var(--bs-claims-primary-rgb), 0.25) !important;
     }
 }
 
@@ -44,7 +44,7 @@
 }
 
 .hover-raised:hover {
-    transform: translateY(-5px);
+    transform: translateY(-3px);
 }
 
 .c-hover {
@@ -54,4 +54,8 @@
 
 .p-hover:hover .c-hover {
     transform: translateY(0px);
+}
+
+.scrollbar-hidden {
+    scrollbar-width: none !important;
 }

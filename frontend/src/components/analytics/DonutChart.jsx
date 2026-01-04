@@ -5,7 +5,20 @@ import { Card } from 'react-bootstrap';
 import useChartData from '../../hooks/useChartData';
 import { ExclamationTriangle } from 'react-bootstrap-icons';
 
-const DonutChart = ({ apiPath, title, options, colors = [], colorMap = null, cutout = '60%', bare = false }) => {
+const DonutChart = ({
+    apiPath,
+    title,
+    options,
+    colors = [],
+    colorMap = null,
+    cutout = '60%',
+    bare = false,
+    showTitle = true,
+    showLegend = true,
+    legendPosition = 'top',
+    height = '300px',
+    className = ''
+}) => {
     const { chartData, error } = useChartData(apiPath);
 
     // Default colors if none provided
@@ -49,8 +62,8 @@ const DonutChart = ({ apiPath, title, options, colors = [], colorMap = null, cut
         maintainAspectRatio: false,
         cutout: cutout,
         plugins: {
-            legend: { position: 'top' },
-            title: { display: !!title, text: title },
+            legend: { display: showLegend, position: legendPosition },
+            title: { display: showTitle && !!title, text: title },
         },
         ...options
     };
@@ -78,7 +91,7 @@ const DonutChart = ({ apiPath, title, options, colors = [], colorMap = null, cut
     // Bare mode: return chart only without Card wrapper
     if (bare) {
         return (
-            <div className="position-relative w-100" style={{ height: '300px' }}>
+            <div className={`position-relative w-100 ${className}`} style={{ height: height }}>
                 {chartContent}
             </div>
         );
@@ -86,8 +99,8 @@ const DonutChart = ({ apiPath, title, options, colors = [], colorMap = null, cut
 
     // Wrapped mode: return full Card with styling
     return (
-        <Card className="shadow bg-body-tertiary h-100">
-            <Card.Body className='p-0 relative w-100' style={{ height: '300px' }}>
+        <Card className={`shadow bg-body-tertiary h-100 ${className}`}>
+            <Card.Body className='p-0 relative w-100' style={{ height: height }}>
                 {chartContent}
             </Card.Body>
         </Card>

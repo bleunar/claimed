@@ -147,7 +147,7 @@ api.interceptors.response.use(
             originalRequest._reauthRetry = true;
 
             // Import the emitter dynamically to avoid circular dependencies
-            const { reauthEmitter } = await import('../components/ReauthModal');
+            const { reauthEmitter } = await import('../utils/reauthEmitter');
 
             return new Promise((resolve, reject) => {
                 // Set up one-time listener for re-auth result

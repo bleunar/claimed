@@ -3,7 +3,7 @@ import { useTheme } from '../context/ThemeContext';
 import { Form, Button, Card, Row, Col, Image, Modal, ProgressBar } from 'react-bootstrap';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
-import { Person, PersonCircle, Eye, EyeSlash } from 'react-bootstrap-icons';
+import { Person, PersonCircle, Eye, EyeSlash, InfoCircle } from 'react-bootstrap-icons';
 import ChangeEmailModal from '../components/modals/ChangeEmailModal';
 import ChangePasswordModal from '../components/modals/ChangePasswordModal';
 import toast from 'react-hot-toast';
@@ -12,7 +12,7 @@ import ActivityTimeline from '../components/common/ActivityTimeline';
 
 const ProfilePage = () => {
     const { user, refreshUser } = useAuth();
-    const { theme, toggleTheme, toastPosition, setToastPosition, seasonalEffects, toggleSeasonalEffects, hasActiveSeason, savePreferences, savingPreferences, hasUnsavedChanges, effectiveTheme, effectiveToastPosition, effectiveSeasonalEffects } = useTheme();
+    const { theme, toggleTheme, toastPosition, setToastPosition, seasonalEffects, toggleSeasonalEffects, hasActiveSeason, savePreferences, savingPreferences, hasUnsavedChanges, effectiveTheme, effectiveToastPosition, effectiveSeasonalEffects, effectiveEmailOptOut, toggleEmailOptOut } = useTheme();
     const [name, setName] = useState('');
     const [uploading, setUploading] = useState(false);
     const [imageTimestamp, setImageTimestamp] = useState(Date.now());
@@ -61,8 +61,8 @@ const ProfilePage = () => {
             const updateData = {
                 name,
                 birth_date: birthDate || null,
-                gender: gender || null,
-                department_name: departmentName || null
+                gender: gender || null
+                // department_id is managed by admin only, not included here
             };
             // Include school_id for admin/head roles
             if (['admin', 'it_head', 'lab_head'].includes(user?.role)) {
@@ -155,9 +155,17 @@ const ProfilePage = () => {
         return null;
     };
 
+    const originalDate = user?.birth_date ? new Date(user.birth_date).toISOString().split('T')[0] : '';
+    const hasNameChanged = name !== user?.name;
+    const hasDateChanged = birthDate !== originalDate;
+    const hasGenderChanged = gender !== (user?.gender || '');
+    const hasSchoolIdChanged = ['admin', 'it_head', 'lab_head'].includes(user?.role) && schoolId !== (user?.school_id || '');
+
+    const hasProfileChanges = hasNameChanged || hasDateChanged || hasGenderChanged || hasSchoolIdChanged;
+
     return (
-        <div className="container py-3">
-            <h2 className="h4 mb-3 fw-bold">User Profile</h2>
+        <div className="container p-0 py-3 overflow-hidden">
+            <h2 className="h4 mb-3 fw-bold">My Profile</h2>
             <Row className="g-4 mb-4">
                 <Col lg={4}>
                     <Card className='h-100 overflow-hidden shadow-sm'>
@@ -166,6 +174,7 @@ const ProfilePage = () => {
                             <div className="mb-3 position-relative d-inline-block">
                                 <ProfileImage
                                     src={getProfileImageUrl()}
+                                    name={user?.name}
                                     size="150px"
                                     shape='circle'
                                 />
@@ -175,7 +184,7 @@ const ProfilePage = () => {
                         </Card.Body>
                         <Card.Footer>
                             <div className="d-flex justify-content-end gap-2">
-                                <Form.Label htmlFor="upload-photo" className={`btn btn-primary mb-0`}>
+                                <Form.Label htmlFor="upload-photo" className={`btn btn-claims-primary mb-0`}>
                                     Update Photo
                                 </Form.Label>
                                 <Form.Control
@@ -213,6 +222,18 @@ const ProfilePage = () => {
                                 </div>
 
                                 <div className="col-12 col-md-6">
+                                    <Form.Group className="" title='Contact the administrator for department shifts'>
+                                        <Form.Label>Department</Form.Label>
+                                        <Form.Control
+                                            type="text"
+                                            value={user?.department_name || 'Not assigned'}
+                                            disabled
+                                            className="text-muted"
+                                        />
+                                    </Form.Group>
+                                </div>
+
+                                <div className="col-12 col-md-6">
                                     <Form.Group className="mb-3">
                                         <Form.Label>School ID</Form.Label>
                                         {['admin', 'it_head', 'lab_head'].includes(user?.role) ? (
@@ -225,8 +246,9 @@ const ProfilePage = () => {
                                             <Form.Control type="text" value={user?.school_id || ''} disabled />
                                         )}
                                     </Form.Group>
-
                                 </div>
+
+
 
                                 <div className="col-12 col-md-6">
                                     <Form.Group className="mb-3">
@@ -265,47 +287,32 @@ const ProfilePage = () => {
                                         </Form.Select>
                                     </Form.Group>
                                 </div>
-
-                                <div className="col-12 col-md-6">
-                                    <Form.Group className="">
-                                        <Form.Label>Department</Form.Label>
-                                        <Form.Select
-                                            value={departmentName}
-                                            onChange={(e) => setDepartmentName(e.target.value)}
-                                        >
-                                            <option value="" hidden>Select department</option>
-                                            <option value="ITSD">ITSD</option>
-                                            <option value="CITE">CITE</option>
-                                            <option value="others">Other</option>
-                                        </Form.Select>
-                                    </Form.Group>
-                                </div>
                             </Form>
 
-                                <div className="d-flex d-lg-none flex-wrap gap-2 align-items-center justify-content-start mt-3">
-                                    <Button variant="link" size='sm' className='text-nowrap' onClick={() => setShowPasswordModal(true)}>
-                                        Change Password
-                                    </Button>
+                            <div className="d-flex d-lg-none flex-wrap gap-2 align-items-center justify-content-start mt-3">
+                                <Button variant="claims-primary" size='sm' className='text-nowrap' onClick={() => setShowPasswordModal(true)}>
+                                    Change Password
+                                </Button>
 
-                                    <Button
-                                        variant="link"
-                                        size='sm'
-                                        className='text-nowrap'
-                                        onClick={() => setShowEmailModal(true)}
-                                    >
-                                        Change Email
-                                    </Button>
-                                </div>
+                                <Button
+                                    variant="claims-primary"
+                                    size='sm'
+                                    className='text-nowrap'
+                                    onClick={() => setShowEmailModal(true)}
+                                >
+                                    Change Email
+                                </Button>
+                            </div>
                         </Card.Body>
                         <Card.Footer>
                             <div className="d-flex justify-content-end justify-content-lg-between align-items-center gap-2">
                                 <div className="d-none d-lg-flex flex-wrap gap-2 align-items-center justify-content-start">
-                                    <Button variant="link" size='sm' className='text-nowrap' onClick={() => setShowPasswordModal(true)}>
+                                    <Button variant="claims-primary" size='sm' className='text-nowrap' onClick={() => setShowPasswordModal(true)}>
                                         Change Password
                                     </Button>
 
                                     <Button
-                                        variant="link"
+                                        variant="claims-primary"
                                         size='sm'
                                         className='text-nowrap'
                                         onClick={() => setShowEmailModal(true)}
@@ -313,7 +320,7 @@ const ProfilePage = () => {
                                         Change Email
                                     </Button>
                                 </div>
-                                <Button variant="primary" className='mb-0' onClick={handleUpdateName} disabled={updatingProfile}>
+                                <Button variant="claims-primary" className='mb-0' onClick={handleUpdateName} disabled={updatingProfile || !hasProfileChanges}>
                                     {updatingProfile ? (
                                         <><span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Updating...</>
                                     ) : 'Update'}
@@ -327,7 +334,7 @@ const ProfilePage = () => {
             <Row className='g-4 justify-content-end'>
                 <Col lg={8}>
                     <Card className='mb-4 mb-md-0 h-100 shadow-sm overflow-hidden'>
-                        <Card.Header className='text-body-secondary fw-bold'>Settings</Card.Header>
+                        <Card.Header className='text-body-secondary fw-bold'>General Settings</Card.Header>
                         <Card.Body className='bg-body-tertiary'>
                             <Form.Group className="mb-3 d-flex justify-content-between align-items-center">
                                 <Form.Label className="mb-0">Dark Mode</Form.Label>
@@ -336,6 +343,16 @@ const ProfilePage = () => {
                                     id="theme-switch"
                                     checked={effectiveTheme === 'dark'}
                                     onChange={toggleTheme}
+                                />
+                            </Form.Group>
+
+                            <Form.Group className="mb-3 d-flex justify-content-between align-items-center">
+                                <Form.Label className="mb-0">Opt-out of System Emails <InfoCircle title='You will not receive email notificatios sent from the system (Wala pa magamit)' className='text-muted small ms-1' /></Form.Label>
+                                <Form.Check
+                                    type="switch"
+                                    id="email-optout-switch"
+                                    checked={effectiveEmailOptOut}
+                                    onChange={toggleEmailOptOut}
                                 />
                             </Form.Group>
 
@@ -368,7 +385,7 @@ const ProfilePage = () => {
                         <Card.Footer>
                             <div className='text-end'>
                                 <Button
-                                    variant="primary"
+                                    variant="claims-primary"
                                     onClick={async () => {
                                         const result = await savePreferences();
                                         if (result.success) {
@@ -451,10 +468,10 @@ const ProfilePage = () => {
                     )}
                 </Modal.Body>
                 <Modal.Footer className='border-0'>
-                    <Button variant="secondary" onClick={handleClosePreview} disabled={uploading}>
+                    <Button variant="claims-secondary" onClick={handleClosePreview} disabled={uploading}>
                         Cancel
                     </Button>
-                    <Button variant="primary" onClick={handleConfirmUpload} disabled={uploading}>
+                    <Button variant="claims-primary" onClick={handleConfirmUpload} disabled={uploading}>
                         {uploading ? 'Uploading...' : 'Confirm Upload'}
                     </Button>
                 </Modal.Footer>

@@ -10,11 +10,13 @@ import ActivityTimeline from '../components/common/ActivityTimeline';
 
 import { useAuth } from '../context/AuthContext';
 import RoleBasedContent from '../components/ComponentProtector';
+import ProfileImage from '../components/common/ProfileImage';
 
 
 const AccountsPage = () => {
     const { user } = useAuth();
     const [accounts, setAccounts] = useState([]);
+    const [departments, setDepartments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [showPreviewModal, setShowPreviewModal] = useState(false);
@@ -30,7 +32,8 @@ const AccountsPage = () => {
         suspended: false,
         birth_date: '',
         gender: '',
-        department_name: ''
+        department_id: '',
+        password_reset_required: true
     });
     const [error, setError] = useState('');
 
@@ -178,8 +181,23 @@ const AccountsPage = () => {
         }
     };
 
+    const fetchDepartments = async () => {
+        try {
+            const response = await api.get('/departments/');
+            setDepartments(response.data || []);
+        } catch (err) {
+            console.error("Failed to fetch departments", err);
+        }
+    };
+
+    // Fetch departments on mount
+    useEffect(() => {
+        fetchDepartments();
+    }, []);
+
     const handleInputChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+        setFormData({ ...formData, [e.target.name]: value });
     };
 
     const handleEdit = (account) => {
@@ -192,7 +210,7 @@ const AccountsPage = () => {
             suspended: !!account.suspended_at,
             birth_date: account.birth_date ? new Date(account.birth_date).toISOString().split('T')[0] : '',
             gender: account.gender || '',
-            department_name: account.department_name || ''
+            department_id: account.department_id || ''
         });
         setShowModal(true);
     };
@@ -202,6 +220,7 @@ const AccountsPage = () => {
         let defaultRole = 'lab_assistant';
         if (user?.role === 'it_head') defaultRole = 'it_technician';
         if (user?.role === 'lab_head') defaultRole = 'lab_assistant';
+        if (user?.role === 'department_head') defaultRole = 'department_staff';
 
         setFormData({
             name: '',
@@ -212,7 +231,8 @@ const AccountsPage = () => {
             suspended: false,
             birth_date: '',
             gender: '',
-            department_name: ''
+            department_id: user?.role === 'admin' ? '' : (user?.department_id || ''),
+            password_reset_required: false
         });
         setShowModal(true);
     };
@@ -304,8 +324,13 @@ const AccountsPage = () => {
         e.preventDefault();
         setError('');
         try {
+            const payload = { ...formData };
+            if (user?.role !== 'admin') {
+                delete payload.department_id;
+            }
+
             if (editingId) {
-                await api.put(`/accounts/${editingId}`, formData);
+                await api.put(`/accounts/${editingId}`, payload);
                 toast.success("Account updated successfully");
             } else {
                 // For new accounts, backend skips password validation, so we can send empty/default if needed
@@ -317,7 +342,7 @@ const AccountsPage = () => {
                 // Be careful. If I remove it from Create too, then newly created accounts have no password?
                 // Or I can keep it for Create, but remove for Edit.
                 // Let's keep it for Create but remove for Edit.
-                await api.post('/accounts/', formData);
+                await api.post('/accounts/', payload);
                 toast.success("Account created successfully");
             }
             setShowModal(false);
@@ -485,7 +510,7 @@ const AccountsPage = () => {
         try {
             const promises = selectedAccounts.map(account => {
                 const updateData = {};
-                if (department) updateData.department_name = department;
+                if (department) updateData.department_id = department;
                 if (role && user?.role === 'admin') updateData.role = role;
                 if (status === 'active') updateData.suspended = false;
                 if (status === 'suspended') updateData.suspended = true;
@@ -534,7 +559,7 @@ const AccountsPage = () => {
     // Route Protection
     const navigate = useNavigate();
     useEffect(() => {
-        if (user && !['admin', 'it_head', 'lab_head'].includes(user.role)) {
+        if (user && !['admin', 'it_head', 'lab_head', 'department_head'].includes(user.role)) {
             toast.error("Access Denied");
             navigate('/dashboard');
         }
@@ -548,21 +573,33 @@ const AccountsPage = () => {
             { value: 'it_head', label: 'IT Head' },
             { value: 'it_technician', label: 'IT Technician' },
             { value: 'lab_head', label: 'Lab Head' },
-            { value: 'lab_assistant', label: 'Lab Assistant' }
+            { value: 'lab_assistant', label: 'Lab Assistant' },
+            { value: 'department_head', label: 'Department Head' },
+            { value: 'department_staff', label: 'Department Staff' },
+            { value: 'department_assistant', label: 'Department Assistant' }
         ];
         if (user.role === 'it_head') return [{ value: 'it_technician', label: 'IT Technician' }];
         if (user.role === 'lab_head') return [{ value: 'lab_assistant', label: 'Lab Assistant' }];
+        if (user.role === 'department_head') return [
+            { value: 'department_staff', label: 'Department Staff' },
+            { value: 'department_assistant', label: 'Department Assistant' },
+            { value: 'lab_head', label: 'Lab Head' },
+            { value: 'lab_assistant', label: 'Lab Assistant' }
+        ];
         return [];
     };
 
     // Helper to get display label for role filter
     const getRoleLabel = (roleValue) => {
         const roleLabels = {
-            admin: 'Admin',
+            admin: 'Administrator',
             it_head: 'IT Head',
             it_technician: 'IT Technician',
             lab_head: 'Lab Head',
-            lab_assistant: 'Lab Assistant'
+            lab_assistant: 'Lab Assistant',
+            department_head: 'Department Head',
+            department_staff: 'Department Staff',
+            department_assistant: 'Department Assistant'
         };
         return roleLabels[roleValue] || roleValue;
     };
@@ -640,17 +677,17 @@ const AccountsPage = () => {
                 </div>
             </div>
 
-            <div className="bg-body-tertiary shadow rounded p-3">
+            <div className="bg-body-secondary border shadow rounded p-3">
                 <div className="mb-3 d-flex justify-content-between gap-2">
                     <div className="d-flex gap-2 flex-fill align-items-center justify-content-start">
                         <InputGroup>
-                            <span className='btn bg-primary text-white' title='Hello World'>
+                            <span className='btn bg-claims-primary text-white' title='Hello World'>
                                 <Search size={"16px"} />
                             </span>
                             <Form.Control
                                 type="text"
-                                className='border-primary'
-                                placeholder="Search"
+                                className='border-claims-primary'
+                                placeholder="Search Accounts"
                                 value={searchTerm}
                                 style={{ maxWidth: '400px' }}
                                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -660,13 +697,13 @@ const AccountsPage = () => {
 
                     <div className="d-flex gap-2">
                         <InputGroup>
-                            <Button variant="primary" className='text-nowrap d-flex justify-content-center align-items-center gap-1' onClick={handleCreate}>
+                            <Button variant="claims-primary" className='text-nowrap d-flex justify-content-center align-items-center gap-1' onClick={handleCreate}>
                                 <Plus />
                                 <span className='d-none d-md-inline'>Create Account</span>
                             </Button>
                         </InputGroup>
                         <Button
-                            variant="primary"
+                            variant="claims-primary"
                             title='Filter Results'
                             onClick={() => setFiltersCollapsed(true)}
                         >
@@ -752,7 +789,7 @@ const AccountsPage = () => {
                             <div className="row w-100 align-items-center">
                                 <div className="col-12 col-md-6 p-0 text-center text-md-start mb-2 mb-md-0">
                                     <span className='fw-bold text-body'>
-                                        <CheckCircleFill className="me-2 text-primary" />
+                                        <CheckCircleFill className="me-2 text-claims-primary" />
                                         {selectedAccounts.length} Item{selectedAccounts.length !== 1 ? 's' : ''} Selected
                                     </span>
                                 </div>
@@ -764,7 +801,7 @@ const AccountsPage = () => {
                                         >
                                             Clear Selection
                                         </button>
-                                        <button className="btn btn-sm btn-primary text-nowrap text-decoration-none" onClick={() => setShowSelectedModal(true)}>
+                                        <button className="btn btn-sm btn-claims-primary text-nowrap text-decoration-none" onClick={() => setShowSelectedModal(true)}>
                                             Update Selection
                                         </button>
                                     </div>
@@ -794,7 +831,7 @@ const AccountsPage = () => {
                                                 />
                                             </th>
                                             <th className="bg-transparent text-center text-md-start">Account</th>
-                                            <th className="bg-transparent d-none d-md-table-cell text-nowrap">School ID</th>
+                                            <th className="bg-transparent d-none d-sm-table-cell text-nowrap">School ID</th>
                                             <th className="bg-transparent d-none d-lg-table-cell text-nowrap">Department</th>
                                             <th className="bg-transparent d-none d-md-table-cell text-nowrap">Role</th>
                                             <th className="bg-transparent d-none d-lg-table-cell text-nowrap">Status</th>
@@ -803,7 +840,7 @@ const AccountsPage = () => {
                                     </thead>
                                     <tbody>
                                         {currentUsers.map((account, key) => (
-                                            <tr key={account.id} className={key != (currentUsers.length-1) ? "border-bottom" : ""}>
+                                            <tr key={account.id} className={key != (currentUsers.length - 1) ? "border-bottom" : ""}>
                                                 <td className="bg-transparent text-center">
                                                     <input
                                                         type="checkbox"
@@ -814,7 +851,13 @@ const AccountsPage = () => {
                                                 </td>
                                                 <td className='bg-transparent cursor-pointer' onClick={() => handleDropdownAction(handlePreview, account)}>
                                                     <div className="d-flex align-items-center">
-                                                        <PersonCircle className="me-2 me-md-3 text-secondary" style={{ width: '32px', height: '32px' }} />
+                                                        <ProfileImage
+                                                            src={account?.profile_picture ? `${import.meta.env.VITE_API_URL}/accounts/${account.id}/picture?t=${account._picTimestamp || ''}` : null}
+                                                            size="36px"
+                                                            shape="circle"
+                                                            className='border me-2'
+                                                            name={account?.name}
+                                                        />
                                                         <div className='cursor-pointer'>
                                                             <div className="fw-bold">{account.name}</div>
                                                             <div className="text-muted small">{account.email}</div>
@@ -834,7 +877,7 @@ const AccountsPage = () => {
                                                         </div>
                                                     </div >
                                                 </td >
-                                                <td className="bg-transparent d-none d-md-table-cell text-nowrap cursor-pointer" onClick={() => handleDropdownAction(handlePreview, account)}>
+                                                <td className="bg-transparent d-none d-sm-table-cell text-nowrap cursor-pointer" onClick={() => handleDropdownAction(handlePreview, account)}>
                                                     <span className="text-muted">{account.school_id}</span>
                                                 </td>
                                                 <td className="bg-transparent d-none d-lg-table-cell text-nowrap cursor-pointer" onClick={() => handleDropdownAction(handlePreview, account)}>
@@ -898,6 +941,14 @@ const AccountsPage = () => {
                                                                     </button>
                                                                 </li>
 
+                                                                <li>
+                                                                    <button
+                                                                        className="dropdown-item"
+                                                                        onClick={() => handleDropdownAction(handleOpenActivityModal, account)}
+                                                                    >
+                                                                        <ClockHistory className="me-2" /> View Activity
+                                                                    </button>
+                                                                </li>
                                                                 <li><hr className="dropdown-divider" /></li>
 
                                                                 <li>
@@ -919,15 +970,6 @@ const AccountsPage = () => {
 
                                                                 {user?.role === 'admin' && (
                                                                     <>
-                                                                        <li>
-                                                                            <button
-                                                                                className="dropdown-item"
-                                                                                onClick={() => handleDropdownAction(handleOpenActivityModal, account)}
-                                                                            >
-                                                                                <ClockHistory className="me-2" /> View Activity
-                                                                            </button>
-                                                                        </li>
-
                                                                         {account.deleted_at && (
                                                                             <li>
                                                                                 <button
@@ -994,7 +1036,7 @@ const AccountsPage = () => {
                                     <div
                                         key={opt.value}
                                         className={`badge rounded border small cursor-pointer fw-normal ${filterRoles.includes(opt.value)
-                                            ? 'bg-primary'
+                                            ? 'bg-claims-primary'
                                             : 'bg-body-tertiary text-muted'
                                             }`}
                                         style={{ cursor: 'pointer' }}
@@ -1016,7 +1058,7 @@ const AccountsPage = () => {
                                     <div
                                         key={opt.value}
                                         className={`badge rounded border small cursor-pointer fw-normal ${filterStatuses.includes(opt.value)
-                                            ? 'bg-primary'
+                                            ? 'bg-claims-primary'
                                             : 'bg-body-tertiary text-muted'
                                             }`}
                                         style={{ cursor: 'pointer' }}
@@ -1066,7 +1108,7 @@ const AccountsPage = () => {
                                     <div
                                         key={opt.value}
                                         className={`badge rounded border small cursor-pointer fw-normal ${sortBy === opt.sortBy && sortOrder === opt.sortOrder
-                                            ? 'bg-primary'
+                                            ? 'bg-claims-primary'
                                             : 'bg-body-tertiary text-muted'
                                             }`}
                                         style={{ cursor: 'pointer' }}
@@ -1092,7 +1134,7 @@ const AccountsPage = () => {
                                     <div
                                         key={opt.value}
                                         className={`badge rounded border small cursor-pointer fw-normal ${sortBy === opt.value
-                                            ? 'bg-primary'
+                                            ? 'bg-claims-primary'
                                             : 'bg-body-tertiary text-muted'
                                             }`}
                                         style={{ cursor: 'pointer' }}
@@ -1122,7 +1164,7 @@ const AccountsPage = () => {
                         {
                             !(filterRoles.length === 0 && filterStatuses.length === 0 && !includeDeleted && sortBy === 'created_at' && sortOrder === 'desc') && (
                                 <Button
-                                    variant="primary"
+                                    variant="claims-primary"
                                     onClick={() => {
                                         setFilterRoles([]);
                                         setFilterStatuses([]);
@@ -1146,7 +1188,7 @@ const AccountsPage = () => {
                             Close
                         </Button>
 
-                        <Button variant="primary" onClick={() => setFiltersCollapsed(false)}>
+                        <Button variant="claims-primary" onClick={() => setFiltersCollapsed(false)}>
                             Apply Filters
                         </Button>
                     </div>
@@ -1211,39 +1253,80 @@ const AccountsPage = () => {
                                 </div>
                             )}
 
+                            {!editingId && (
+                                <div className="mb-3">
+                                    <div className="form-check">
+                                        <input
+                                            className="form-check-input"
+                                            type="checkbox"
+                                            name="password_reset_required"
+                                            id="forceResetCreate"
+                                            checked={formData.password_reset_required}
+                                            onChange={handleInputChange}
+                                        />
+                                        <label className="form-check-label small text-muted" htmlFor="forceResetCreate">
+                                            Force user to change password on first login
+                                        </label>
+                                    </div>
+                                </div>
+                            )}
+
                             <hr />
 
                             <div className="row mb-3">
                                 <div className="col-6">
                                     <label className="form-label">Role</label>
                                     <select className="form-select" name="role" value={formData.role} onChange={handleInputChange}>
+                                        {/* Admin Roles */}
                                         {user?.role === 'admin' && (
                                             <>
-                                                <RoleBasedContent allowedRoles={["admin"]}>
-                                                    <option value="admin">Administrator</option>
-                                                </RoleBasedContent>
-                                                <option value="it_head">ITSD Head</option>
-                                                <option value="it_technician">ITSD Technician</option>
+                                                <option value="admin">Administrator</option>
+                                                <option value="it_head">IT Head</option>
+                                                <option value="it_technician">IT Technician</option>
+                                                <option value="department_head">Department Head</option>
+                                                <option value="department_staff">Department Staff</option>
                                                 <option value="lab_head">Laboratory Head</option>
                                                 <option value="lab_assistant">Laboratory Assistant</option>
                                             </>
                                         )}
+
+                                        {/* IT Head Roles */}
                                         {user?.role === 'it_head' && (
                                             <option value="it_technician">IT Technician</option>
                                         )}
+
+                                        {/* Lab Head Roles */}
                                         {user?.role === 'lab_head' && (
-                                            <option value="lab_assistant">Lab Assistant</option>
+                                            <option value="lab_assistant">Laboratory Assistant</option>
+                                        )}
+
+                                        {/* Department Head Roles */}
+                                        {user?.role === 'department_head' && (
+                                            <>
+                                                <option value="department_staff">Department Staff</option>
+                                                <option value="department_assistant">Department Assistant</option>
+                                                <option value="lab_head">Laboratory Head</option>
+                                                <option value="lab_assistant">Laboratory Assistant</option>
+                                            </>
                                         )}
                                     </select>
                                 </div>
 
                                 <div className="col-6">
                                     <label className="form-label">Department</label>
-                                    <select className="form-select" name="department_name" value={formData.department_name} onChange={handleInputChange}>
-                                        <option value="" hidden>Select department</option>
-                                        <option value="ITSD">ITSD</option>
-                                        <option value="CITE">CITE</option>
-                                        <option value="others">Other</option>
+                                    <select
+                                        className="form-select"
+                                        name="department_id"
+                                        value={formData.department_id}
+                                        onChange={handleInputChange}
+                                        disabled={user?.role !== 'admin'}
+                                    >
+                                        <option value="" hidden={user?.role === 'admin'}>
+                                            {user?.role !== 'admin' ? (departments.find(d => d.id === user.department_id)?.name || 'Using your department') : 'Select department'}
+                                        </option>
+                                        {departments.map(dept => (
+                                            <option key={dept.id} value={dept.id}>{dept.name}</option>
+                                        ))}
                                     </select>
                                 </div>
                             </div>
@@ -1266,7 +1349,7 @@ const AccountsPage = () => {
                         </div>
                         <div className="modal-footer">
                             <Button variant="secondary" onClick={() => setShowModal(false)}>Close</Button>
-                            <Button variant="primary" type="submit">{editingId ? 'Update Account' : 'Create Account'}</Button>
+                            <Button variant="claims-primary" type="submit">{editingId ? 'Update Account' : 'Create Account'}</Button>
                         </div>
                     </form>
                 </Modal.Body>
@@ -1280,72 +1363,85 @@ const AccountsPage = () => {
                     {viewingAccount && (
                         <div>
                             <div className="mb-3 position-relative d-inline-block group">
-                                {viewingAccount.profile_picture ? (
-                                    <>
-                                        <img
-                                            src={`${api.defaults.baseURL}/accounts/${viewingAccount.id}/picture`}
-                                            alt={viewingAccount.name}
-                                            className=""
-                                            style={{ width: '100px', height: '100px', objectFit: 'cover' }}
-                                            onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; }}
+                                <>
+                                    <div className="rounded overflow-hidden border">
+                                        <ProfileImage
+                                            src={viewingAccount?.profile_picture ? `${import.meta.env.VITE_API_URL}/accounts/${viewingAccount.id}/picture?t=${viewingAccount._picTimestamp || ''}` : null}
+                                            size="128px"
+                                            shape="square"
+                                            name={viewingAccount?.name}
                                         />
-                                        <button
-                                            className="btn btn-sm btn-danger position-absolute top-0 start-100 translate-middle rounded-circle"
-                                            style={{ width: '24px', height: '24px', padding: 0 }}
-                                            onClick={handleDeletePicture}
-                                            title="Remove Profile Picture"
-                                        >
-                                            <Trash size={12} />
-                                        </button>
-                                    </>
-                                ) : (
-                                    <PersonCircle className="text-secondary mx-auto" style={{ width: '100px', height: '100px' }} />
-                                )}
+                                    </div>
+                                    <button
+                                        className="btn btn-sm rounded-circle btn-danger position-absolute d-flex justify-content-center align-items-center p-2"
+                                        style={{ top: '-10px', right: '-5px' }}
+                                        onClick={handleDeletePicture}
+                                        title="Remove Profile Picture"
+                                    >
+                                        <Trash size={16} />
+                                    </button>
+                                </>
                             </div>
                             <h4 className="fw-bold mb-0">{viewingAccount.name}</h4>
-                            <p className="text-muted mb-3">{viewingAccount.email}</p>
+                            <p className="text-muted mb-2">{viewingAccount.email}</p>
 
                             <div className="d-flex justify-content-center gap-2 mb-2">
-                                <span className="badge bg-primary text-white text-uppercase">
-                                    {viewingAccount.role.replace('_', ' ')}
+                                <span className="badge bg-claims-primary text-white text-uppercase">
+                                    {viewingAccount.department_name.replace('_', ' ')}
                                 </span>
-                                <span className={`badge ${getStatus(viewingAccount) === 'active' ? 'bg-primary text-white' : getStatus(viewingAccount) === 'suspended' ? 'bg-warning text-dark' : ' bg-secondary text-dark'} text-capitalize`}>
-                                    <span className='p mb-0'>{getStatus(viewingAccount)}</span>
+                                <span className="badge bg-claims-primary text-white text-uppercase">
+                                    {viewingAccount.role.replace('_', ' ')}
                                 </span>
                             </div>
 
                             <div className="text-start mt-3">
-                                <div className='row row-cols-1 rounded overflow-hidden'>
-                                    <div className="col-12 p-3 bg-body-secondary">
-                                        <small className="text-muted d-block text-nowrap">School ID</small>
-                                        <div className='fw-semibold'>{viewingAccount.school_id || <span className="text-muted fst-italic">Not set</span>}</div>
+                                <div className='row rounded overflow-hidden'>
+                                    <div className="col-12 p-1">
+                                        <div className="bg-body-secondary p-2 rounded">
+                                            <small className="text-muted d-block text-nowrap">School ID</small>
+                                            <div className='fw-semibold'>{viewingAccount.school_id || <span className="text-muted fst-italic">Not set</span>}</div>
+                                        </div>
                                     </div>
-                                    <div className="col-12 p-3 bg-body-secondary">
-                                        <small className="text-muted d-block text-nowrap">Department</small>
-                                        <div className='fw-semibold'>{viewingAccount.department_name || <span className="text-muted fst-italic">Not set</span>}</div>
+                                    <div className="col-12 p-1">
+                                        <div className="bg-body-secondary p-2 rounded">
+                                            <small className="text-muted d-block text-nowrap">Status</small>
+                                            <div className='fw-semibold'>
+                                                <span className='p mb-0 text-capitalize'>{getStatus(viewingAccount)}</span>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="col-12 p-3 bg-body-secondary">
-                                        <small className="text-muted d-block text-nowrap">Gender</small>
-                                        <div className='text-capitalize fw-semibold'>{viewingAccount.gender || <span className="text-muted fst-italic">Not set</span>}</div>
+                                    <div className="col-12 p-1">
+                                        <div className="bg-body-secondary p-2 rounded">
+                                            <small className="text-muted d-block text-nowrap">Gender</small>
+                                            <div className='text-capitalize fw-semibold'>{viewingAccount.gender || <span className="text-muted fst-italic">Not set</span>}</div>
+                                        </div>
                                     </div>
-                                    <div className="col-12 p-3 bg-body-secondary">
-                                        <small className="text-muted d-block text-nowrap">Birth Date</small>
-                                        <div className='fw-semibold'>{viewingAccount.birth_date ? new Date(viewingAccount.birth_date).toLocaleDateString() : <span className="text-muted fst-italic">Not set</span>}</div>
+                                    <div className="col-12 p-1">
+                                        <div className="bg-body-secondary p-2 rounded">
+                                            <small className="text-muted d-block text-nowrap">Birth Date</small>
+                                            <div className={viewingAccount.birth_date ? "fw-semibold" : "fst-italic"}>{viewingAccount.birth_date ? new Date(viewingAccount.birth_date).toLocaleDateString() : <span className="text-muted fst-italic">Not set</span>}</div>
+                                        </div>
                                     </div>
-                                    <div className="col-12 p-3 bg-body-secondary">
-                                        <small className="text-muted d-block text-nowrap">Account Created</small>
-                                        <div className='fw-semibold'>{new Date(viewingAccount.created_at).toLocaleString()}</div>
+                                    <div className="col-12 p-1 p-1">
+                                        <div className="bg-body-secondary p-2 rounded">
+                                            <small className="text-muted d-block text-nowrap">Created At</small>
+                                            <div className='fw-semibold'>{new Date(viewingAccount.created_at).toLocaleString()}</div>
+                                        </div>
                                     </div>
                                     {viewingAccount.suspended_at && (
-                                        <div className="col-12 p-3 bg-body-secondary bg-warning bg-opacity-10">
-                                            <small className="text-warning d-block">Suspended Since</small>
-                                            <div className="text-warning fw-semibold">{new Date(viewingAccount.suspended_at).toLocaleString()}</div>
+                                        <div className="col p-1">
+                                            <div className="bg-body-secondary p-2 rounded">
+                                                <small className="text-muted d-block">Suspended Since</small>
+                                                <div className="fw-semibold">{new Date(viewingAccount.suspended_at).toLocaleString()}</div>
+                                            </div>
                                         </div>
                                     )}
                                     {viewingAccount.deleted_at && (
-                                        <div className="col-12 p-3 bg-body-secondary bg-danger bg-opacity-10">
-                                            <small className="text-danger d-block">Deleted On</small>
-                                            <div className="text-danger fw-semibold">{new Date(viewingAccount.deleted_at).toLocaleString()}</div>
+                                        <div className="col p-1">
+                                            <div className="bg-body-secondary p-2 rounded">
+                                                <small className="text-muted d-block">Deleted On</small>
+                                                <div className="text-danger fw-semibold">{new Date(viewingAccount.deleted_at).toLocaleString()}</div>
+                                            </div>
                                         </div>
                                     )}
                                 </div>
@@ -1398,7 +1494,7 @@ const AccountsPage = () => {
                         </Form.Group>
                         <div className="d-flex justify-content-end gap-2">
                             <Button variant="secondary" onClick={() => setShowPasswordModal(false)}>Cancel</Button>
-                            <Button variant="primary" type="submit" disabled={passwordLoading}>
+                            <Button variant="claims-primary" type="submit" disabled={passwordLoading}>
                                 {passwordLoading ? 'Saving...' : 'Set Password'}
                             </Button>
                         </div>
@@ -1520,6 +1616,8 @@ const AccountsPage = () => {
                                         <option value="lab_head">Laboratory Head</option>
                                         <option value="it_technician">IT Technician</option>
                                         <option value="lab_assistant">Lab Assistant</option>
+                                        <option value="department_head">Department Head</option>
+                                        <option value="department_staff">Department Staff</option>
                                     </Form.Select>
                                 </div>
                             )}
@@ -1586,7 +1684,7 @@ const AccountsPage = () => {
                             Close
                         </Button>
                         <Button
-                            variant="primary"
+                            variant="claims-primary"
                             onClick={executeBulkUpdate}
                             disabled={selectedAccounts.length === 0 || isBulkSubmitting || (!bulkUpdateValues.department && !bulkUpdateValues.role && !bulkUpdateValues.status)}
                         >
@@ -1630,7 +1728,7 @@ const AccountsPage = () => {
                                         <td className="small text-muted">{account.email}</td>
                                         <td className="text-capitalize small">{account.role?.replace('_', ' ')}</td>
                                         <td>
-                                            <span className={`badge bg-${getStatus(account) === 'active' ? 'success' : getStatus(account) === 'suspended' ? 'warning' : 'secondary'}`}>
+                                            <span className={`badge bg-${getStatus(account) === 'active' ? 'success' : getStatus(account) === 'suspended' ? 'warning' : 'claims-secondary'}`}>
                                                 {getStatus(account)}
                                             </span>
                                         </td>
@@ -1645,7 +1743,7 @@ const AccountsPage = () => {
                         Cancel
                     </Button>
                     <Button
-                        variant={getOperationDetails(bulkOperation)?.variant || 'primary'}
+                        variant={getOperationDetails(bulkOperation)?.variant || 'claims-primary'}
                         onClick={executeBulkOperation}
                         disabled={isBulkSubmitting}
                     >

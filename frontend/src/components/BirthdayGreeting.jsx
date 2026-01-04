@@ -92,12 +92,6 @@ const isBirthdayToday = (birthDate) => {
     // Parse birth date - handle both ISO string and date-only formats
     const birth = new Date(birthDate);
 
-    console.log('[BirthdayGreeting] Date comparison:', {
-        todayPH: `${phTime.getMonth() + 1}/${phTime.getDate()}`,
-        birthDate: `${birth.getMonth() + 1}/${birth.getDate()}`,
-        rawBirthDate: birthDate
-    });
-
     return phTime.getMonth() === birth.getMonth() &&
         phTime.getDate() === birth.getDate();
 };
@@ -164,7 +158,7 @@ const BirthdayGreeting = () => {
             } catch (error) {
                 // Silently ignore 401 errors (happens during initial auth before token is available)
                 if (error?.response?.status !== 401) {
-                    console.error('[BirthdayGreeting] Failed to fetch birthday token:', error);
+                    console.error(' Failed to setup birthday celebration:', error);
                 }
             }
         };

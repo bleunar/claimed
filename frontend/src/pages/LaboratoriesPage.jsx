@@ -6,38 +6,39 @@ import toast from 'react-hot-toast';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { LaboratoryCard } from '../components/laboratory';
+import { LocationCard } from '../components/laboratory';
 import RoleBasedContent from '../components/ComponentProtector';
 
 const LaboratoriesPage = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
-    const [laboratories, setLaboratories] = useState([]);
+    const [locations, setLocations] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [editingId, setEditingId] = useState(null);
     const [formData, setFormData] = useState({
         name: '',
         description: '',
-        location: ''
+        type: 'laboratory'
     });
     const [error, setError] = useState('');
 
     const canManage = ['admin', 'it_head', 'lab_head'].includes(user?.role);
 
     useEffect(() => {
-        fetchLaboratories();
+        fetchLocations();
     }, []);
 
-    const fetchLaboratories = async () => {
+    const fetchLocations = async () => {
         try {
-            const response = await api.get('/laboratories/');
-            const sortedLabs = response.data.sort((a, b) =>
+            // Only fetch laboratory-type locations for this page
+            const response = await api.get('/locations/?type=laboratory');
+            const sortedLocs = response.data.sort((a, b) =>
                 a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
             );
-            setLaboratories(sortedLabs);
+            setLocations(sortedLocs);
         } catch (err) {
-            console.error("Failed to fetch laboratories", err);
+            console.error("Failed to fetch locations", err);
         } finally {
             setLoading(false);
         }
@@ -47,12 +48,12 @@ const LaboratoriesPage = () => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    const handleEdit = (lab) => {
-        setEditingId(lab.id);
+    const handleEdit = (loc) => {
+        setEditingId(loc.id);
         setFormData({
-            name: lab.name,
-            description: lab.description || '',
-            location: lab.location || ''
+            name: loc.name,
+            description: loc.description || '',
+            type: loc.type || 'laboratory'
         });
         setShowModal(true);
     };
@@ -62,7 +63,7 @@ const LaboratoriesPage = () => {
         setFormData({
             name: '',
             description: '',
-            location: ''
+            type: 'laboratory'
         });
         setShowModal(true);
     };
@@ -71,9 +72,9 @@ const LaboratoriesPage = () => {
         if (!window.confirm("Are you sure you want to delete this laboratory?")) return;
 
         try {
-            await api.delete(`/laboratories/${id}`);
+            await api.delete(`/locations/${id}`);
             toast.success("Laboratory deleted successfully");
-            fetchLaboratories();
+            fetchLocations();
         } catch (err) {
             toast.error(err.response?.data?.msg || "Failed to delete laboratory");
         }
@@ -83,14 +84,14 @@ const LaboratoriesPage = () => {
         e.preventDefault();
         try {
             if (editingId) {
-                await api.put(`/laboratories/${editingId}`, formData);
+                await api.put(`/locations/${editingId}`, formData);
                 toast.success("Laboratory updated successfully");
             } else {
-                await api.post('/laboratories/', formData);
+                await api.post('/locations/', formData);
                 toast.success("Laboratory created successfully");
             }
             setShowModal(false);
-            fetchLaboratories();
+            fetchLocations();
         } catch (err) {
             toast.error(err.response?.data?.msg || `Failed to ${editingId ? 'update' : 'create'} laboratory`);
         }
@@ -114,12 +115,12 @@ const LaboratoriesPage = () => {
                         <LoadingSpinner centered />
                     ) : (
                         (
-                            laboratories.length > 0 ? (
+                            locations.length > 0 ? (
                                 <div className="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xxl-4">
-                                    {laboratories.map(lab => (
-                                        <LaboratoryCard
-                                            key={lab.id}
-                                            lab={lab}
+                                    {locations.map(loc => (
+                                        <LocationCard
+                                            key={loc.id}
+                                            location={loc}
                                             canManage={canManage}
                                             onEdit={handleEdit}
                                             onDelete={handleDelete}

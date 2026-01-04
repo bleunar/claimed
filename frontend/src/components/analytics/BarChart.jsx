@@ -5,7 +5,20 @@ import { Card } from 'react-bootstrap';
 import useChartData from '../../hooks/useChartData';
 import { ExclamationTriangle } from 'react-bootstrap-icons';
 
-const BarChart = ({ apiPath, title, options, label = 'Data', colors = [], colorMap = null, bare = false }) => {
+const BarChart = ({
+    apiPath,
+    title,
+    options,
+    label = 'Data',
+    colors = [],
+    colorMap = null,
+    bare = false,
+    showTitle = true,
+    showLegend = true,
+    legendPosition = 'top',
+    height = '300px',
+    className = ''
+}) => {
     const { chartData, error } = useChartData(apiPath);
 
     // Default colors
@@ -59,8 +72,8 @@ const BarChart = ({ apiPath, title, options, label = 'Data', colors = [], colorM
         maintainAspectRatio: false,
         maxBarThickness: 100,
         plugins: {
-            legend: { position: 'top' },
-            title: { display: !!title, text: title },
+            legend: { display: showLegend, position: legendPosition },
+            title: { display: showTitle && !!title, text: title },
         },
         ...options
     };
@@ -88,7 +101,7 @@ const BarChart = ({ apiPath, title, options, label = 'Data', colors = [], colorM
     // Bare mode: return chart only without Card wrapper
     if (bare) {
         return (
-            <div className="position-relative w-100" style={{ height: '300px' }}>
+            <div className={`position-relative w-100 ${className}`} style={{ height: height }}>
                 {chartContent}
             </div>
         );
@@ -96,8 +109,8 @@ const BarChart = ({ apiPath, title, options, label = 'Data', colors = [], colorM
 
     // Wrapped mode: return full Card with styling
     return (
-        <Card className="shadow bg-body-tertiary h-100">
-            <Card.Body className='p-0 relative w-100' style={{ height: '300px' }}>
+        <Card className={`shadow bg-body-tertiary h-100 ${className}`}>
+            <Card.Body className='p-0 relative w-100' style={{ height: height }}>
                 {chartContent}
             </Card.Body>
         </Card>

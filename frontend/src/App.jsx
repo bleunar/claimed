@@ -7,9 +7,12 @@ import DashboardPage from './pages/DashboardPage';
 import AccountsPage from './pages/AccountsPage';
 import DashboardLayout from './layouts/DashboardLayout';
 import LaboratoriesPage from './pages/LaboratoriesPage';
+import LocationsPage from './pages/LocationsPage';
 import ComponentsPage from './pages/ComponentsPage';
 import LaboratoryComputersPage from './pages/LaboratoryComputersPage';
 import LabResourcesPage from './pages/LabResourcesPage';
+import DepartmentsPage from './pages/DepartmentsPage';
+import DepartmentOverviewPage from './pages/DepartmentOverviewPage';
 import ProfilePage from './pages/ProfilePage';
 import ProtectedRoute from './components/ProtectedRoute';
 import ThemedToaster from './components/ThemedToaster';
@@ -34,15 +37,29 @@ function App() {
                 <Route path="/" element={<LoginPage />} />
                 <Route path='/dashboard' element={<DashboardLayout />}>
                   <Route index element={<DashboardPage />} />
-                  <Route element={<ProtectedRoute allowedRoles={['admin', 'it_head', 'lab_head']} />}>
+                  <Route element={<ProtectedRoute allowedRoles={['admin', 'it_head', 'lab_head', 'department_head']} />}>
                     <Route path='accounts' element={<AccountsPage />} />
                   </Route>
-                  <Route element={<ProtectedRoute allowedRoles={['admin', 'it_head', 'lab_head']} />}>
+                  <Route element={<ProtectedRoute allowedRoles={['admin', 'it_head', 'lab_head', 'it_technician']} />}>
                     <Route path='components' element={<ComponentsPage />} />
                   </Route>
-                  <Route element={<ProtectedRoute allowedRoles={['admin', 'it_head', 'lab_head', 'it_technician', 'lab_assistant']} />}>
+                  <Route element={<ProtectedRoute allowedRoles={['admin', 'it_head']} />}>
+                    <Route path='departments' element={<DepartmentsPage />} />
+                  </Route>
+                  <Route element={<ProtectedRoute allowedRoles={['admin', 'department_head']} />}>
+                    <Route path='departments/:id' element={<DepartmentOverviewPage />} />
+                  </Route>
+                  <Route element={<ProtectedRoute allowedRoles={['admin', 'it_head', 'it_technician', 'department_head', 'department_staff', 'department_assistant']} />}>
+                    <Route path='locations' element={<LocationsPage />} />
+                    <Route path='locations/:id' element={<LaboratoryComputersPage />} />
+                  </Route>
+
+                  <Route element={<ProtectedRoute allowedRoles={['admin', 'it_head', 'lab_head', 'it_technician', 'lab_assistant', 'department_head']} />}>
                     <Route path='laboratories' element={<LaboratoriesPage />} />
                     <Route path='laboratories/:id' element={<LaboratoryComputersPage />} />
+                  </Route>
+
+                  <Route element={<ProtectedRoute allowedRoles={['admin', 'it_head', 'lab_head', 'it_technician', 'lab_assistant']} />}>
                     <Route path='lab-resources' element={<LabResourcesPage />} />
                   </Route>
 

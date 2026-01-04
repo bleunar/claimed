@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useContext, useMemo, useCallback, useRef } from 'react';
-import { hasActiveSeasonalEffect } from '../components/SeasonalEffects';
+import { hasActiveSeasonalEffect } from '../utils/seasonalEffectsUtils';
 import api from '../api/axios';
 
 const ThemeContext = createContext();
@@ -8,7 +8,10 @@ const ThemeContext = createContext();
 const DEFAULTS = {
     theme: 'light',
     toastPosition: 'top-center',
-    seasonalEffects: false
+    theme: 'light',
+    toastPosition: 'top-center',
+    seasonalEffects: false,
+    emailOptOut: false
 };
 
 export const ThemeProvider = ({ children }) => {
@@ -19,11 +22,16 @@ export const ThemeProvider = ({ children }) => {
         const saved = localStorage.getItem('seasonalEffects');
         return saved !== null ? saved === 'true' : DEFAULTS.seasonalEffects;
     });
+    const [emailOptOut, setEmailOptOutState] = useState(() => {
+        const saved = localStorage.getItem('emailOptOut');
+        return saved !== null ? saved === 'true' : DEFAULTS.emailOptOut;
+    });
 
     // Pending settings (user's changes before clicking Update)
     const [pendingTheme, setPendingTheme] = useState(null);
     const [pendingToastPosition, setPendingToastPosition] = useState(null);
     const [pendingSeasonalEffects, setPendingSeasonalEffects] = useState(null);
+    const [pendingEmailOptOut, setPendingEmailOptOut] = useState(null);
 
     const [preferencesLoaded, setPreferencesLoaded] = useState(false);
     const [savingPreferences, setSavingPreferences] = useState(false);
@@ -47,14 +55,20 @@ export const ThemeProvider = ({ children }) => {
         localStorage.setItem('seasonalEffects', seasonalEffects.toString());
     }, [seasonalEffects]);
 
+    // Sync emailOptOut to localStorage
+    useEffect(() => {
+        localStorage.setItem('emailOptOut', emailOptOut.toString());
+    }, [emailOptOut]);
+
     // Check if there are unsaved changes
     const hasUnsavedChanges = useMemo(() => {
         return (
             (pendingTheme !== null && pendingTheme !== theme) ||
             (pendingToastPosition !== null && pendingToastPosition !== toastPosition) ||
-            (pendingSeasonalEffects !== null && pendingSeasonalEffects !== seasonalEffects)
+            (pendingSeasonalEffects !== null && pendingSeasonalEffects !== seasonalEffects) ||
+            (pendingEmailOptOut !== null && pendingEmailOptOut !== emailOptOut)
         );
-    }, [pendingTheme, pendingToastPosition, pendingSeasonalEffects, theme, toastPosition, seasonalEffects]);
+    }, [pendingTheme, pendingToastPosition, pendingSeasonalEffects, pendingEmailOptOut, theme, toastPosition, seasonalEffects, emailOptOut]);
 
     // Save preferences to backend and apply changes
     const savePreferences = useCallback(async () => {
@@ -64,11 +78,13 @@ export const ThemeProvider = ({ children }) => {
             const finalTheme = pendingTheme !== null ? pendingTheme : theme;
             const finalToastPosition = pendingToastPosition !== null ? pendingToastPosition : toastPosition;
             const finalSeasonalEffects = pendingSeasonalEffects !== null ? pendingSeasonalEffects : seasonalEffects;
+            const finalEmailOptOut = pendingEmailOptOut !== null ? pendingEmailOptOut : emailOptOut;
 
             const preferences = {
                 theme: finalTheme,
                 toastPosition: finalToastPosition,
-                seasonalEffects: finalSeasonalEffects
+                seasonalEffects: finalSeasonalEffects,
+                emailOptOut: finalEmailOptOut
             };
 
             await api.put('/accounts/profile', { preferences });
@@ -77,11 +93,13 @@ export const ThemeProvider = ({ children }) => {
             setTheme(finalTheme);
             setToastPositionState(finalToastPosition);
             setSeasonalEffectsState(finalSeasonalEffects);
+            setEmailOptOutState(finalEmailOptOut);
 
             // Clear pending state
             setPendingTheme(null);
             setPendingToastPosition(null);
             setPendingSeasonalEffects(null);
+            setPendingEmailOptOut(null);
 
             return { success: true };
         } catch (err) {
@@ -90,7 +108,7 @@ export const ThemeProvider = ({ children }) => {
         } finally {
             setSavingPreferences(false);
         }
-    }, [pendingTheme, pendingToastPosition, pendingSeasonalEffects, theme, toastPosition, seasonalEffects]);
+    }, [pendingTheme, pendingToastPosition, pendingSeasonalEffects, pendingEmailOptOut, theme, toastPosition, seasonalEffects, emailOptOut]);
 
     // Load preferences from user data (called by AuthContext after login)
     const loadPreferencesFromUser = useCallback((userPreferences) => {
@@ -103,12 +121,15 @@ export const ThemeProvider = ({ children }) => {
             // Apply directly to active state
             if (prefs.theme) setTheme(prefs.theme);
             if (prefs.toastPosition) setToastPositionState(prefs.toastPosition);
+            if (prefs.toastPosition) setToastPositionState(prefs.toastPosition);
             if (prefs.seasonalEffects !== undefined) setSeasonalEffectsState(prefs.seasonalEffects);
+            if (prefs.emailOptOut !== undefined) setEmailOptOutState(prefs.emailOptOut);
         }
         // Clear any pending changes
         setPendingTheme(null);
         setPendingToastPosition(null);
         setPendingSeasonalEffects(null);
+        setPendingEmailOptOut(null);
         setPreferencesLoaded(true);
     }, []);
 
@@ -117,7 +138,9 @@ export const ThemeProvider = ({ children }) => {
         setPreferencesLoaded(false);
         setPendingTheme(null);
         setPendingToastPosition(null);
+        setPendingToastPosition(null);
         setPendingSeasonalEffects(null);
+        setPendingEmailOptOut(null);
     }, []);
 
     // Toggle functions set pending values, not active values
@@ -135,11 +158,17 @@ export const ThemeProvider = ({ children }) => {
         setPendingSeasonalEffects(!currentEffective);
     }, [pendingSeasonalEffects, seasonalEffects]);
 
+    const toggleEmailOptOut = useCallback(() => {
+        const currentEffective = pendingEmailOptOut !== null ? pendingEmailOptOut : emailOptOut;
+        setPendingEmailOptOut(!currentEffective);
+    }, [pendingEmailOptOut, emailOptOut]);
+
     // Expose both active and pending values for UI display
     // Settings UI should show pending values (if set) to reflect user's choices
     const effectiveTheme = pendingTheme !== null ? pendingTheme : theme;
     const effectiveToastPosition = pendingToastPosition !== null ? pendingToastPosition : toastPosition;
     const effectiveSeasonalEffects = pendingSeasonalEffects !== null ? pendingSeasonalEffects : seasonalEffects;
+    const effectiveEmailOptOut = pendingEmailOptOut !== null ? pendingEmailOptOut : emailOptOut;
 
     return (
         <ThemeContext.Provider value={{
@@ -151,10 +180,12 @@ export const ThemeProvider = ({ children }) => {
             effectiveTheme,
             effectiveToastPosition,
             effectiveSeasonalEffects,
+            effectiveEmailOptOut,
             // Actions
             toggleTheme,
             setToastPosition,
             toggleSeasonalEffects,
+            toggleEmailOptOut,
             // Other
             hasActiveSeason,
             loadPreferencesFromUser,

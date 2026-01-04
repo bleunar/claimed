@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Person } from 'react-bootstrap-icons';
 
-const ProfileImage = ({ src, size = 'md', shape = 'square', className = '' }) => {
+const ProfileImage = ({ src, name, size = 'md', shape = 'square', className = '' }) => {
     const [imageLoaded, setImageLoaded] = useState(false);
     const [hasError, setHasError] = useState(false);
 
@@ -25,6 +25,14 @@ const ProfileImage = ({ src, size = 'md', shape = 'square', className = '' }) =>
 
     // Determine class to apply: prioritize shape prop
     const finalShapeClass = shapeClasses[shape] || 'rounded-0';
+
+    // Get initials
+    const getInitials = (fullName) => {
+        if (!fullName) return '';
+        const names = fullName.trim().split(/\s+/);
+        if (names.length === 1) return names[0].substring(0, 2).toUpperCase();
+        return (names[0][0] + names[names.length - 1][0]).toUpperCase();
+    };
 
     useEffect(() => {
         if (!src) {
@@ -50,10 +58,13 @@ const ProfileImage = ({ src, size = 'md', shape = 'square', className = '' }) =>
         };
     }, [src]);
 
+    // Calculate font size roughly based on container size
+    const fontSize = parseInt(finalSize) ? `${parseInt(finalSize) * 0.4}px` : '1rem';
+
     return (
         <div
-            className={`${className} ${finalShapeClass} overflow-hidden bg-dark-subtle d-flex align-items-center justify-content-center`}
-            style={{ width: finalSize, height: finalSize }}
+            className={`${className} ${finalShapeClass} overflow-hidden bg-body-secondary d-flex align-items-center justify-content-center`}
+            style={{ width: finalSize, height: finalSize, userSelect: 'none' }}
         >
             {imageLoaded && !hasError ? (
                 <img
@@ -61,8 +72,12 @@ const ProfileImage = ({ src, size = 'md', shape = 'square', className = '' }) =>
                     alt="profile"
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
+            ) : name ? (
+                <span className="fw-bold text-body" style={{ fontSize: fontSize}}>
+                    {getInitials(name)}
+                </span>
             ) : (
-                <Person className="text-primary" style={{ width: '80%', height: '80%' }} />
+                <Person className="text-claims-primary" style={{ width: '80%', height: '80%' }} />
             )}
         </div>
     );

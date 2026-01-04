@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight, ChevronDoubleLeft, ChevronDoubleRight } from
 const Pagination = ({ itemsPerPage, totalItems, paginate, currentPage, alwaysShow = false }) => {
     const totalPages = Math.ceil(totalItems / itemsPerPage);
 
-    if (totalPages <= 1 || !alwaysShow) return null;
+    if (totalPages <= 1 && !alwaysShow) return null;
 
     let startPage, endPage;
     if (totalPages <= 5) {

@@ -20,7 +20,7 @@ const LaboratoryComputersPage = () => {
     const [searchParams, setSearchParams] = useSearchParams();
     const { user } = useAuth();
     const [computerSets, setComputerSets] = useState([]);
-    const [laboratory, setLaboratory] = useState(null);
+    const [location, setLocation] = useState(null);
     const [loading, setLoading] = useState(true);
 
     // UI Logic States only
@@ -75,12 +75,12 @@ const LaboratoryComputersPage = () => {
 
     const fetchData = async () => {
         try {
-            const [labRes, setsRes, compsRes] = await Promise.all([
-                api.get(`/laboratories/${laboratoryId}`),
-                api.get(`/computer-sets/?laboratory_id=${laboratoryId}`),
-                api.get(`/components/?laboratory_id=${laboratoryId}`)
+            const [locRes, setsRes, compsRes] = await Promise.all([
+                api.get(`/locations/${laboratoryId}`),
+                api.get(`/computer-sets/?location_id=${laboratoryId}`),
+                api.get(`/components/?location_id=${laboratoryId}`)
             ]);
-            setLaboratory(labRes.data);
+            setLocation(locRes.data);
             const sortedSets = setsRes.data.sort((a, b) =>
                 a.set_name.localeCompare(b.set_name, undefined, { numeric: true, sensitivity: 'base' })
             );
@@ -163,7 +163,7 @@ const LaboratoryComputersPage = () => {
                 const set = computerSets.find(s => s.id === id);
                 if (!set) return Promise.resolve();
                 return api.put(`/computer-sets/${id}`, {
-                    laboratory_id: laboratoryId,
+                    location_id: laboratoryId,
                     set_name: set.set_name,
                     status: status
                 });
@@ -188,7 +188,7 @@ const LaboratoryComputersPage = () => {
         }
     };
 
-    if (!loading && !laboratory) return <div className="container py-3">Laboratory not found</div>;
+    if (!loading && !location) return <div className="container py-3">Location not found</div>;
 
     return (
         <div className="container-fluid py-3">
@@ -201,8 +201,8 @@ const LaboratoryComputersPage = () => {
                         </div>
                     ) : (
                         <>
-                            <div className="h4 fw-semibold mb-0">{laboratory?.name}</div>
-                            <div className="text-muted mb-0">{laboratory?.description}</div>
+                            <div className="h4 fw-semibold mb-0">{location?.name}</div>
+                            <div className="text-muted mb-0">{location?.description}</div>
                         </>
                     )}
                 </div>
@@ -262,7 +262,7 @@ const LaboratoryComputersPage = () => {
                         ))
                     ) : (
                         <div className="col-12">
-                            <div className="text-center text-muted"><p>No computer sets found in this laboratory
+                            <div className="text-center text-muted"><p>No computer sets found in this location
                                 <RoleBasedContent allowedRoles={['admin', 'it_head', 'lab_head']}>
                                     . <span className='btn btn-link px-0' onClick={handleCreate}>Add One</span>
                                 </RoleBasedContent>
@@ -284,8 +284,8 @@ const LaboratoryComputersPage = () => {
                         mode={mode}
                         editingId={selectedSet?.id}
                         initialData={selectedSet}
-                        laboratoryId={laboratoryId}
-                        laboratoryName={laboratory?.name}
+                        locationId={laboratoryId}
+                        locationName={location?.name}
                         onSubmit={handleFormSubmit}
                         onCancel={handleCloseSetModal}
                         existingTopLevelComponents={allComponents}

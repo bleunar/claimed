@@ -1,17 +1,22 @@
-import React, { useState, useEffect } from 'react';
-import { Modal, Button } from 'react-bootstrap';
+import React, { useState, useEffect, useRef } from 'react';
+import { Modal, Button, Form } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import Pagination from '../components/Pagination';
-import { Funnel, Plus, Search, Trash, PencilSquare, CheckCircle, CheckCircleFill, ExclamationTriangle, ExclamationTriangleFill, InfoCircle, XCircle } from 'react-bootstrap-icons';
+import LoadingSpinner from '../components/LoadingSpinner';
+import { Plus, Trash, PencilSquare, InfoCircle, X, ExclamationTriangleFill, Filter, Search, ThreeDotsVertical, Eye } from 'react-bootstrap-icons';
 import KeyValueEditor from '../components/common/KeyValueEditor';
 import KeyValues from '../components/common/KeyValues';
 import BarcodeScanner from '../components/common/BarcodeScanner';
+import BulkActionsToolbar from '../components/common/BulkActionsToolbar';
+import FilterBadges from '../components/common/FilterBadges';
+import SearchBar from '../components/common/SearchBar';
 import { COMPONENT_TYPES } from '../utils/componentTypes';
 import { getComponentIcon } from '../utils/componentIcons';
 import { getComponentStatusVariant } from '../utils/statusColors';
+import ComponentConflictModal from '../components/modals/ComponentConflictModal';
 
 const ComponentsPage = () => {
     const { user } = useAuth();
@@ -23,16 +28,42 @@ const ComponentsPage = () => {
     const [isBulkSubmitting, setIsBulkSubmitting] = useState(false);
     const [bulkStatus, setBulkStatus] = useState('');
     const [showSelectedModal, setShowSelectedModal] = useState(false);
+    const [showFilterModal, setShowFilterModal] = useState(false);
 
-    // Filters
+    // Filters - arrays for multi-select
     const [search, setSearch] = useState('');
-    const [statusFilter, setStatusFilter] = useState('');
+    const [statusFilters, setStatusFilters] = useState([]); // Array for multi-select
+    const [typeFilters, setTypeFilters] = useState([]); // Array for multi-select
     const [assignmentFilter, setAssignmentFilter] = useState('false'); // 'false'=Assigned (default), 'true'=Unassigned, ''=All
     const [labFilter, setLabFilter] = useState('');
     const [setFilter, setSetFilter] = useState('');
-    const [typeFilter, setTypeFilter] = useState('');
 
-    const [laboratories, setLaboratories] = useState([]);
+    // Sorting
+    const [sortBy, setSortBy] = useState('created_at');
+    const [sortOrder, setSortOrder] = useState('desc');
+
+    const [departments, setDepartments] = useState([]);
+    const [departmentFilter, setDepartmentFilter] = useState('');
+    const [locationTypeFilter, setLocationTypeFilter] = useState('');
+
+    // Toggle functions for multi-select filters
+    const toggleStatusFilter = (status) => {
+        setStatusFilters(prev =>
+            prev.includes(status)
+                ? prev.filter(s => s !== status)
+                : [...prev, status]
+        );
+    };
+
+    const toggleTypeFilter = (type) => {
+        setTypeFilters(prev =>
+            prev.includes(type)
+                ? prev.filter(t => t !== type)
+                : [...prev, type]
+        );
+    };
+
+    const [locations, setLocations] = useState([]);
     const [computerSets, setComputerSets] = useState([]);
 
     // Pagination
@@ -50,23 +81,86 @@ const ComponentsPage = () => {
         properties: {}
     });
 
+    const [conflictModal, setConflictModal] = useState({ show: false, data: null, pendingPayload: null });
+
     const canManage = ['admin', 'it_head', 'lab_head'].includes(user?.role);
 
     const [viewPropsModal, setViewPropsModal] = useState({ show: false, component: null });
 
-    const fetchLaboratories = async () => {
+    // Actions Dropdown State
+    const [openDropdownId, setOpenDropdownId] = useState(null);
+    const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
+    const dropdownRef = useRef(null);
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (openDropdownId && dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setOpenDropdownId(null);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [openDropdownId]);
+
+    const toggleDropdown = (componentId, event) => {
+        if (openDropdownId === componentId) {
+            setOpenDropdownId(null);
+        } else {
+            const button = event.currentTarget;
+            const rect = button.getBoundingClientRect();
+            setDropdownPosition({
+                top: rect.top,
+                left: rect.left - 10
+            });
+            setOpenDropdownId(componentId);
+        }
+    };
+
+    const handleDropdownAction = (action, component) => {
+        setOpenDropdownId(null);
+        action(component);
+    };
+
+    const fetchLocations = async (deptId = '', type = '') => {
         try {
-            const res = await api.get('/laboratories/');
-            const sortedLabs = res.data.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
-            setLaboratories(sortedLabs);
+            // Fetch locations based on type (if provided) and department
+            let url = '/locations/?';
+            if (type) {
+                url += `type=${type}&`;
+            }
+            // If no type is selected, backend returns all types by default (unless we want to restrict?)
+            // Previously it was restricted to 'laboratory'. Now we want it dynamic.
+
+            if (deptId) {
+                url += `department_id=${deptId}`;
+            }
+            const res = await api.get(url);
+            const sortedLocs = res.data.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+            setLocations(sortedLocs);
         } catch (err) {
-            console.error("Failed to fetch laboratories", err);
+            console.error("Failed to fetch locations", err);
+        }
+    };
+
+    const fetchDepartments = async () => {
+        try {
+            const res = await api.get('/departments/');
+            setDepartments(res.data);
+
+            // Set initial department filter for non-admins
+            if (user?.role !== 'admin' && user?.department_id) {
+                setDepartmentFilter(user.department_id);
+            }
+        } catch (err) {
+            console.error("Failed to fetch departments", err);
         }
     };
 
     const fetchComputerSets = async (labId) => {
         try {
-            const res = await api.get(`/computer-sets/?laboratory_id=${labId}`);
+            const res = await api.get(`/computer-sets/?location_id=${labId}`);
             const sortedSets = res.data.sort((a, b) => a.set_name.localeCompare(b.set_name, undefined, { numeric: true }));
             setComputerSets(sortedSets);
         } catch (err) {
@@ -78,15 +172,39 @@ const ComponentsPage = () => {
         setLoading(true);
         try {
             let query = `/components/?`;
-            if (statusFilter) query += `status=${statusFilter}&`;
-            if (typeFilter) query += `component_type=${typeFilter}&`;
+            // Multi-select filters - join with comma
+            if (statusFilters.length > 0) query += `status=${statusFilters.join(',')}&`;
+            if (typeFilters.length > 0) query += `component_type=${typeFilters.join(',')}&`;
             if (assignmentFilter) query += `unassigned=${assignmentFilter}&`;
             if (search) query += `search=${search}&`;
             if (labFilter) query += `laboratory_id=${labFilter}&`;
             if (setFilter) query += `computer_set_id=${setFilter}&`;
+            if (departmentFilter) query += `department_id=${departmentFilter}&`;
+            if (locationTypeFilter) query += `location_type=${locationTypeFilter}&`;
 
             const res = await api.get(query);
-            setComponents(res.data);
+            let data = res.data;
+
+            // Client-side sorting
+            data.sort((a, b) => {
+                let comparison = 0;
+                switch (sortBy) {
+                    case 'created_at':
+                        comparison = new Date(a.created_at) - new Date(b.created_at);
+                        break;
+                    case 'brand_name':
+                        comparison = (a.brand_name || '').localeCompare(b.brand_name || '');
+                        break;
+                    case 'serial_number':
+                        comparison = (a.serial_number || '').localeCompare(b.serial_number || '');
+                        break;
+                    default:
+                        comparison = new Date(a.created_at) - new Date(b.created_at);
+                }
+                return sortOrder === 'asc' ? comparison : -comparison;
+            });
+
+            setComponents(data);
 
         } catch (err) {
             console.error("Failed to fetch components", err);
@@ -97,8 +215,17 @@ const ComponentsPage = () => {
     };
 
     useEffect(() => {
-        fetchLaboratories();
+        fetchDepartments();
+        // fetchLocations called in effect below when departmentFilter is set/defaults
     }, []);
+
+    // Cascade: Department/LocationType -> Location
+    useEffect(() => {
+        fetchLocations(departmentFilter, locationTypeFilter);
+        // Reset lower filters when upper filters change
+        setLabFilter('');
+        setSetFilter('');
+    }, [departmentFilter, locationTypeFilter]);
 
     useEffect(() => {
         if (labFilter) {
@@ -117,7 +244,7 @@ const ComponentsPage = () => {
 
         return () => clearTimeout(timer);
 
-    }, [search, statusFilter, assignmentFilter, labFilter, setFilter, typeFilter]);
+    }, [search, statusFilters, typeFilters, assignmentFilter, labFilter, setFilter, departmentFilter, locationTypeFilter, sortBy, sortOrder]);
 
     const handleSearch = (e) => {
         e.preventDefault();
@@ -204,7 +331,7 @@ const ComponentsPage = () => {
             });
             await Promise.all(promises);
             toast.success(`Updated ${selectedItems.length} components successfully`);
-            setSelectedItems([]); // Clear selection
+            setSelectedItems([]);
             setBulkStatus('');
             fetchComponents();
         } catch (err) {
@@ -248,34 +375,18 @@ const ComponentsPage = () => {
                 if (checkRes.data.exists) {
                     const existing = checkRes.data.component;
 
-                    // Specific logic: If we are editing, and the serial belongs to ANOTHER component, block or warn?
-                    // User requirement: "If the serial number is used on other component -> opt to move"
-                    // This implies we essentially "take over" the other component ID.
-
                     if (editingComponent && existing.id === editingComponent.id) {
-                        // Same component, just proceed
-                    } else if (existing.computer_set_name) {
-                        // Case 1: Assigned to another set
-                        const locationMsg = `assigned to ${existing.computer_set_name} in ${existing.laboratory_name}`;
-                        const confirmMsg = `Serial Number "${formData.serial_number}" is currently ${locationMsg}.\n\nDo you want to MOVE this component to this new configuration?`;
-
-                        if (!window.confirm(confirmMsg)) return;
-
-                        // Switch to PUT on the EXISTING component
-                        targetId = existing.id;
-                        method = 'put';
-                        url = `/components/${targetId}`;
-
+                        // Same component, proceed
                     } else {
-                        // Case 2: Unassigned (Rogue)
-                        const confirmMsg = `Serial Number "${formData.serial_number}" exists but is currently UNASSIGNED.\n\nDo you want to LINK this component to this configuration?`;
-
-                        if (!window.confirm(confirmMsg)) return;
-
-                        // Switch to PUT on the EXISTING component
-                        targetId = existing.id;
-                        method = 'put';
-                        url = `/components/${targetId}`;
+                        // Conflict found - Show Modal
+                        setConflictModal({
+                            show: true,
+                            data: { existing, currentInput: formData },
+                            // Store the INTENDED logical operation (though we might change it)
+                            // Actually, if we resolve, we switch to Updating the EXISTING component
+                            originalPayload: payload
+                        });
+                        return;
                     }
                 }
             }
@@ -293,7 +404,6 @@ const ComponentsPage = () => {
             if (!payload.computer_set_id) delete payload.computer_set_id;
 
             if (method === 'post') {
-                // Explicitly set is_core false for manual creation
                 payload.is_core = false;
             }
 
@@ -304,6 +414,46 @@ const ComponentsPage = () => {
             fetchComponents();
         } catch (err) {
             toast.error(err.response?.data?.msg || "Failed to save component");
+        }
+    };
+
+    const handleConflictResolve = async () => {
+        // User agreed to Move/Link the EXISTING component to current context
+        try {
+            const existing = conflictModal.data.existing;
+            const targetId = existing.id;
+
+            // We are essentially doing a "Take Over"
+            // We update the EXISTING component with the values from our Form
+            // BUT we keep the ID of the existing one.
+
+            let payload = { ...formData };
+            // Ensure we keep the serial (obviously)
+            payload.serial_number = existing.serial_number; // same as form
+
+            // Computer Set ID logic matches original form data
+            if (formData.isAssigning && formData.computer_set_id) {
+                payload.computer_set_id = formData.computer_set_id;
+            } else {
+                // If we were creating Unassigned, then we make existing unassigned?
+                // Logic: "Link this component to this configuration?"
+                // If the form says "Unassigned" (no computer_set_id), then we are effectively moving it to Storage
+                if (!formData.isAssigning) payload.computer_set_id = null;
+            }
+
+            delete payload.isAssigning;
+            if (!payload.computer_set_id) delete payload.computer_set_id;
+
+            // We use PUT on existing ID
+            await api.put(`/components/${targetId}`, payload);
+
+            toast.success("Component moved/linked successfully");
+            setConflictModal({ show: false, data: null, pendingPayload: null });
+            setShowModal(false);
+            fetchComponents();
+
+        } catch (err) {
+            toast.error(err.response?.data?.msg || "Failed to resolve conflict");
         }
     };
 
@@ -332,11 +482,20 @@ const ComponentsPage = () => {
 
     const handleClearFilters = () => {
         setSearch('');
+        // Restore department filter default for non-admins
+        if (user?.role !== 'admin' && user?.department_id) {
+            setDepartmentFilter(user.department_id);
+        } else {
+            setDepartmentFilter('');
+        }
+        setLocationTypeFilter('');
         setLabFilter('');
         setSetFilter('');
-        setStatusFilter('');
-        setTypeFilter('');
+        setStatusFilters([]);
+        setTypeFilters([]);
         setAssignmentFilter('false');
+        setSortBy('created_at');
+        setSortOrder('desc');
         setCurrentPage(1);
         // fetchComponents will be triggered by useEffect dependency changes
     };
@@ -347,193 +506,186 @@ const ComponentsPage = () => {
 
     return (
         <div className="container-fluid py-3">
-            <div className="d-flex justify-content-between align-items-center mb-4">
-                <div className='h4 fw-semibold'>Computer Components</div>
-                {canManage && (
-                    <button className="btn btn-sm btn-primary" onClick={handleCreate}>
-                        <span className='d-none d-md-inline'>New Component</span>
-                        <Plus className='d-inline d-md-none' />
-                    </button>
-                )}
+            <div className="mb-3 d-flex justify-content-between align-items-center">
+                <div className='h4 fw-semibold mb-0'>Computer Components</div>
             </div>
 
-            {/* Filters */}
-            <div className="card mb-4 overflow-hidden">
-                <div className="card-body bg-body-tertiary">
-                    <form onSubmit={handleSearch} className="row g-3 align-items-end">
+            {/* Search and Filter Section */}
+            <div className="bg-body-secondary border shadow rounded p-3">
+                <div className="row g-2 mb-3">
 
-                        <div className="col-md-4">
+                    <div className="col-12 d-flex justify-content-between gap-2">
+                        <div className="d-flex gap-2 flex-fill align-items-center justify-content-start">
                             <div className="input-group">
-                                <span className="input-group-text"><Search /></span>
-                                <input
+                                <span className='btn bg-claims-primary text-white'>
+                                    <Search size={"16px"} />
+                                </span>
+                                <Form.Control
                                     type="text"
-                                    className="form-control"
-                                    placeholder="Brand or Serial No."
+                                    className='border-primary'
+                                    placeholder="Search brand, name, serial, etc."
                                     value={search}
+                                    style={{ maxWidth: '400px' }}
                                     onChange={(e) => setSearch(e.target.value)}
                                 />
                             </div>
                         </div>
 
-                        <div className="col-6 col-md-2">
-                            <select
-                                className="form-select form-select-sm"
-                                value={labFilter}
-                                onChange={(e) => {
-                                    setLabFilter(e.target.value);
-                                    // if (e.target.value) setAssignmentFilter('false'); // Optional: force assignment filter? No, let user decide.
-                                }}
-                                disabled={assignmentFilter === 'true'}
+                        <div className="d-flex gap-2">
+                            {canManage && (
+                                <Button variant="primary" className='text-nowrap d-flex justify-content-center align-items-center gap-1' onClick={handleCreate}>
+                                    <Plus />
+                                    <span className='d-none d-md-inline'>New Component</span>
+                                </Button>
+                            )}
+                            <Button
+                                variant="primary"
+                                title='Filter Results'
+                                onClick={() => setShowFilterModal(true)}
                             >
-                                <option value="">All Laboratory</option>
-                                {laboratories.map(lab => (
-                                    <option key={lab.id} value={lab.id}>{lab.name}</option>
-                                ))}
-                            </select>
-                        </div>
-
-                        <div className="col-6 col-md-2">
-                            <select
-                                className="form-select form-select-sm"
-                                value={setFilter}
-                                onChange={(e) => setSetFilter(e.target.value)}
-                                disabled={!labFilter || assignmentFilter === 'true'}
-                            >
-                                <option value="">All Sets</option>
-                                {computerSets.map(set => (
-                                    <option key={set.id} value={set.id}>{set.set_name}</option>
-                                ))}
-                            </select>
-                        </div>
-
-                        <div className="col-6 col-md-2">
-                            <select
-                                className="form-select form-select-sm"
-                                value={statusFilter}
-                                onChange={(e) => setStatusFilter(e.target.value)}
-                            >
-                                <option value="">All Status</option>
-                                <option value="good">Good</option>
-                                <option value="bad">Bad</option>
-                                <option value="maintenance">Maintenance</option>
-                                <option value="missing">Missing</option>
-                            </select>
-                        </div>
-
-                        <div className="col-6 col-md-2">
-                            <select
-                                className="form-select form-select-sm"
-                                value={typeFilter}
-                                onChange={(e) => setTypeFilter(e.target.value)}
-                            >
-                                <option value="">All Types</option>
-                                {COMPONENT_TYPES.map(type => (
-                                    <option key={type.value} value={type.value}>{type.label}</option>
-                                ))}
-                            </select>
-                        </div>
-
-                        <div className="col-12">
-                            <div className="row row-cols-md-2">
-                                <div className="col-12 col-md-4 d-flex justify-content-center justify-content-md-start mb-3 mb-md-0">
-                                    <select
-                                        className="form-select form-select-sm"
-                                        value={assignmentFilter}
-                                        onChange={(e) => {
-                                            setAssignmentFilter(e.target.value);
-                                            if (e.target.value === 'true') { // 'true' is Unassigned
-                                                setLabFilter('');
-                                                setSetFilter('');
-                                            }
-                                        }}
-                                    >
-                                        <option value="false">Active Components</option>
-                                        <option value="true" title='Components that are not assigned to computer sets'>Rogue Components</option>
-                                        <option value="">Show All</option>
-                                    </select>
-                                </div>
-                                <div className="col-12 col-md-8 d-flex justify-content-end justify-content-md-end gap-2">
-                                    <button type="button" className="btn btn-sm btn-link border-0" onClick={handleClearFilters}>Clear Filters</button>
-                                    <button type="button" className="btn btn-sm btn-link border-0" onClick={() => fetchComponents()} title="Refresh">Refresh</button>
-                                    <button type="submit" className="btn btn-sm btn-primary"><Search /> <span className='d-none d-md-inline'>Search</span></button>
-                                </div>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            {/* Bulk Actions Toolbar */}
-            {selectedItems.length > 0 && (
-                <div className="card mb-4 border-0">
-                    <div className="card-body bg-body-tertiary rounded shadow-sm border p-2 d-flex align-items-center justify-content-center flex-wrap gap-2">
-                        <div className="row w-100">
-                            <div className="col-12 col-md-6 p-1">
-                                <span className='mb-3 fw-bold text-primary'>
-                                    <CheckCircleFill className="me-2" />
-                                    {selectedItems.length} component{selectedItems.length !== 1 ? 's' : ''} selected
-                                </span>
-
-                                <div className="d-flex gap-2">
-                                    <button className="btn btn-sm btn-link text-nowrap text-decoration-none" onClick={() => setShowSelectedModal(true)}>
-                                        View
-                                    </button>
-
-                                    <button
-                                        className="btn btn-sm btn-link text-nowrap text-decoration-none"
-                                        onClick={() => setSelectedItems([])}
-                                    >
-                                        Clear Selection
-                                    </button>
-                                </div>
-                            </div>
-                            <div className="col-12 col-md-4 p-1">
-                                <div className="d-flex gap-2 align-items-center w-100">
-                                    <div className="input-group input-group-sm flex-fill">
-                                        <select
-                                            className="form-select"
-                                            value={bulkStatus}
-                                            onChange={(e) => setBulkStatus(e.target.value)}
-                                            disabled={isBulkSubmitting}
-                                        >
-                                            <option value="">Set Status...</option>
-                                            <option value="good">Good</option>
-                                            <option value="bad">Bad</option>
-                                            <option value="maintenance">Maintenance</option>
-                                            <option value="missing">Missing</option>
-                                        </select>
-                                        <button
-                                            className="btn btn-primary"
-                                            onClick={handleBulkStatusUpdate}
-                                            disabled={!bulkStatus || isBulkSubmitting}
-                                        >
-                                            Apply
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="col-12 col-md-2 p-1">
-                                <button
-                                    className="btn btn-sm btn-danger d-flex align-items-center text-nowrap w-100"
-                                    onClick={handleBulkDelete}
-                                    disabled={isBulkSubmitting}
-                                >
-                                    <Trash className="me-1" /> Delete Items
-                                </button>
-                            </div>
+                                <Filter />
+                            </Button>
                         </div>
                     </div>
                 </div>
-            )}
 
-            {/* Table */}
-            <div className="card overflow-hidden border-0">
-                <div className="table-responsive border-0">
-                    <table className="table table-hover table-borderless table-striped align-middle mb-0">
+
+                {/* Department, Location, Set Filters */}
+                {canManage && (
+                    <div className="mb-2 container-fluid px-0">
+                        <div className="row g-1 row-cols-1 row-cols-sm-2 row-cols-lg-4" style={{ maxWidth: "700px" }}>
+                            {/* Department Filter - Conditional for Admins */}
+                            {user?.role === 'admin' && (
+                                <div className="col">
+                                    <select
+                                        className="form-select form-select-sm w-100"
+                                        value={departmentFilter}
+                                        onChange={(e) => setDepartmentFilter(e.target.value)}
+                                    >
+                                        <option value="">All Departments</option>
+                                        {departments.map(dept => (
+                                            <option key={dept.id} value={dept.id}>{dept.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+                            <div className="col">
+                                <select
+                                    className="form-select form-select-sm w-100"
+                                    value={locationTypeFilter}
+                                    onChange={(e) => setLocationTypeFilter(e.target.value)}
+                                >
+                                    <option value="">All Location Types</option>
+                                    <option value="laboratory">Laboratory</option>
+                                    <option value="office">Office</option>
+                                    <option value="kiosk">Kiosk</option>
+                                    <option value="others">Others</option>
+                                </select>
+                            </div>
+                            <div className="col">
+                                <select
+                                    className="form-select form-select-sm w-100"
+                                    value={labFilter}
+                                    onChange={(e) => {
+                                        setLabFilter(e.target.value);
+                                        setSetFilter('');
+                                    }}
+                                >
+                                    <option value="">All Locations</option>
+                                    {locations.map(loc => (
+                                        <option key={loc.id} value={loc.id}>{loc.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="col">
+                                <select
+                                    className="form-select form-select-sm w-100"
+                                    value={setFilter}
+                                    onChange={(e) => setSetFilter(e.target.value)}
+                                    disabled={!labFilter}
+                                >
+                                    <option value="">All Sets</option>
+                                    {computerSets.map(set => (
+                                        <option key={set.id} value={set.id}>{set.set_name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                <div className='mb-3'>
+                    <FilterBadges
+                        filters={[
+                            // Status filter badges (each one individually)
+                            ...statusFilters.map(status => ({
+                                key: `status-${status}`,
+                                label: `${status}`,
+                                onRemove: () => setStatusFilters(prev => prev.filter(s => s !== status))
+                            })),
+                            // Type filter badges (each one individually)
+                            ...typeFilters.map(type => ({
+                                key: `type-${type}`,
+                                label: `${COMPONENT_TYPES.find(t => t.value === type)?.label || type}`,
+                                onRemove: () => setTypeFilters(prev => prev.filter(t => t !== type))
+                            })),
+                            // Department filter badge (only for admins as they can filter all)
+                            ...(departmentFilter && user?.role === 'admin' ? [{
+                                key: 'dept',
+                                label: `Dept: ${departments.find(d => d.id == departmentFilter)?.name || 'Unknown'}`,
+                                onRemove: () => { setDepartmentFilter(''); setLabFilter(''); setSetFilter(''); }
+                            }] : []),
+                            // Location Type filter badge
+                            ...(locationTypeFilter ? [{
+                                key: 'locType',
+                                label: `Type: ${locationTypeFilter.charAt(0).toUpperCase() + locationTypeFilter.slice(1)}`,
+                                onRemove: () => setLocationTypeFilter('')
+                            }] : []),
+                            // Lab filter badge
+                            ...(labFilter ? [{
+                                key: 'lab',
+                                label: `Location: ${locations.find(l => l.id == labFilter)?.name || labFilter}`,
+                                onRemove: () => { setLabFilter(''); setSetFilter(''); }
+                            }] : []),
+                            // Set filter badge
+                            ...(setFilter ? [{
+                                key: 'set',
+                                label: `Set: ${computerSets.find(s => s.id == setFilter)?.set_name || setFilter}`,
+                                onRemove: () => setSetFilter('')
+                            }] : []),
+                            // Assignment filter badge (only show if not default)
+                            ...(assignmentFilter !== 'false' ? [{
+                                key: 'assignment',
+                                label: assignmentFilter === 'true' ? 'Rogue Only' : 'All Components',
+                                onRemove: () => setAssignmentFilter('false')
+                            }] : []),
+                            // Sort badge (only show if not default)
+                            ...(sortBy !== 'created_at' || sortOrder !== 'desc' ? [{
+                                key: 'sort',
+                                label: `Sort: ${sortBy === 'brand_name' ? 'Name' : sortBy === 'serial_number' ? 'Serial' : sortBy === 'created_at' ? 'Date' : sortBy} ${sortOrder === 'asc' ? '↑' : '↓'}`,
+                                onRemove: () => { setSortBy('created_at'); setSortOrder('desc'); }
+                            }] : [])
+                        ]}
+                        onAddFilter={() => setShowFilterModal(true)}
+                        hasFilters={statusFilters.length > 0 || typeFilters.length > 0 || labFilter || setFilter || departmentFilter || locationTypeFilter || assignmentFilter !== 'false' || sortBy !== 'created_at' || sortOrder !== 'desc'}
+                    />
+                </div>
+
+                {/* Bulk Actions Toolbar */}
+                <BulkActionsToolbar
+                    selectedCount={selectedItems.length}
+                    onClear={() => setSelectedItems([])}
+                    onAction={() => setShowSelectedModal(true)}
+                    actionLabel="Update Selection"
+                    disabled={isBulkSubmitting}
+                />
+
+                <div className="table-responsive">
+                    <table className="table align-middle mb-0">
                         <thead>
                             <tr className='text-center'>
-                                <th style={{ width: '40px' }}>
+                                <th style={{ width: '40px' }} className='bg-transparent'>
                                     <input
                                         type="checkbox"
                                         className="form-check-input"
@@ -541,23 +693,25 @@ const ComponentsPage = () => {
                                         checked={components.length > 0 && components.every(c => selectedItems.some(item => item.id === c.id))}
                                     />
                                 </th>
-                                <th>Type</th>
-                                <th className='text-start'>Brand</th>
-                                <th className='text-start'>Serial</th>
-                                <th>Status</th>
-                                <th className='text-start'>Assigned at</th>
-                                {canManage && <th>Actions</th>}
+                                <th className='bg-transparent text-start'>Component</th>
+                                <th className='bg-transparent d-none d-md-table-cell'>Status</th>
+                                <th className='bg-transparent text-start d-none d-md-table-cell'>Assignment</th>
+                                <th className='bg-transparent' style={{ width: '40px' }} >Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {loading ? (
-                                <tr><td colSpan={canManage ? 7 : 6} className="text-center py-4">Loading...</td></tr>
+                                <tr>
+                                    <td colSpan={canManage ? 7 : 6} className="bg-transparent text-center py-4">Loading...</td>
+                                </tr>
                             ) : components.length === 0 ? (
-                                <tr><td colSpan={canManage ? 7 : 6} className="text-center py-4">No components found.</td></tr>
+                                <tr>
+                                    <td colSpan={canManage ? 7 : 6} className="bg-transparent text-center py-4">No components found.</td>
+                                </tr>
                             ) : (
                                 currentComponents.map(comp => (
                                     <tr key={comp.id}>
-                                        <td className="text-center">
+                                        <td className="bg-transparent text-center cursor-pointer">
                                             <input
                                                 type="checkbox"
                                                 className="form-check-input"
@@ -565,27 +719,38 @@ const ComponentsPage = () => {
                                                 onChange={() => handleSelect(comp)}
                                             />
                                         </td>
-                                        <td className='text-center'>
-                                            <span className="fs-5" title={COMPONENT_TYPES.find(t => t.value === comp.component_type)?.label || comp.component_type}>
-                                                {getComponentIcon(comp.component_type)}
-                                            </span>
+                                        <td className='bg-transparent text-truncate cursor-pointer' onClick={() => setViewPropsModal({ show: true, component: comp })}>
+                                            <div className="d-flex align-items-center gap-3">
+                                                <span className="rounded bg-body-secondary p-2" title={COMPONENT_TYPES.find(t => t.value === comp.component_type)?.label || comp.component_type}>
+                                                    {getComponentIcon(comp.component_type)}
+                                                </span>
+                                                <div className='d-flex flex-column'>
+                                                    <span className='fw-semibold'>{comp.brand_name} <span className='small text-muted d-inline d-md-none text-capitalize small'>({comp.status})</span></span>
+                                                    <span className='small text-muted'>{comp.serial_number || "None"}</span>
+
+                                                    <span className='small text-muted d-inline d-md-none'>{comp?.computer_set_name ? `${comp?.location_name} > ${comp?.computer_set_name}` : 'Unassigned'}</span>
+                                                </div>
+                                            </div>
                                         </td>
-                                        <td className='text-truncate'>{comp.brand_name}</td>
-                                        <td className='text-truncate'>{comp.serial_number || '-'}</td>
-                                        <td>
+                                        <td className='bg-transparent d-none d-md-table-cell cursor-pointer' onClick={() => setViewPropsModal({ show: true, component: comp })}>
                                             <div className="d-flex align-items-center justify-content-center">
                                                 <span className={`${getStatusBadgeClass(comp.status)} me-2 text-capitalize`}>{comp.status}</span>
                                             </div>
                                         </td>
-                                        <td>
+                                        <td className='bg-transparent d-none d-md-table-cell'>
                                             <div className="d-flex justify-content-start">
                                                 {
                                                     comp.computer_set_name ? (
                                                         <>
-                                                            <Link to={`/dashboard/laboratories/${comp.laboratory_id}`} className="badge fw-semibold bg-primary text-decoration-none me-1" title="Go to Laboratory">
-                                                                {comp?.laboratory_name}
+                                                            {comp?.department_name && (
+                                                                <span className="badge fw-semibold bg-claims-primary text-decoration-none me-1 cursor-pointer" title={comp.department_description}>
+                                                                    {comp.department_name}
+                                                                </span>
+                                                            )}
+                                                            <Link to={`/dashboard/locations/${comp.location_id}`} className="badge fw-semibold bg-claims-primary text-decoration-none me-1" title="Go to Location">
+                                                                {comp?.location_name}
                                                             </Link>
-                                                            <Link to={`/dashboard/laboratories/${comp.laboratory_id}?set=${comp.computer_set_id}&components=true`} className="badge fw-semibold bg-primary text-decoration-none" title="View in Computer Set">
+                                                            <Link to={`/dashboard/locations/${comp.location_id}?set=${comp.computer_set_id}&components=true`} className="badge fw-semibold bg-claims-primary text-decoration-none" title="View in Computer Set">
                                                                 {comp?.computer_set_name}
                                                             </Link>
                                                         </>
@@ -596,17 +761,57 @@ const ComponentsPage = () => {
                                             </div>
                                         </td>
                                         {canManage && (
-                                            <td>
-                                                <div className='d-flex flex-wrap gap-1 justify-content-end'>
-                                                    {
-                                                        comp.properties && Object.keys(comp.properties).length > 0 && (
-                                                            <button className="btn btn-sm border-0 btn-outline-primary" onClick={() => setViewPropsModal({ show: true, component: comp })}>
-                                                                <InfoCircle title="View Properties" />
-                                                            </button>
-                                                        )
-                                                    }
-                                                    <button className="btn btn-sm border-0 btn-outline-primary" onClick={() => handleEdit(comp)} title="Edit Component"><PencilSquare /></button>
-                                                    <button className="btn btn-sm border-0 btn-outline-danger" onClick={() => handleDelete(comp.id)} title="Delete Component"><Trash /></button>
+                                            <td className='bg-transparent text-center'>
+                                                <div className="d-flex justify-content-center">
+                                                    <div
+                                                        className={`dropstart ${openDropdownId === comp.id ? 'show' : ''}`}
+                                                        ref={openDropdownId === comp.id ? dropdownRef : null}
+                                                    >
+                                                        <button
+                                                            className="btn btn-link btn-sm p-1 text-body border-0"
+                                                            type="button"
+                                                            onClick={(e) => toggleDropdown(comp.id, e)}
+                                                            aria-expanded={openDropdownId === comp.id}
+                                                        >
+                                                            <ThreeDotsVertical size={18} />
+                                                        </button>
+                                                        <ul
+                                                            className={`dropdown-menu shadow ${openDropdownId === comp.id ? 'show' : ''}`}
+                                                            style={{
+                                                                position: 'fixed',
+                                                                top: `${dropdownPosition.top}px`,
+                                                                left: `${dropdownPosition.left}px`,
+                                                                transform: 'translateX(-100%)',
+                                                                zIndex: 1050
+                                                            }}
+                                                        >
+                                                            <li>
+                                                                <button
+                                                                    className="dropdown-item"
+                                                                    onClick={() => handleDropdownAction((c) => setViewPropsModal({ show: true, component: c }), comp)}
+                                                                >
+                                                                    <Eye className="me-2" /> View Details
+                                                                </button>
+                                                            </li>
+                                                            <li>
+                                                                <button
+                                                                    className="dropdown-item"
+                                                                    onClick={() => handleDropdownAction(handleEdit, comp)}
+                                                                >
+                                                                    <PencilSquare className="me-2" /> Edit Component
+                                                                </button>
+                                                            </li>
+                                                            <li><hr className="dropdown-divider" /></li>
+                                                            <li>
+                                                                <button
+                                                                    className="dropdown-item text-danger"
+                                                                    onClick={() => handleDropdownAction((c) => handleDelete(c.id), comp)}
+                                                                >
+                                                                    <Trash className="me-2" /> Delete Component
+                                                                </button>
+                                                            </li>
+                                                        </ul>
+                                                    </div>
                                                 </div>
                                             </td>
                                         )}
@@ -616,90 +821,97 @@ const ComponentsPage = () => {
                         </tbody>
                     </table>
                 </div>
+
+                <Pagination
+                    itemsPerPage={itemsPerPage}
+                    totalItems={components.length}
+                    paginate={paginate}
+                    currentPage={currentPage}
+                />
+
             </div>
 
-            <Pagination
-                itemsPerPage={itemsPerPage}
-                totalItems={components.length}
-                paginate={paginate}
-                currentPage={currentPage}
-            />
 
             {/* Modal */}
-            <Modal className='pb-5' show={showModal} onHide={() => setShowModal(false)}>
+            <Modal className='pb-5' show={showModal} onHide={() => setShowModal(false)} size='lg'>
                 <Modal.Header closeButton>
                     <Modal.Title>{editingComponent ? 'Edit Component' : 'Add Component'}</Modal.Title>
                 </Modal.Header>
                 <form onSubmit={handleSubmit}>
                     <Modal.Body>
-                        <div className="mb-3">
-                            <label className="form-label">Type</label>
-                            <select
-                                className="form-select"
-                                value={formData.component_type}
-                                onChange={(e) => setFormData({ ...formData, component_type: e.target.value })}
-                                required
-                            >
-                                {COMPONENT_TYPES.map(t => (
-                                    <option key={t.value} value={t.value}>{t.label}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div className="mb-3">
-                            <label className="form-label">Brand Name</label>
-                            <input
-                                type="text"
-                                className="form-control"
-                                value={formData.brand_name}
-                                onChange={(e) => setFormData({ ...formData, brand_name: e.target.value })}
-                                required
-                                maxLength="50"
-                            />
-                        </div>
-                        <div className="mb-3">
-                            <label className="form-label">Serial Number</label>
-                            <div className="input-group">
-                                <input
-                                    type="text"
-                                    className="form-control"
-                                    value={formData.serial_number}
-                                    onChange={(e) => setFormData({ ...formData, serial_number: e.target.value })}
-                                    maxLength="36"
-                                    placeholder="Enter or scan serial number"
-                                />
-                                <BarcodeScanner
-                                    onScan={(value) => setFormData({ ...formData, serial_number: value })}
-                                    buttonIconOnly={true}
-                                    buttonVariant="outline-primary"
-                                    className="d-lg-none border-0"
+                        <div className="row g-4">
+                            {/* Component Information - Left on desktop, top on mobile */}
+                            <div className="col-lg-6">
+                                <h6 className="fw-semibold text-muted mb-2">Component Information</h6>
+                                <div className="mb-3">
+                                    <label className="form-label">Type</label>
+                                    <select
+                                        className="form-select"
+                                        value={formData.component_type}
+                                        onChange={(e) => setFormData({ ...formData, component_type: e.target.value })}
+                                        required
+                                    >
+                                        {COMPONENT_TYPES.map(t => (
+                                            <option key={t.value} value={t.value}>{t.label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="mb-3">
+                                    <label className="form-label">Brand Name</label>
+                                    <input
+                                        type="text"
+                                        className="form-control"
+                                        value={formData.brand_name}
+                                        onChange={(e) => setFormData({ ...formData, brand_name: e.target.value })}
+                                        required
+                                        maxLength="50"
+                                    />
+                                </div>
+                                <div className="mb-3">
+                                    <label className="form-label">Serial Number</label>
+                                    <div className="input-group border rounded">
+                                        <input
+                                            type="text"
+                                            className="form-control border-0"
+                                            value={formData.serial_number}
+                                            onChange={(e) => setFormData({ ...formData, serial_number: e.target.value })}
+                                            maxLength="36"
+                                            placeholder="Enter or scan serial number"
+                                        />
+                                        <BarcodeScanner
+                                            onScan={(value) => setFormData({ ...formData, serial_number: value })}
+                                            buttonIconOnly={true}
+                                            className="d-lg-none border-0"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="mb-3">
+                                    <label className="form-label">Status</label>
+                                    <select
+                                        className="form-select"
+                                        value={formData.status}
+                                        onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                                    >
+                                        <option value="good">Good</option>
+                                        <option value="bad">Bad</option>
+                                        <option value="maintenance">Maintenance</option>
+                                        <option value="missing">Missing</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Component Properties - Right on desktop, bottom on mobile */}
+                            <div className="col-lg-6">
+                                <h6 className="fw-semibold text-muted mb-2">Properties</h6>
+                                <KeyValueEditor
+                                    properties={formData.properties}
+                                    onChange={(newProps) => setFormData({ ...formData, properties: newProps })}
                                 />
                             </div>
-                        </div>
-                        <div className="mb-3">
-                            <label className="form-label">Status</label>
-                            <select
-                                className="form-select"
-                                value={formData.status}
-                                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                            >
-                                <option value="good">Good</option>
-                                <option value="bad">Bad</option>
-                                <option value="maintenance">Maintenance</option>
-                                <option value="missing">Missing</option>
-                            </select>
-                        </div>
-
-                        <div className="mb-3">
-                            <label className="form-label">Properties</label>
-                            <KeyValueEditor
-                                properties={formData.properties}
-                                onChange={(newProps) => setFormData({ ...formData, properties: newProps })}
-                            />
                         </div>
 
                         {!editingComponent && (
                             <>
-                                <hr />
                                 <div className="mb-3 form-check">
                                     <input
                                         type="checkbox"
@@ -712,37 +924,41 @@ const ComponentsPage = () => {
                                 </div>
                                 {formData.isAssigning && (
                                     <>
-                                        <div className="mb-3">
-                                            <label className="form-label">Laboratory</label>
-                                            <select
-                                                className="form-select"
-                                                value={formData.laboratory_id}
-                                                onChange={(e) => {
-                                                    setFormData({ ...formData, laboratory_id: e.target.value });
-                                                    fetchModalComputerSets(e.target.value);
-                                                }}
-                                                required={formData.isAssigning}
-                                            >
-                                                <option value="">Select Laboratory</option>
-                                                {laboratories.map(lab => (
-                                                    <option key={lab.id} value={lab.id}>{lab.name}</option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                        <div className="mb-3">
-                                            <label className="form-label">Computer Set</label>
-                                            <select
-                                                className="form-select"
-                                                value={formData.computer_set_id}
-                                                onChange={(e) => setFormData({ ...formData, computer_set_id: e.target.value })}
-                                                required={formData.isAssigning}
-                                                disabled={!formData.laboratory_id}
-                                            >
-                                                <option value="">Select Computer Set</option>
-                                                {modalComputerSets.map(set => (
-                                                    <option key={set.id} value={set.id}>{set.set_name}</option>
-                                                ))}
-                                            </select>
+
+                                        <hr />
+                                        <div className="row">
+                                            <div className="col-md-6 mb-3">
+                                                <label className="form-label">Laboratory</label>
+                                                <select
+                                                    className="form-select"
+                                                    value={formData.laboratory_id}
+                                                    onChange={(e) => {
+                                                        setFormData({ ...formData, laboratory_id: e.target.value });
+                                                        fetchModalComputerSets(e.target.value);
+                                                    }}
+                                                    required={formData.isAssigning}
+                                                >
+                                                    <option value="" hidden>Select Location</option>
+                                                    {locations.map(loc => (
+                                                        <option key={loc.id} value={loc.id}>{loc.name}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div className="col-md-6 mb-3">
+                                                <label className="form-label">Computer Set</label>
+                                                <select
+                                                    className="form-select"
+                                                    value={formData.computer_set_id}
+                                                    onChange={(e) => setFormData({ ...formData, computer_set_id: e.target.value })}
+                                                    required={formData.isAssigning}
+                                                    disabled={!formData.laboratory_id}
+                                                >
+                                                    <option value="" hidden>Select Computer Set</option>
+                                                    {modalComputerSets.map(set => (
+                                                        <option key={set.id} value={set.id}>{set.set_name}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
                                         </div>
                                     </>
                                 )}
@@ -759,36 +975,36 @@ const ComponentsPage = () => {
             {/* View Selected Items Modal */}
             <Modal show={showSelectedModal} onHide={() => setShowSelectedModal(false)} size="lg" centered>
                 <Modal.Header closeButton>
+                    <Modal.Title>Selected Items</Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
-                    <div className="h4 fw-bold">Selected Components ({selectedItems.length})</div>
-
-                    {
-                        selectedItems.length > 0 ? (
-                            <div className="px-3 overflow-auto" style={{ maxHeight: "50vh" }}>
+                    <div className="mb-4">
+                        <div className="h6 fw-semibold text-muted">Selected Items:</div>
+                        <div className="bg-body-tertiary p-2 rounded" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                            {selectedItems.length > 0 ? (
                                 <div className="table-responsive">
-                                    <table className="table table-hover align-middle mb-0">
-                                        <thead className="sticky-top">
-                                            <tr>
-                                                <th>Brand</th>
-                                                <th>Serial</th>
-                                                <th>Type</th>
-                                                <th className="text-end">Action</th>
-                                            </tr>
-                                        </thead>
+                                    <table className="table table-sm table-borderless align-middle mb-0">
                                         <tbody>
-                                            {selectedItems.map(item => (
-                                                <tr key={item.id}>
-                                                    <td>{item.brand_name}</td>
-                                                    <td>{item.serial_number || <span className='small text-muted'>n/a</span>}</td>
-                                                    <td>{item.component_type}</td>
-                                                    <td className="text-end">
+                                            {selectedItems.map((item, key) => (
+                                                <tr key={item.id} className={key !== (selectedItems.length - 1) ? 'border-bottom' : 'border-0'}>
+                                                    <td className='bg-transparent'>
+                                                        <div className='d-flex flex-column'>
+                                                            <span className='text-body fw-bold'>{item.brand_name}</span>
+                                                            <span className='small text-muted'>{item.serial_number || 'No serial'}</span>
+                                                            <span className='small text-muted text-capitalize'>
+                                                                {COMPONENT_TYPES.find(t => t.value === item.component_type)?.label || item.component_type}
+                                                                {' • '}
+                                                                <span className={`badge bg-${getComponentStatusVariant(item.status)}`}>{item.status}</span>
+                                                            </span>
+                                                        </div>
+                                                    </td>
+                                                    <td className='bg-transparent text-end'>
                                                         <button
-                                                            className="btn btn-sm btn-outline-danger"
+                                                            className='btn btn-sm btn-outline-danger border-0'
                                                             onClick={() => handleSelect(item)}
-                                                            title="Remove from selection"
+                                                            title='Remove from selection'
                                                         >
-                                                            <Trash />
+                                                            <X size={"1.2rem"} />
                                                         </button>
                                                     </td>
                                                 </tr>
@@ -796,40 +1012,382 @@ const ComponentsPage = () => {
                                         </tbody>
                                     </table>
                                 </div>
+                            ) : (
+                                <span className='text-center d-block py-4 text-muted'>No Items Selected</span>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="container-fluid">
+                        <div className='row'>
+                            <div className="col-lg-6 p-2 h-100">
+                                <div className="h6 text-muted">Batch Operations:</div>
+                                <div className="border p-3 rounded bg-body-tertiary">
+                                    {/* Status Update */}
+                                    <div className="mb-2 d-flex align-items-center justify-content-center gap-2">
+                                        <span className="text-nowrap">Update status to:</span>
+                                        <Form.Select
+                                            size="sm"
+                                            value={bulkStatus}
+                                            onChange={(e) => setBulkStatus(e.target.value)}
+                                            disabled={isBulkSubmitting}
+                                        >
+                                            <option value="">Nothing</option>
+                                            <option value="good">Good</option>
+                                            <option value="bad">Bad</option>
+                                            <option value="maintenance">Maintenance</option>
+                                            <option value="missing">Missing</option>
+                                        </Form.Select>
+                                    </div>
+
+                                    {/* Status change warning message */}
+                                    {bulkStatus && (
+                                        <div className="alert alert-info p-2 m-0 mt-3">
+                                            <span className='text-center small'>
+                                                <strong>{selectedItems.length}</strong>{` component${selectedItems.length !== 1 ? 's' : ''} will be set to ${bulkStatus.toUpperCase()} status`}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+
                             </div>
-                        ) : (
-                            <span className='text-center'>No Items Selected</span>
-                        )
-                    }
+                            <div className="col-lg-6 p-2 h-100">
+                                <div className="h6 text-muted">Danger zone:</div>
+                                <div className="mb-3 border border-danger p-3 rounded bg-danger-subtle">
+                                    <div className="d-flex align-items-center justify-content-center">
+                                        <Button variant="danger" size='sm' onClick={handleBulkDelete} disabled={selectedItems.length === 0 || isBulkSubmitting}>
+                                            <Trash className="me-1" /> Delete Selected Items
+                                        </Button>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
                 </Modal.Body>
-                <Modal.Footer>
-                    <Button variant="secondary" onClick={() => setShowSelectedModal(false)}>Close</Button>
+                <Modal.Footer className="d-flex justify-content-between">
+                    <Button variant="secondary" onClick={() => { setSelectedItems([]), setShowSelectedModal(false) }} disabled={selectedItems.length === 0 || isBulkSubmitting}>
+                        Clear
+                    </Button>
+                    <div className="d-flex gap-2">
+                        <Button variant="secondary" onClick={() => setShowSelectedModal(false)} disabled={isBulkSubmitting}>
+                            Close
+                        </Button>
+                        <Button
+                            variant="primary"
+                            onClick={handleBulkStatusUpdate}
+                            disabled={selectedItems.length === 0 || isBulkSubmitting || !bulkStatus}
+                        >
+                            {isBulkSubmitting ? 'Applying...' : 'Apply Changes'}
+                        </Button>
+                    </div>
                 </Modal.Footer>
             </Modal>
 
-            {/* View Properties Modal */}
-            <Modal show={viewPropsModal.show} onHide={() => setViewPropsModal({ show: false, component: null })} centered>
-                <Modal.Header closeButton>
-                    <Modal.Title>Component Properties</Modal.Title>
+            {/* Filter and Sort Modal */}
+            <Modal show={showFilterModal} onHide={() => setShowFilterModal(false)} size='lg' centered>
+                <Modal.Header>
+                    <div className="h4 mb-0">Sort and Filter</div>
                 </Modal.Header>
                 <Modal.Body>
-                    <KeyValues
-                        data={viewPropsModal.component?.properties}
-                        emptyMessage="No properties defined for this component"
-                    />
+                    <div className="row g-4">
+                        <div className="col-lg-6">
+                            <div className="h4 fw-semibold">Filter</div>
+                            <hr />
+
+                            {/* Status Filter - Multi-select */}
+                            <div className="mb-4">
+                                <div className="small mb-2 fw-semibold text-muted">Status</div>
+                                <div className="d-flex flex-wrap gap-1">
+                                    {[
+                                        { value: 'good', label: 'Good' },
+                                        { value: 'bad', label: 'Bad' },
+                                        { value: 'maintenance', label: 'Maintenance' },
+                                        { value: 'missing', label: 'Missing' }
+                                    ].map(opt => (
+                                        <div
+                                            key={opt.value}
+                                            className={`badge rounded border small cursor-pointer fw-normal ${statusFilters.includes(opt.value)
+                                                ? 'bg-claims-primary'
+                                                : 'bg-body-tertiary text-muted'
+                                                }`}
+                                            style={{ cursor: 'pointer' }}
+                                            onClick={() => toggleStatusFilter(opt.value)}
+                                        >
+                                            {opt.label}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Type Filter - Multi-select */}
+                            <div className="mb-4">
+                                <div className="small mb-2 fw-semibold text-muted">Type</div>
+                                <div className="d-flex flex-wrap gap-1">
+                                    {COMPONENT_TYPES.map(opt => (
+                                        <div
+                                            key={opt.value}
+                                            className={`badge rounded border small cursor-pointer fw-normal ${typeFilters.includes(opt.value)
+                                                ? 'bg-claims-primary'
+                                                : 'bg-body-tertiary text-muted'
+                                                }`}
+                                            style={{ cursor: 'pointer' }}
+                                            onClick={() => toggleTypeFilter(opt.value)}
+                                        >
+                                            {opt.label}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Assignment Filter */}
+                            <div className="mb-4">
+                                <div className="small mb-2 fw-semibold text-muted">Assignment</div>
+                                <div className="d-flex flex-wrap gap-1">
+                                    {[
+                                        { value: '', label: 'All' },
+                                        { value: 'false', label: 'Active', title: "Components that are LINKED to a Computer Set" },
+                                        { value: 'true', label: 'Rogue (Unassigned)', title: "Components that have not beed asigned to a Computer Set" }
+                                    ].map(opt => (
+                                        <div
+                                            key={opt.value}
+                                            className={`badge rounded border small cursor-pointer fw-normal ${assignmentFilter === opt.value
+                                                ? 'bg-claims-primary'
+                                                : 'bg-body-tertiary text-muted'
+                                                }`}
+                                            style={{ cursor: 'pointer' }}
+                                            title={opt.title}
+                                            onClick={() => {
+                                                setAssignmentFilter(opt.value);
+                                                if (opt.value === 'true') {
+                                                    setLabFilter('');
+                                                    setSetFilter('');
+                                                }
+                                            }}
+                                        >
+                                            {opt.label}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Computer Set Filter - only when lab is selected */}
+                            {labFilter && assignmentFilter !== 'true' && (
+                                <div className="mb-4">
+                                    <div className="small mb-2 fw-semibold text-muted">Computer Set</div>
+                                    <div className="d-flex flex-wrap gap-1">
+                                        <div
+                                            className={`badge rounded border small cursor-pointer fw-normal ${setFilter === ''
+                                                ? 'bg-claims-primary'
+                                                : 'bg-body-tertiary text-muted'
+                                                }`}
+                                            style={{ cursor: 'pointer' }}
+                                            onClick={() => setSetFilter('')}
+                                        >
+                                            All Sets
+                                        </div>
+                                        {computerSets.map(set => (
+                                            <div
+                                                key={set.id}
+                                                className={`badge rounded border small cursor-pointer fw-normal ${setFilter == set.id
+                                                    ? 'bg-claims-primary'
+                                                    : 'bg-body-tertiary text-muted'
+                                                    }`}
+                                                style={{ cursor: 'pointer' }}
+                                                onClick={() => setSetFilter(set.id)}
+                                            >
+                                                {set.set_name}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="col-lg-6">
+                            <div className="h4 fw-semibold">Sort</div>
+                            <hr />
+
+                            <div className="mb-4">
+                                <div className="small mb-2 fw-semibold text-muted">Sort By Time</div>
+                                <div className="d-flex flex-wrap gap-1">
+                                    {[
+                                        { value: 'created_at_desc', label: 'Latest', sortBy: 'created_at', sortOrder: 'desc' },
+                                        { value: 'created_at_asc', label: 'Oldest', sortBy: 'created_at', sortOrder: 'asc' }
+                                    ].map(opt => (
+                                        <div
+                                            key={opt.value}
+                                            className={`badge rounded border small cursor-pointer fw-normal ${sortBy === opt.sortBy && sortOrder === opt.sortOrder
+                                                ? 'bg-claims-primary'
+                                                : 'bg-body-tertiary text-muted'
+                                                }`}
+                                            style={{ cursor: 'pointer' }}
+                                            onClick={() => {
+                                                setSortBy(opt.sortBy);
+                                                setSortOrder(opt.sortOrder);
+                                            }}
+                                        >
+                                            {opt.label}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="mb-4">
+                                <div className="small mb-2 fw-semibold text-muted">Sort By Field</div>
+                                <div className="d-flex flex-wrap gap-1">
+                                    {[
+                                        { value: 'brand_name', label: 'Name' },
+                                        { value: 'serial_number', label: 'Serial Number' }
+                                    ].map(opt => (
+                                        <div
+                                            key={opt.value}
+                                            className={`badge rounded border small cursor-pointer fw-normal ${sortBy === opt.value
+                                                ? 'bg-claims-primary'
+                                                : 'bg-body-tertiary text-muted'
+                                                }`}
+                                            style={{ cursor: 'pointer' }}
+                                            onClick={() => {
+                                                setSortBy(opt.value);
+                                                // Toggle order if same field, otherwise default to asc
+                                                if (sortBy === opt.value) {
+                                                    setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                                                } else {
+                                                    setSortOrder('asc');
+                                                }
+                                            }}
+                                        >
+                                            {opt.label}
+                                            {sortBy === opt.value && (
+                                                <span className="ms-1">{sortOrder === 'asc' ? '↑' : '↓'}</span>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                 </Modal.Body>
-                <Modal.Footer className=' justify-content-between align-items-end'>
+                <Modal.Footer className="d-flex justify-content-between">
+                    <div>
+                        {(statusFilters.length > 0 || typeFilters.length > 0 || labFilter || setFilter || assignmentFilter !== 'false' || sortBy !== 'created_at' || sortOrder !== 'desc') && (
+                            <Button
+                                variant="secondary"
+                                onClick={handleClearFilters}
+                            >
+                                Clear
+                            </Button>
+                        )}
+                    </div>
+                    <Button variant="secondary" onClick={() => setShowFilterModal(false)}>
+                        Done
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+
+            {/* Component Preview Modal */}
+            <Modal show={viewPropsModal.show} onHide={() => setViewPropsModal({ show: false, component: null })} centered size="lg">
+                <Modal.Header closeButton>
+                    <Modal.Title>Component Details</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    {viewPropsModal.component && (
+                        <div className="row g-4 p-3">
+                            {/* Component Information Section - Left on desktop, top on mobile */}
+                            <div className="col-md-6 p-1">
+                                <h6 className="fw-semibold text-muted mb-2">Component Information</h6>
+                                <div className="d-flex flex-column gap-2">
+                                    <div className="bg-body-tertiary rounded p-3">
+                                        <small className="text-muted d-block mb-1">Type</small>
+                                        <div className="d-flex align-items-center gap-2">
+                                            <span className="fs-2">{getComponentIcon(viewPropsModal.component.component_type)}</span>
+                                            <span className="text-capitalize fw-semibold">
+                                                {COMPONENT_TYPES.find(t => t.value === viewPropsModal.component.component_type)?.label || viewPropsModal.component.component_type}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="bg-body-tertiary rounded p-3">
+                                        <small className="text-muted d-block mb-1">Status</small>
+                                        <span className="fw-semibold text-capitalize">
+                                            {viewPropsModal.component.status}
+                                        </span>
+                                    </div>
+                                    <div className="bg-body-tertiary rounded p-3">
+                                        <small className="text-muted d-block mb-1">Brand / Model</small>
+                                        <span className="fw-semibold">{viewPropsModal.component.brand_name}</span>
+                                    </div>
+                                    <div className="bg-body-tertiary rounded p-3">
+                                        <small className="text-muted d-block mb-1">Serial Number</small>
+                                        <span className={viewPropsModal.component.serial_number ? 'fw-semibold' : 'text-muted fst-italic'}>
+                                            {viewPropsModal.component.serial_number || 'N/A'}
+                                        </span>
+                                    </div>
+                                    <div className="bg-body-tertiary rounded p-3">
+                                        <small className="text-muted d-block mb-1">Assignment</small>
+                                        {viewPropsModal.component.computer_set_name ? (
+                                            <div className="d-flex flex-wrap gap-1">
+                                                {viewPropsModal.component.department_name && (
+                                                    <span className="badge bg-claims-primary cursor-pointer" title="Department">
+                                                        {viewPropsModal.component.department_name}
+                                                    </span>
+                                                )}
+                                                <span className="badge bg-claims-primary cursor-pointer" title="Location">
+                                                    {viewPropsModal.component.location_name}
+                                                </span>
+                                                <span className="badge bg-claims-primary cursor-pointer" title="Computer Set">
+                                                    {viewPropsModal.component.computer_set_name}
+                                                </span>
+                                            </div>
+                                        ) : (
+                                            <span className="badge bg-secondary fst-italic">Unassigned (Rogue Component)</span>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Component Properties Section - Right on desktop, bottom on mobile */}
+                            <div className="col-md-6 p-1">
+                                <h6 className="fw-semibold text-muted mb-2">Properties</h6>
+                                <div className="bg-body-tertiary rounded p-3">
+                                    <KeyValues
+                                        data={viewPropsModal.component?.properties}
+                                        emptyMessage="No custom properties defined for this component"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </Modal.Body>
+                <Modal.Footer className="justify-content-between">
                     {canManage && (
-                        <Button variant="primary" size='sm' onClick={() => {
-                            setViewPropsModal({ show: false, component: null });
-                            handleEdit(viewPropsModal.component);
-                        }}>
-                            Edit
-                        </Button>
+                        <div className='d-flex gap-2'>
+                            <Button variant="primary" onClick={() => {
+                                setViewPropsModal({ show: false, component: null });
+                                handleEdit(viewPropsModal.component);
+                            }}>
+                                <PencilSquare className="me-1" /> Edit
+                            </Button>
+                            <Button variant="danger"
+                                onClick={() => handleDropdownAction((c) => handleDelete(viewPropsModal.component.id), viewPropsModal.component)}
+
+                            >
+                                <Trash className="me-1" /> Delete
+                            </Button>
+                        </div>
                     )}
                     <Button variant="secondary" onClick={() => setViewPropsModal({ show: false, component: null })}>Close</Button>
                 </Modal.Footer>
             </Modal>
+
+            {/* Conflict Modal */}
+            <ComponentConflictModal
+                show={conflictModal.show}
+                onHide={() => setConflictModal({ ...conflictModal, show: false })}
+                conflictData={conflictModal.data}
+                onResolve={handleConflictResolve}
+                onCancel={() => setConflictModal({ ...conflictModal, show: false })}
+            />
         </div>
     );
 };
