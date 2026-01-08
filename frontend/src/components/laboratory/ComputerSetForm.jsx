@@ -116,6 +116,14 @@ const ComputerSetForm = ({ mode, editingId, initialData, locationId, locationNam
                         if (checkRes.data.exists) {
                             const existing = checkRes.data.component;
 
+                            // Department check for department-specific roles
+                            const isDeptRole = ['department_head', 'lab_head'].includes(user?.role);
+                            if (isDeptRole && existing.department_id && existing.department_id !== user?.department_id) {
+                                toast.error(`Component "${existing.brand_name}" (${existing.serial_number}) belongs to another department (${existing.department_name || 'Unknown'}). You can only use components from your department.`);
+                                setIsSubmitting(false);
+                                return;
+                            }
+
                             setConflictModal({
                                 show: true,
                                 data: { existing, currentInput: comp },

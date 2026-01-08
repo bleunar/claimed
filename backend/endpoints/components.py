@@ -41,19 +41,19 @@ def list_components():
              department_id = 'non_existent'
 
     query = """
-        SELECT c.id, c.computer_set_id, c.component_type, c.is_core, c.brand_name, c.serial_number, c.properties, c.status, c.created_at, c.updated_at, 
+        SELECT c.id, c.computer_set_id, c.department_id, c.component_type, c.is_core, c.brand_name, c.serial_number, c.properties, c.status, c.created_at, c.updated_at, 
                cs.set_name as computer_set_name, l.name as location_name, cs.location_id, l.department_id as location_department_id,
                d.name as department_name,  d.description as department_description
         FROM computer_set_components c
         LEFT JOIN computer_sets cs ON c.computer_set_id = cs.id
         LEFT JOIN locations l ON cs.location_id = l.id
-        LEFT JOIN departments d ON l.department_id = d.id
+        LEFT JOIN departments d ON c.department_id = d.id
         WHERE 1=1
     """
     params = []
 
     if department_id:
-        query += " AND l.department_id = %s"
+        query += " AND c.department_id = %s"
         params.append(department_id)
     
     if computer_set_id:
@@ -119,7 +119,7 @@ def list_components():
 def get_component(id):
     db = get_db()
     cursor = db.cursor(dictionary=True)
-    cursor.execute("SELECT id, computer_set_id, component_type, is_core, brand_name, serial_number, properties, status, created_at, updated_at FROM computer_set_components WHERE id = %s", (id,))
+    cursor.execute("SELECT id, computer_set_id, department_id, component_type, is_core, brand_name, serial_number, properties, status, created_at, updated_at FROM computer_set_components WHERE id = %s", (id,))
     component = cursor.fetchone()
     cursor.close()
     
@@ -147,12 +147,12 @@ def check_serial():
     cursor = db.cursor(dictionary=True)
     
     query = """
-        SELECT c.id, c.computer_set_id, c.component_type, c.status, c.brand_name, c.serial_number, c.properties, c.disposal_info,
+        SELECT c.id, c.computer_set_id, c.department_id, c.component_type, c.status, c.brand_name, c.serial_number, c.properties, c.disposal_info,
                cs.set_name as computer_set_name, l.name as location_name, d.name as department_name
         FROM computer_set_components c
         LEFT JOIN computer_sets cs ON c.computer_set_id = cs.id
         LEFT JOIN locations l ON cs.location_id = l.id
-        LEFT JOIN departments d ON l.department_id = d.id
+        LEFT JOIN departments d ON c.department_id = d.id
         WHERE c.serial_number = %s
     """
     
@@ -228,10 +228,15 @@ def create_component():
                   cursor.close()
                   return jsonify({"msg": "Access Denied: You can only add components to sets in your department"}), 403
     
+    # Determine department_id from the target computer set
+    target_department_id = None
+    if computer_set_id and target_set:
+        target_department_id = target_set.get('department_id')
+    
     try:
         cursor.execute(
-            "INSERT INTO computer_set_components (id, computer_set_id, component_type, is_core, brand_name, serial_number, properties, status) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
-            (component_id, computer_set_id, component_type, is_core, brand_name, serial_number, properties, status)
+            "INSERT INTO computer_set_components (id, computer_set_id, department_id, component_type, is_core, brand_name, serial_number, properties, status) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+            (component_id, computer_set_id, target_department_id, component_type, is_core, brand_name, serial_number, properties, status)
         )
         db.commit()
         cursor.close()
@@ -338,13 +343,29 @@ def update_component(id):
         # Let's keep it simple for now, the ownership check prevents them from editing OTHERS' components.
         # Moving to a rogue set outside dept is a risk, but manageable.
 
+    # Determine department_id based on the new computer_set_id
+    new_department_id = existing_component.get('department_id')  # Keep existing by default
+    if computer_set_id is not None:
+        if computer_set_id:  # Not None and not empty
+            cursor.execute("""
+                SELECT l.department_id 
+                FROM computer_sets cs 
+                JOIN locations l ON cs.location_id = l.id 
+                WHERE cs.id = %s
+            """, (computer_set_id,))
+            new_set_info = cursor.fetchone()
+            if new_set_info:
+                new_department_id = new_set_info.get('department_id')
+        # If computer_set_id is explicitly set to None/empty, keep existing department_id
+        # (we want to preserve department history when unlinked)
+
     try:
         import json
         props_val = json.dumps(properties) if properties is not None else None
 
         cursor.execute(
-            "UPDATE computer_set_components SET computer_set_id = %s, component_type = %s, is_core = %s, brand_name = %s, serial_number = %s, properties = %s, status = %s WHERE id = %s",
-            (computer_set_id, component_type, is_core, brand_name, serial_number, props_val, status, id)
+            "UPDATE computer_set_components SET computer_set_id = %s, department_id = %s, component_type = %s, is_core = %s, brand_name = %s, serial_number = %s, properties = %s, status = %s WHERE id = %s",
+            (computer_set_id, new_department_id, component_type, is_core, brand_name, serial_number, props_val, status, id)
         )
         db.commit()
         cursor.close()
@@ -466,13 +487,26 @@ def batch_component_transaction():
             if not item.get('component_type') or not item.get('brand_name'):
                 raise Exception("Missing required fields for create")
 
+            # Determine department_id from the target computer set
+            department_id = None
+            if item.get('computer_set_id'):
+                 cursor.execute("""
+                    SELECT l.department_id 
+                    FROM computer_sets cs 
+                    JOIN locations l ON cs.location_id = l.id 
+                    WHERE cs.id = %s
+                 """, (item.get('computer_set_id'),))
+                 set_info = cursor.fetchone()
+                 if set_info:
+                     department_id = set_info.get('department_id')
+
             props = item.get('properties')
             import json
             props_val = json.dumps(props) if props else None
 
             cursor.execute(
-                "INSERT INTO computer_set_components (id, computer_set_id, component_type, is_core, brand_name, serial_number, properties, status) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
-                (comp_id, item.get('computer_set_id'), item.get('component_type'), is_core, item.get('brand_name'), item.get('serial_number'), props_val, item.get('status', 'good'))
+                "INSERT INTO computer_set_components (id, computer_set_id, department_id, component_type, is_core, brand_name, serial_number, properties, status) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                (comp_id, item.get('computer_set_id'), department_id, item.get('component_type'), is_core, item.get('brand_name'), item.get('serial_number'), props_val, item.get('status', 'good'))
             )
             created_count += 1
 
@@ -484,10 +518,65 @@ def batch_component_transaction():
             props = item.get('properties')
             import json
             props_val = json.dumps(props) if props is not None else None
+
+            # Determine department_id if computer_set_id is changing or if we need to sync it
+            # For simplicity, if computer_set_id is provided (even if same), let's re-verify department_id
+            # But efficiently: we only update department_id if computer_set_id is in the update item.
+            # If computer_set_id is NOT in item, we keep existing department_id (handled by not including it in SET or handling dynamic query - wait, query below is static).
+            # The static query below updates ALL fields. We need to fetch existing first if we want to selectively update, OR we assume 'item' contains changes.
+            # actually the query below sets computer_set_id = %s. 
+            # If item doesn't have computer_set_id, it might be None or missing. 
+            # The current implementation assumes 'item' has the value or None.
+            # Let's see how 'item' is constructed. The user sends partial updates? 
+            # If partial, we need to know what to keep. 
+            # But the current implementation blindly sets `item.get('computer_set_id')`. If the user sent JSON without it, it becomes None. 
+            # This implies the client MUST send the full object or at least the fields that are allowed to be null.
+            # However, looking at lines 510, it effectively wipes fields if they aren't provided.
+            # BUT, looking at the loop (line 503), it iterates `updates`.
+            # If the client sends partial data, `item.get` returns None. 
+            # This suggests the `batch_component_transaction` expects FULL updates or at least the fields being updated.
+            # Actually, standard REST `PUT` behavior is replace. But typical batch might be partial.
+            # Let's look at the query again:
+            # "UPDATE ... SET computer_set_id = %s ... WHERE id = %s"
+            # If I send `{"id": "1", "status": "bad"}`, then `computer_set_id` becomes NULL.
+            # This seems like a flaw in the EXISTING implementation (it wipes data if not provided), 
+            # OR the frontend is expected to send everything.
+            # Assuming frontend sends everything or we are fixing it.
+            # To fix `department_id`, we need to know the NEW computer_set_id.
+            
+            # We need to fetch the current values to preserve `department_id` if `computer_set_id` is not changing/provided,
+            # OR if `computer_set_id` IS provided, we find the new department.
+            
+            current_dept_id = None
+            # We already fetched 'existing' up top (lines 457) but only inside a restricted block.
+            # We should probably fetch it here to be safe and correct.
+            cursor.execute("SELECT computer_set_id, department_id FROM computer_set_components WHERE id = %s", (item.get('id'),))
+            current_comp = cursor.fetchone()
+            if not current_comp: continue
+            
+            new_set_id = item.get('computer_set_id')
+            new_dept_id = current_comp['department_id'] # Default to keeping it
+
+            if 'computer_set_id' in item: # Check if key exists in valid payload
+                 # If explicit None, it means unlink -> department_id stays (or becomes null? Business logic says preserve history usually, strict schema might say NULL if cascade, but migration allowed NULL).
+                 # If explicit ID, lookup.
+                 if new_set_id:
+                     cursor.execute("""
+                        SELECT l.department_id 
+                        FROM computer_sets cs 
+                        JOIN locations l ON cs.location_id = l.id 
+                        WHERE cs.id = %s
+                     """, (new_set_id,))
+                     result = cursor.fetchone()
+                     if result:
+                         new_dept_id = result['department_id']
+            
+            # NOTE: The existing query blindly updates everything. This is dangerous if partial updates.
+            # Use 'new_dept_id' in the update.
             
             cursor.execute(
-                "UPDATE computer_set_components SET computer_set_id = %s, component_type = %s, is_core = %s, brand_name = %s, serial_number = %s, properties = %s, status = %s WHERE id = %s",
-                (item.get('computer_set_id'), item.get('component_type'), item.get('is_core'), item.get('brand_name'), item.get('serial_number'), props_val, item.get('status'), item.get('id'))
+                "UPDATE computer_set_components SET computer_set_id = %s, department_id = %s, component_type = %s, is_core = %s, brand_name = %s, serial_number = %s, properties = %s, status = %s WHERE id = %s",
+                (item.get('computer_set_id'), new_dept_id, item.get('component_type'), item.get('is_core'), item.get('brand_name'), item.get('serial_number'), props_val, item.get('status'), item.get('id'))
             )
             updated_count += 1
 

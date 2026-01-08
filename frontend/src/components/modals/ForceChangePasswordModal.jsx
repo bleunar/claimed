@@ -67,11 +67,11 @@ const ForceChangePasswordModal = ({ show }) => {
     return (
         <Modal show={show} backdrop="static" keyboard={false} centered>
             <Modal.Header>
-                <Modal.Title>Password Change Required</Modal.Title>
+                <Modal.Title>Password Update</Modal.Title>
             </Modal.Header>
             <Modal.Body>
                 <p className="text-muted mb-4">
-                    Please set a new secure password to continue accessing the system.
+                    Please set a new secure password to secure your account.
                 </p>
 
                 <Form onSubmit={handleSubmit}>
@@ -105,7 +105,7 @@ const ForceChangePasswordModal = ({ show }) => {
                         <Form.Label>Confirm New Password</Form.Label>
                         <div className="input-group bg-body rounded border">
                             <Form.Control
-                                type={showPassword ? "text" : "password"}
+                                type={showConfirmPassword ? "text" : "password"}
                                 placeholder="Confirm new password"
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}

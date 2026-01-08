@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Modal, Button, Dropdown } from 'react-bootstrap';
+import React, { useState, useEffect, useRef } from 'react';
+import { Modal, Button, Dropdown, Form, InputGroup } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Funnel } from 'react-bootstrap-icons';
+import { Plus, Funnel, Search, ArrowRepeat, XCircleFill } from 'react-bootstrap-icons';
 import toast from 'react-hot-toast';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
@@ -35,8 +35,24 @@ const LocationsPage = () => {
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [editingId, setEditingId] = useState(null);
+    const [submitting, setSubmitting] = useState(false);
     const [typeFilter, setTypeFilter] = useState(''); // Empty = all types
     const [departmentFilter, setDepartmentFilter] = useState(''); // Empty = all departments
+    const [searchTerm, setSearchTerm] = useState('');
+
+    // Refs to always have current values (avoids stale closure in fetchLocations)
+    const searchTermRef = useRef(searchTerm);
+    const typeFilterRef = useRef(typeFilter);
+    const departmentFilterRef = useRef(departmentFilter);
+
+    // Update refs on every render to have current values
+    searchTermRef.current = searchTerm;
+    typeFilterRef.current = typeFilter;
+    departmentFilterRef.current = departmentFilter;
+
+    // Track previous search term to detect when it's cleared
+    const prevSearchTermRef = useRef(searchTerm);
+
     const [formData, setFormData] = useState({
         name: '',
         description: '',
@@ -44,9 +60,15 @@ const LocationsPage = () => {
         department_id: ''
     });
 
-    const canManage = ['admin', 'it_head', 'lab_head'].includes(user?.role);
+    // RBAC for Locations
+    const canAdd = ['admin', 'it_head', 'department_head', 'lab_head'].includes(user?.role);
+    const canDelete = ['admin', 'it_head'].includes(user?.role);
+    const canEdit = ['admin', 'it_head', 'department_head', 'lab_head'].includes(user?.role);
+    const canSelectDepartment = ['admin', 'it_head'].includes(user?.role); // Can choose any department
+    const canEditAllFields = ['admin', 'it_head', 'department_head', 'lab_head'].includes(user?.role); // Can edit type and department
 
     const isGlobalRole = ['admin', 'it_head', 'it_technician'].includes(user?.role);
+    // Department-restricted roles that MUST have a department filter set
     const isDepartmentRole = ['department_head', 'department_staff', 'department_assistant'].includes(user?.role);
 
     const getDepartmentLabel = () => {
@@ -60,18 +82,43 @@ const LocationsPage = () => {
         return typeFilter.charAt(0).toUpperCase() + typeFilter.slice(1);
     }
 
+    // Set department filter for restricted roles
     useEffect(() => {
         if (isDepartmentRole && user?.department_id) {
             setDepartmentFilter(user.department_id);
         }
     }, [user, isDepartmentRole]);
 
+    // Fetch when filters change (type and department auto-fetch, search requires button)
     useEffect(() => {
-        // Only fetch locations if we have the necessary filter context (e.g. if dept role needs dept ID)
+        // For department-restricted roles, wait until their department is set
         if (isDepartmentRole && !departmentFilter) return;
         fetchLocations();
+    }, [typeFilter, departmentFilter]);
+
+    // Handle search button click
+    const handleSearch = () => {
+        fetchLocations();
+    };
+
+    // Auto-fetch when search is cleared (by typing or clear button)
+    useEffect(() => {
+        // If search was cleared (had value before, now empty), fetch data
+        if (prevSearchTermRef.current !== '' && searchTerm === '') {
+            fetchLocations();
+        }
+        prevSearchTermRef.current = searchTerm;
+    }, [searchTerm]);
+
+    // Clear search (just set to empty, useEffect handles the fetch)
+    const clearSearch = () => {
+        setSearchTerm('');
+    };
+
+    // Fetch departments on mount
+    useEffect(() => {
         fetchDepartments();
-    }, [typeFilter, departmentFilter, isDepartmentRole]);
+    }, []);
 
     const fetchDepartments = async () => {
         try {
@@ -86,8 +133,15 @@ const LocationsPage = () => {
         setLoading(true);
         try {
             let params = [];
-            if (typeFilter) params.push(`type=${typeFilter}`);
-            if (departmentFilter) params.push(`department_id=${departmentFilter}`);
+            // Use refs to get current values (avoids stale closure issues)
+            const currentType = typeFilterRef.current;
+            const currentDept = departmentFilterRef.current;
+            const currentSearch = searchTermRef.current;
+
+            if (currentType) params.push(`type=${currentType}`);
+            if (currentDept) params.push(`department_id=${currentDept}`);
+            if (currentSearch) params.push(`search=${encodeURIComponent(currentSearch)}`);
+
             const queryString = params.length > 0 ? `?${params.join('&')}` : '';
 
             const response = await api.get(`/locations/${queryString}`);
@@ -112,7 +166,7 @@ const LocationsPage = () => {
             name: loc.name,
             description: loc.description || '',
             type: loc.type || 'office',
-            department_id: user?.role === 'admin' ? (loc.department_id || '') : (user?.department_id || '')
+            department_id: canSelectDepartment ? (loc.department_id || '') : (user?.department_id || '')
         });
         setShowModal(true);
     };
@@ -123,7 +177,7 @@ const LocationsPage = () => {
             name: '',
             description: '',
             type: 'office',
-            department_id: user?.role === 'admin' ? '' : (user?.department_id || '')
+            department_id: canSelectDepartment ? '' : (user?.department_id || '')
         });
         setShowModal(true);
     };
@@ -142,6 +196,7 @@ const LocationsPage = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setSubmitting(true);
         try {
             if (editingId) {
                 await api.put(`/locations/${editingId}`, formData);
@@ -154,17 +209,56 @@ const LocationsPage = () => {
             fetchLocations();
         } catch (err) {
             toast.error(err.response?.data?.msg || `Failed to ${editingId ? 'update' : 'create'} location`);
+        } finally {
+            setSubmitting(false);
         }
     };
 
     return (
         <div className="container-fluid py-3">
-            <div className="d-flex justify-content-between align-items-center mb-4">
-                <div className='h4 fw-semibold'>Locations</div>
-                <div className="d-flex gap-2">
-                    <div className="d-flex gap-2 align-items-center">
+            <div className="d-flex justify-content-between align-items-center mb-3">
+                <div className='h4 fw-semibold mb-0'>Locations</div>
+            </div>
+
+            <div className="mb-3">
+                <div className="d-flex justify-content-between align-items-center gap-2">
+                    <div className='flex-fill'>
+                        <InputGroup className='rounded border border-claims-primary border-2 overflow-hidden' style={{ maxWidth: "400px" }}>
+                            <div className="position-relative flex-fill">
+                                <Form.Control
+                                    type="text"
+                                    className='border-0 pe-4'
+                                    placeholder="Search Locations"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                                    autoFocus
+                                />
+                                {searchTerm && (
+                                    <button
+                                        type="button"
+                                        className="btn btn-link position-absolute top-50 end-0 translate-middle-y p-0 me-2 text-muted"
+                                        onClick={clearSearch}
+                                        title="Clear search"
+                                        style={{ zIndex: 10 }}
+                                    >
+                                        <XCircleFill size={16} />
+                                    </button>
+                                )}
+                            </div>
+                            <button
+                                className='btn bg-claims-primary text-white px-3 rounded-0'
+                                onClick={handleSearch}
+                                disabled={loading}
+                                title='Search'
+                            >
+                                {loading ? <ArrowRepeat size={16} className="spinner" /> : <Search size={16} />}
+                            </button>
+                        </InputGroup>
+                    </div>
+                    <div className="d-none d-lg-flex gap-2 align-items-center">
                         {/* Type Filter Dropdown */}
-                        <div className="d-none d-md-flex flex-wrap align-items-center gap-2 border border-primary py-1 px-2 rounded">
+                        <div className="d-flex flex-wrap align-items-center gap-2 border border-primary border-2 py-1 px-2 rounded">
                             <Funnel className="text-muted" />
                             <Dropdown onSelect={(k) => setDepartmentFilter(k)}>
                                 <Dropdown.Toggle
@@ -207,18 +301,18 @@ const LocationsPage = () => {
                         </div>
                     </div>
                     {/* Department Filter Dropdown */}
-                    {canManage && (
-                        <button className="btn btn-sm btn-primary rounded" onClick={handleCreate}>
+                    {canAdd && (
+                        <button className="btn btn-primary" onClick={handleCreate}>
+                            <Plus />
                             <span className='d-none d-md-inline'>New Location</span>
-                            <Plus className='d-inline d-md-none' />
                         </button>
                     )}
                 </div>
             </div>
 
 
-            <div className="mb-4 d-flex d-md-none justify-content-center gap-1 border border-primary rounded align-items-center py-1 px-2">
-                <Funnel className="text-muted" style={{fontSize: "2rem", width: "2.5rem"}} />
+            <div className="mb-4 d-flex d-lg-none justify-content-center gap-1 border border-primary border-2 rounded align-items-center py-1 px-2">
+                <Funnel className="text-muted" style={{ fontSize: "2rem", width: "2.5rem" }} />
                 <Dropdown onSelect={(k) => setDepartmentFilter(k)} className="w-100 d-flex justify-content-center">
                     <Dropdown.Toggle
                         as={CustomToggle}
@@ -264,12 +358,13 @@ const LocationsPage = () => {
                     ) : (
                         (
                             locations.length > 0 ? (
-                                <div className="row row-cols-1 row-cols-sm-2 row-cols-lg-4 p-1">
+                                <div className="row row-cols-1 row-cols-sm-2 row-cols-lg-3 p-1">
                                     {locations.map(loc => (
                                         <LocationCard
                                             key={loc.id}
                                             location={loc}
-                                            canManage={canManage}
+                                            canEdit={canEdit}
+                                            canDelete={canDelete}
                                             onEdit={handleEdit}
                                             onDelete={handleDelete}
                                             onNavigate={(id) => navigate(`/dashboard/locations/${id}`)}
@@ -281,7 +376,7 @@ const LocationsPage = () => {
                             ) : (
                                 <div className="w-100 text-center">
                                     <span className="text-muted w-100">No Locations Found
-                                        <RoleBasedContent allowedRoles={['admin', 'it_head', 'lab_head']}>
+                                        <RoleBasedContent allowedRoles={['admin', 'it_head', 'department_head', 'lab_head']}>
                                             , <span className='btn btn-link px-0' onClick={handleCreate}>Add One</span>
                                         </RoleBasedContent>
                                     </span>
@@ -309,7 +404,7 @@ const LocationsPage = () => {
                                     <label className="form-label">Description</label>
                                     <input className="form-control" name="description" value={formData.description} onChange={handleInputChange} placeholder='Description'></input>
                                 </div>
-                                {user?.role === 'admin' && (
+                                {canSelectDepartment && (
                                     <div className="col-md-6 mb-3">
                                         <label className="form-label">Department</label>
                                         <select className="form-select" name="department_id" value={formData.department_id} onChange={handleInputChange}>
@@ -320,19 +415,21 @@ const LocationsPage = () => {
                                         </select>
                                     </div>
                                 )}
-                                <div className="col mb-3">
-                                    <label className="form-label">Type</label>
-                                    <select className="form-select" name="type" value={formData.type} onChange={handleInputChange} required>
-                                        {LOCATION_TYPES.map(type => (
-                                            <option key={type} value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</option>
-                                        ))}
-                                    </select>
-                                </div>
+                                {canEditAllFields && (
+                                    <div className="col mb-3">
+                                        <label className="form-label">Type</label>
+                                        <select className="form-select" name="type" value={formData.type} onChange={handleInputChange} required>
+                                            {LOCATION_TYPES.map(type => (
+                                                <option key={type} value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
                             </div>
                         </div>
                         <div className="modal-footer border-0">
-                            <Button variant="secondary" onClick={() => setShowModal(false)}>Close</Button>
-                            <Button variant="primary" type="submit">{editingId ? 'Update' : 'Create'}</Button>
+                            <Button variant="secondary" onClick={() => setShowModal(false)} disabled={submitting}>Close</Button>
+                            <Button variant="primary" type="submit" disabled={submitting}>{submitting ? 'Saving...' : (editingId ? 'Update' : 'Create')}</Button>
                         </div>
                     </form>
                 </Modal.Body>

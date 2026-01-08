@@ -7,8 +7,8 @@ import { ExclamationTriangle } from 'react-bootstrap-icons';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
-const Ratiolytics = ({ apiPath, title, colorMap = null, height = "200px" }) => {
-    const { chartData, error } = useChartData(apiPath);
+const Ratiolytics = ({ apiPath, title, colorMap = null, height = "200px", refreshTrigger = 0 }) => {
+    const { chartData, error } = useChartData(apiPath, refreshTrigger);
 
     // Default colors
     const defaultColors = ['#28a745', '#ffc107', '#dc3545', '#6c757d', '#17a2b8', '#6610f2'];

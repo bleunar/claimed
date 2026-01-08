@@ -12,13 +12,14 @@ locations_bp = Blueprint('locations', __name__, url_prefix='/locations')
 @locations_bp.route('/', methods=['GET'])
 @jwt_required()
 def list_locations():
-    """List all locations, optionally filtered by type and/or department"""
+    """List all locations, optionally filtered by type, department, and search term"""
     current_claims = get_jwt()
     current_role = current_claims.get("role")
     current_user_id = get_jwt_identity()
 
     location_type = request.args.get('type')
     department_id = request.args.get('department_id')
+    search = request.args.get('search', '').strip()
     
     db = get_db()
     cursor = db.cursor(dictionary=True)
@@ -51,6 +52,11 @@ def list_locations():
     if department_id:
         conditions.append("l.department_id = %s")
         params.append(department_id)
+    
+    if search:
+        conditions.append("(l.name LIKE %s OR l.description LIKE %s)")
+        search_pattern = f"%{search}%"
+        params.extend([search_pattern, search_pattern])
     
     if conditions:
         query += " WHERE " + " AND ".join(conditions)
@@ -138,9 +144,13 @@ def create_location():
 @locations_bp.route('/<id>', methods=['PUT'])
 @jwt_required()
 @verify_role_freshness
-@role_required(['admin', 'it_head', 'lab_head'])
+@role_required(['admin', 'it_head', 'department_head', 'lab_head'])
 def update_location(id: str):
     """Update a location"""
+    current_claims = get_jwt()
+    current_role = current_claims.get("role")
+    current_user_id = get_jwt_identity()
+    
     data = request.json
     name = data.get('name', '')
     description = data.get('description', '')
@@ -166,13 +176,31 @@ def update_location(id: str):
         cursor.close()
         return jsonify({"msg": "Location not found"}), 404
 
-    # Use existing type if not provided
-    if not location_type:
-        location_type = existing_loc['type']
-    
-    # Use existing department_id if not provided in request
-    if 'department_id' not in data:
+    # RBAC: Department/Lab heads can only edit locations in their department
+    if current_role in ['department_head', 'lab_head']:
+        cursor.execute("SELECT department_id FROM accounts WHERE id = %s", (current_user_id,))
+        user_dept = cursor.fetchone()
+        if not user_dept or user_dept['department_id'] != existing_loc['department_id']:
+            cursor.close()
+            return jsonify({"msg": "Access Denied: You can only edit locations in your department"}), 403
+        
+        # Department head: can only edit name and description
+        # Lab head: can edit name, description, and type
+        if current_role == 'department_head':
+            location_type = existing_loc['type']
+        elif not location_type:
+            location_type = existing_loc['type']
+        
+        # Neither can change department
         department_id = existing_loc['department_id']
+    else:
+        # Admin/IT Head - Use existing type if not provided
+        if not location_type:
+            location_type = existing_loc['type']
+        
+        # Use existing department_id if not provided in request
+        if 'department_id' not in data:
+            department_id = existing_loc['department_id']
     
     # Validate department_id if provided and not null
     if department_id:

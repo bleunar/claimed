@@ -43,7 +43,7 @@ def login():
         set_refresh_cookies(resp, refresh_token)
         
         # Log login activity
-        log_activity(user['id'], 'login')
+        log_activity(user['id'], 'login', actor_id=user['id'])
         
         return resp, 200
     
@@ -58,7 +58,7 @@ def logout():
     # Log logout activity if user is authenticated
     identity = get_jwt_identity()
     if identity:
-        log_activity(identity, 'logout')
+        log_activity(identity, 'logout', actor_id=identity)
         # Get client IP address for device-specific logout
         ip_address = request.headers.get('X-Forwarded-For', request.remote_addr)
         if ip_address and ',' in ip_address:
@@ -133,7 +133,7 @@ def verify_password():
     additional_claims = {"role": user['role']}
     access_token = create_access_token(identity=identity, additional_claims=additional_claims)
     
-    log_activity(identity, 'role_reauth', {'new_role': user['role']})
+    log_activity(identity, 'role_reauth', {'new_role': user['role']}, actor_id=identity)
     
     return jsonify({
         "access_token": access_token,
@@ -211,7 +211,7 @@ def reset_password():
         cursor.execute("SELECT id FROM accounts WHERE email = %s", (email,))
         account = cursor.fetchone()
         if account:
-            log_activity(account['id'], 'password_reset')
+            log_activity(account['id'], 'password_reset', actor_id=account['id'])
         
         cursor.close()
         return jsonify({"msg": "Password reset successfully"}), 200

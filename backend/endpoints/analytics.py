@@ -52,7 +52,7 @@ def get_kpi_data():
         total_users = cursor.fetchone()['count']
 
         # 2. Total Labs (Locations)
-        labs_query = "SELECT COUNT(*) as count FROM locations WHERE type = 'laboratory'"
+        labs_query = "SELECT COUNT(*) as count FROM locations WHERE 1=1"
         labs_params = []
         if department_id:
             labs_query += " AND department_id = %s"

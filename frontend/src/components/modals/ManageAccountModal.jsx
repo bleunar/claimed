@@ -168,11 +168,7 @@ const ManageAccountModal = ({ show, onHide, account = null, onSuccess }) => {
                                     </button>
                                 </div>
                                 {
-                                    user?.role === "admin" ? (
-                                        <Form.Text className="text-muted small">
-                                            Note: Password complexity is NOT enforced for administrators
-                                        </Form.Text>
-                                    ) : (
+                                    user?.role != "admin" && (
                                         <Form.Text className="text-muted small">
                                             Note: Minimum of 8 Characters, At least one number and Capital Letter
                                         </Form.Text>
@@ -197,6 +193,23 @@ const ManageAccountModal = ({ show, onHide, account = null, onSuccess }) => {
                         <hr />
 
                         <div className="row mb-3">
+                            <div className="col-6">
+                                <Form.Label>Department</Form.Label>
+                                <Form.Select
+                                    name="department_id"
+                                    value={formData.department_id}
+                                    onChange={handleInputChange}
+                                    disabled={user?.role !== 'admin'}
+                                >
+                                    <option value="" hidden={user?.role === 'admin'}>
+                                        {user?.role !== 'admin' ? (departments.find(d => d.id === user.department_id)?.name || 'Using your department') : 'Select department'}
+                                    </option>
+                                    {departments.map(dept => (
+                                        <option key={dept.id} value={dept.id}>{dept.name}</option>
+                                    ))}
+                                </Form.Select>
+                            </div>
+
                             <div className="col-6">
                                 <Form.Label>Role</Form.Label>
                                 <Form.Select name="role" value={formData.role} onChange={handleInputChange}>
@@ -235,22 +248,6 @@ const ManageAccountModal = ({ show, onHide, account = null, onSuccess }) => {
                                 </Form.Select>
                             </div>
 
-                            <div className="col-6">
-                                <Form.Label>Department</Form.Label>
-                                <Form.Select
-                                    name="department_id"
-                                    value={formData.department_id}
-                                    onChange={handleInputChange}
-                                    disabled={user?.role !== 'admin'}
-                                >
-                                    <option value="" hidden={user?.role === 'admin'}>
-                                        {user?.role !== 'admin' ? (departments.find(d => d.id === user.department_id)?.name || 'Using your department') : 'Select department'}
-                                    </option>
-                                    {departments.map(dept => (
-                                        <option key={dept.id} value={dept.id}>{dept.name}</option>
-                                    ))}
-                                </Form.Select>
-                            </div>
                         </div>
 
                         <div className="row mb-3">

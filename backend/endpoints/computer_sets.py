@@ -66,7 +66,7 @@ def create_computer_set():
     cursor = db.cursor(dictionary=True)
     
     # Verify location exists and get name for log context
-    cursor.execute("SELECT id, name FROM locations WHERE id = %s", (location_id,))
+    cursor.execute("SELECT id, name, department_id FROM locations WHERE id = %s", (location_id,))
     loc_data = cursor.fetchone()
     if not loc_data:
         cursor.close()
@@ -117,8 +117,8 @@ def create_computer_set():
                     props_val = json.dumps(props) if props else None
 
                     cursor.execute(
-                        "INSERT INTO computer_set_components (id, computer_set_id, component_type, is_core, brand_name, serial_number, properties, status) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
-                        (comp_id, set_id, comp.get('component_type'), comp.get('is_core', False), comp.get('brand_name'), comp.get('serial_number'), props_val, 'good')
+                        "INSERT INTO computer_set_components (id, computer_set_id, department_id, component_type, is_core, brand_name, serial_number, properties, status) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                        (comp_id, set_id, loc_data.get('department_id'), comp.get('component_type'), comp.get('is_core', False), comp.get('brand_name'), comp.get('serial_number'), props_val, 'good')
                     )
 
             db.commit()
@@ -157,8 +157,8 @@ def create_computer_set():
                 props_val = json.dumps(props) if props else None
 
                 cursor.execute(
-                    "INSERT INTO computer_set_components (id, computer_set_id, component_type, is_core, brand_name, serial_number, properties, status) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
-                    (comp_id, set_id, comp.get('component_type'), comp.get('is_core', False), comp.get('brand_name'), comp.get('serial_number'), props_val, 'good')
+                    "INSERT INTO computer_set_components (id, computer_set_id, department_id, component_type, is_core, brand_name, serial_number, properties, status) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                    (comp_id, set_id, loc_data.get('department_id'), comp.get('component_type'), comp.get('is_core', False), comp.get('brand_name'), comp.get('serial_number'), props_val, 'good')
                 )
                 
             db.commit()
@@ -189,17 +189,36 @@ def update_computer_set(id):
     cursor = db.cursor(dictionary=True)
     
     # Check if exists
-    cursor.execute("SELECT id, location_id, set_name FROM computer_sets WHERE id = %s", (id,))
+    cursor.execute("SELECT id, location_id, set_name, status FROM computer_sets WHERE id = %s", (id,))
     existing_set = cursor.fetchone()
     if not existing_set:
         cursor.close()
         return jsonify({"msg": "Computer set not found"}), 404
 
     # Validate permissions based on what is changing
+    # Validate permissions based on what is changing
+    move_ops = ['admin', 'it_head', 'department_head', 'lab_head']
+    
+    if location_id is not None and location_id != existing_set['location_id']:
+         if role not in move_ops:
+              cursor.close()
+              return jsonify({"msg": "Access Denied: You are not authorized to move computer sets"}), 403
+         
+         # Strict Department Scoping for Heads
+         if role in ['department_head', 'lab_head']:
+             # Get user's department
+             cursor.execute("SELECT department_id FROM accounts WHERE id = %s", (get_jwt_identity(),))
+             user_dept = cursor.fetchone()
+             
+             # Get target location's department
+             cursor.execute("SELECT department_id FROM locations WHERE id = %s", (location_id,))
+             target_loc = cursor.fetchone()
+             
+             if not user_dept or not target_loc or user_dept['department_id'] != target_loc['department_id']:
+                  cursor.close()
+                  return jsonify({"msg": "Access Denied: You can only move sets to locations within your department"}), 403
+
     if role not in full_ops:
-        if location_id is not None and location_id != existing_set['location_id']:
-             cursor.close()
-             return jsonify({"msg": "Access Denied: You are not authorized to move computer sets"}), 403
         if set_name is not None and set_name != existing_set['set_name']:
              cursor.close()
              return jsonify({"msg": "Access Denied: You are not authorized to rename computer sets"}), 403
@@ -222,9 +241,30 @@ def update_computer_set(id):
             return jsonify({"msg": f"Computer set '{check_name}' already exists in this location."}), 409
 
     try:
+        # Check if we need to sync department_id for components
+        if location_id and location_id != existing_set['location_id']:
+            # Fetch new department
+            cursor.execute("SELECT department_id FROM locations WHERE id = %s", (location_id,))
+            new_loc_info = cursor.fetchone()
+            new_dept_id = new_loc_info['department_id'] if new_loc_info else None
+            
+            # Fetch old department
+            cursor.execute("SELECT department_id FROM locations WHERE id = %s", (existing_set['location_id'],))
+            old_loc_info = cursor.fetchone()
+            old_dept_id = old_loc_info['department_id'] if old_loc_info else None
+            
+            if new_dept_id != old_dept_id:
+                # Sync components
+                cursor.execute("UPDATE computer_set_components SET department_id = %s WHERE computer_set_id = %s", (new_dept_id, id))
+
+        # Prepare final values for update, failing back to existing if not provided
+        final_location_id = location_id if location_id is not None else existing_set['location_id']
+        final_set_name = set_name if set_name else existing_set['set_name']
+        final_status = status if status else existing_set['status']
+
         cursor.execute(
             "UPDATE computer_sets SET location_id = %s, set_name = %s, status = %s WHERE id = %s",
-            (location_id, set_name, status, id)
+            (final_location_id, final_set_name, final_status, id)
         )
         db.commit()
         cursor.close()

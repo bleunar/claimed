@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Modal, Button, Form } from 'react-bootstrap';
+import { Modal, Button, Form, Offcanvas } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import Pagination from '../components/Pagination';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { Plus, Trash, PencilSquare, InfoCircle, X, ExclamationTriangleFill, Filter, Search, ThreeDotsVertical, Eye } from 'react-bootstrap-icons';
+import { Plus, Trash, PencilSquare, InfoCircle, X, ExclamationTriangleFill, Filter, Search, ThreeDotsVertical, Eye, ArrowRepeat, XCircleFill } from 'react-bootstrap-icons';
 import KeyValueEditor from '../components/common/KeyValueEditor';
 import KeyValues from '../components/common/KeyValues';
 import BarcodeScanner from '../components/common/BarcodeScanner';
@@ -22,6 +22,7 @@ const ComponentsPage = () => {
     const { user } = useAuth();
     const [components, setComponents] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [submitting, setSubmitting] = useState(false);
 
     // Bulk Operations State
     const [selectedItems, setSelectedItems] = useState([]); // Array of component objects
@@ -176,7 +177,9 @@ const ComponentsPage = () => {
             if (statusFilters.length > 0) query += `status=${statusFilters.join(',')}&`;
             if (typeFilters.length > 0) query += `component_type=${typeFilters.join(',')}&`;
             if (assignmentFilter) query += `unassigned=${assignmentFilter}&`;
-            if (search) query += `search=${search}&`;
+            // Use ref to get current search value (avoids stale closure)
+            const currentSearch = searchRef.current;
+            if (currentSearch) query += `search=${currentSearch}&`;
             if (labFilter) query += `laboratory_id=${labFilter}&`;
             if (setFilter) query += `computer_set_id=${setFilter}&`;
             if (departmentFilter) query += `department_id=${departmentFilter}&`;
@@ -236,19 +239,38 @@ const ComponentsPage = () => {
         }
     }, [labFilter]);
 
+    // Fetch when filters change (not search term - that requires button click)
     useEffect(() => {
-        const timer = setTimeout(() => {
+        setCurrentPage(1);
+        fetchComponents();
+    }, [statusFilters, typeFilters, assignmentFilter, labFilter, setFilter, departmentFilter, locationTypeFilter, sortBy, sortOrder]);
+
+    // Handle search button click
+    const handleSearch = () => {
+        setCurrentPage(1);
+        fetchComponents();
+    };
+
+    // Ref to always have the current search value (avoids stale closure)
+    const searchRef = useRef(search);
+    searchRef.current = search;
+
+    // Track previous search term to detect when it's cleared
+    const prevSearchRef = useRef(search);
+
+    // Auto-fetch when search is cleared (by typing or clear button)
+    useEffect(() => {
+        // If search was cleared (had value before, now empty), fetch data
+        if (prevSearchRef.current !== '' && search === '') {
             setCurrentPage(1);
             fetchComponents();
-        }, 500);
+        }
+        prevSearchRef.current = search;
+    }, [search]);
 
-        return () => clearTimeout(timer);
-
-    }, [search, statusFilters, typeFilters, assignmentFilter, labFilter, setFilter, departmentFilter, locationTypeFilter, sortBy, sortOrder]);
-
-    const handleSearch = (e) => {
-        e.preventDefault();
-        // Auto-fetch handles this via useEffect
+    // Clear search (just set to empty, useEffect handles the fetch)
+    const clearSearch = () => {
+        setSearch('');
     };
 
     const [modalComputerSets, setModalComputerSets] = useState([]);
@@ -363,6 +385,7 @@ const ComponentsPage = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setSubmitting(true);
         try {
             let targetId = editingComponent?.id;
             let method = editingComponent ? 'put' : 'post';
@@ -414,6 +437,8 @@ const ComponentsPage = () => {
             fetchComponents();
         } catch (err) {
             toast.error(err.response?.data?.msg || "Failed to save component");
+        } finally {
+            setSubmitting(false);
         }
     };
 
@@ -510,166 +535,189 @@ const ComponentsPage = () => {
                 <div className='h4 fw-semibold mb-0'>Computer Components</div>
             </div>
 
-            {/* Search and Filter Section */}
-            <div className="bg-body-secondary border shadow rounded p-3">
-                <div className="row g-2 mb-3">
-
-                    <div className="col-12 d-flex justify-content-between gap-2">
-                        <div className="d-flex gap-2 flex-fill align-items-center justify-content-start">
-                            <div className="input-group">
-                                <span className='btn bg-claims-primary text-white'>
-                                    <Search size={"16px"} />
-                                </span>
+            <div className="mb-3">
+                <div className="d-flex justify-content-between align-items-center gap-2">
+                    <div className="flex-fill">
+                        <div className="input-group rounded border border-claims-primary border-2 overflow-hidden" style={{ maxWidth: "400px" }}>
+                            <div className="position-relative flex-fill">
                                 <Form.Control
                                     type="text"
-                                    className='border-primary'
-                                    placeholder="Search brand, name, serial, etc."
+                                    className='border-0 pe-4'
+                                    placeholder="Search Brand/Name, Serial, etc."
                                     value={search}
-                                    style={{ maxWidth: '400px' }}
                                     onChange={(e) => setSearch(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                                    autoFocus
                                 />
+                                {search && (
+                                    <button
+                                        type="button"
+                                        className="btn btn-link position-absolute top-50 end-0 translate-middle-y p-0 me-2 text-muted"
+                                        onClick={clearSearch}
+                                        title="Clear search"
+                                        style={{ zIndex: 10 }}
+                                    >
+                                        <XCircleFill size={16} />
+                                    </button>
+                                )}
                             </div>
-                        </div>
-
-                        <div className="d-flex gap-2">
-                            {canManage && (
-                                <Button variant="primary" className='text-nowrap d-flex justify-content-center align-items-center gap-1' onClick={handleCreate}>
-                                    <Plus />
-                                    <span className='d-none d-md-inline'>New Component</span>
-                                </Button>
-                            )}
-                            <Button
-                                variant="primary"
-                                title='Filter Results'
-                                onClick={() => setShowFilterModal(true)}
+                            <button
+                                className='btn bg-claims-primary text-white px-3 rounded-0'
+                                onClick={handleSearch}
+                                disabled={loading}
+                                title='Search'
                             >
-                                <Filter />
-                            </Button>
+                                {loading ? <ArrowRepeat size={16} className="spinner" /> : <Search size={16} />}
+                            </button>
                         </div>
+                    </div>
+                    <div className="d-flex gap-2">
+                        {canManage && (
+                            <Button variant="primary" className='text-nowrap d-flex justify-content-center align-items-center gap-1' onClick={handleCreate}>
+                                <Plus />
+                                <span className='d-none d-md-inline'>New Component</span>
+                            </Button>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* Search and Filter Section */}
+            <div className="bg-body-secondary border shadow rounded p-3">
+                <div className="mb-3 d-flex justify-content-between align-items-center">
+                    <div className="d-flex flex-fill gap-2 flex-fill align-items-center justify-content-start">
+                        <FilterBadges
+                            filters={[
+                                // Status filter badges (each one individually)
+                                ...statusFilters.map(status => ({
+                                    key: `status-${status}`,
+                                    label: `${status}`,
+                                    onRemove: () => setStatusFilters(prev => prev.filter(s => s !== status))
+                                })),
+                                // Type filter badges (each one individually)
+                                ...typeFilters.map(type => ({
+                                    key: `type-${type}`,
+                                    label: `${COMPONENT_TYPES.find(t => t.value === type)?.label || type}`,
+                                    onRemove: () => setTypeFilters(prev => prev.filter(t => t !== type))
+                                })),
+                                // Department filter badge (only for admins as they can filter all)
+                                ...(departmentFilter && user?.role === 'admin' ? [{
+                                    key: 'dept',
+                                    label: `Dept: ${departments.find(d => d.id == departmentFilter)?.name || 'Unknown'}`,
+                                    onRemove: () => { setDepartmentFilter(''); setLabFilter(''); setSetFilter(''); }
+                                }] : []),
+                                // Location Type filter badge
+                                ...(locationTypeFilter ? [{
+                                    key: 'locType',
+                                    label: `Type: ${locationTypeFilter.charAt(0).toUpperCase() + locationTypeFilter.slice(1)}`,
+                                    onRemove: () => setLocationTypeFilter('')
+                                }] : []),
+                                // Lab filter badge
+                                ...(labFilter ? [{
+                                    key: 'lab',
+                                    label: `Location: ${locations.find(l => l.id == labFilter)?.name || labFilter}`,
+                                    onRemove: () => { setLabFilter(''); setSetFilter(''); }
+                                }] : []),
+                                // Set filter badge
+                                ...(setFilter ? [{
+                                    key: 'set',
+                                    label: `Set: ${computerSets.find(s => s.id == setFilter)?.set_name || setFilter}`,
+                                    onRemove: () => setSetFilter('')
+                                }] : []),
+                                // Assignment filter badge (only show if not default)
+                                ...(assignmentFilter !== 'false' ? [{
+                                    key: 'assignment',
+                                    label: assignmentFilter === 'true' ? 'Rogue Only' : 'All Components',
+                                    onRemove: () => setAssignmentFilter('false')
+                                }] : []),
+                                // Sort badge (only show if not default)
+                                ...(sortBy !== 'created_at' || sortOrder !== 'desc' ? [{
+                                    key: 'sort',
+                                    label: `Sort: ${sortBy === 'brand_name' ? 'Name' : sortBy === 'serial_number' ? 'Serial' : sortBy === 'created_at' ? 'Date' : sortBy} ${sortOrder === 'asc' ? '↑' : '↓'}`,
+                                    onRemove: () => { setSortBy('created_at'); setSortOrder('desc'); }
+                                }] : [])
+                            ]}
+                            onAddFilter={() => setShowFilterModal(true)}
+                            hasFilters={statusFilters.length > 0 || typeFilters.length > 0 || labFilter || setFilter || departmentFilter || locationTypeFilter || assignmentFilter !== 'false' || sortBy !== 'created_at' || sortOrder !== 'desc'}
+                        />
+                    </div>
+
+                    <div className="d-flex gap-2">
+                        <Button
+                            variant="primary"
+                            title='Filter Results'
+                            onClick={() => setShowFilterModal(true)}
+                        >
+                            <Filter />
+                        </Button>
                     </div>
                 </div>
 
-
-                {/* Department, Location, Set Filters */}
-                {canManage && (
-                    <div className="mb-2 container-fluid px-0">
-                        <div className="row g-1 row-cols-1 row-cols-sm-2 row-cols-lg-4" style={{ maxWidth: "700px" }}>
-                            {/* Department Filter - Conditional for Admins */}
-                            {user?.role === 'admin' && (
+                <div className="mb-3">
+                    {/* Department, Location, Set Filters */}
+                    {canManage && (
+                        <div className="mb-2 container-fluid px-0">
+                            <div className="row g-1 row-cols-2 row-cols-md-3 row-cols-xl-4">
+                                {/* Department Filter - Conditional for Admins */}
+                                {user?.role === 'admin' && (
+                                    <div className="col">
+                                        <select
+                                            className="form-select form-select-sm w-100"
+                                            value={departmentFilter}
+                                            onChange={(e) => setDepartmentFilter(e.target.value)}
+                                        >
+                                            <option value="">All Departments</option>
+                                            {departments.map(dept => (
+                                                <option key={dept.id} value={dept.id}>{dept.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
                                 <div className="col">
                                     <select
                                         className="form-select form-select-sm w-100"
-                                        value={departmentFilter}
-                                        onChange={(e) => setDepartmentFilter(e.target.value)}
+                                        value={locationTypeFilter}
+                                        onChange={(e) => setLocationTypeFilter(e.target.value)}
                                     >
-                                        <option value="">All Departments</option>
-                                        {departments.map(dept => (
-                                            <option key={dept.id} value={dept.id}>{dept.name}</option>
+                                        <option value="">All Location Types</option>
+                                        <option value="laboratory">Laboratory</option>
+                                        <option value="office">Office</option>
+                                        <option value="kiosk">Kiosk</option>
+                                        <option value="others">Others</option>
+                                    </select>
+                                </div>
+                                <div className="col">
+                                    <select
+                                        className="form-select form-select-sm w-100"
+                                        value={labFilter}
+                                        onChange={(e) => {
+                                            setLabFilter(e.target.value);
+                                            setSetFilter('');
+                                        }}
+                                    >
+                                        <option value="">All Locations</option>
+                                        {locations.map(loc => (
+                                            <option key={loc.id} value={loc.id}>{loc.name}</option>
                                         ))}
                                     </select>
                                 </div>
-                            )}
-                            <div className="col">
-                                <select
-                                    className="form-select form-select-sm w-100"
-                                    value={locationTypeFilter}
-                                    onChange={(e) => setLocationTypeFilter(e.target.value)}
-                                >
-                                    <option value="">All Location Types</option>
-                                    <option value="laboratory">Laboratory</option>
-                                    <option value="office">Office</option>
-                                    <option value="kiosk">Kiosk</option>
-                                    <option value="others">Others</option>
-                                </select>
-                            </div>
-                            <div className="col">
-                                <select
-                                    className="form-select form-select-sm w-100"
-                                    value={labFilter}
-                                    onChange={(e) => {
-                                        setLabFilter(e.target.value);
-                                        setSetFilter('');
-                                    }}
-                                >
-                                    <option value="">All Locations</option>
-                                    {locations.map(loc => (
-                                        <option key={loc.id} value={loc.id}>{loc.name}</option>
-                                    ))}
-                                </select>
-                            </div>
 
-                            <div className="col">
-                                <select
-                                    className="form-select form-select-sm w-100"
-                                    value={setFilter}
-                                    onChange={(e) => setSetFilter(e.target.value)}
-                                    disabled={!labFilter}
-                                >
-                                    <option value="">All Sets</option>
-                                    {computerSets.map(set => (
-                                        <option key={set.id} value={set.id}>{set.set_name}</option>
-                                    ))}
-                                </select>
+                                <div className="col">
+                                    <select
+                                        className="form-select form-select-sm w-100"
+                                        value={setFilter}
+                                        onChange={(e) => setSetFilter(e.target.value)}
+                                        disabled={!labFilter}
+                                    >
+                                        <option value="">All Sets</option>
+                                        {computerSets.map(set => (
+                                            <option key={set.id} value={set.id}>{set.set_name}</option>
+                                        ))}
+                                    </select>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                )}
-
-                <div className='mb-3'>
-                    <FilterBadges
-                        filters={[
-                            // Status filter badges (each one individually)
-                            ...statusFilters.map(status => ({
-                                key: `status-${status}`,
-                                label: `${status}`,
-                                onRemove: () => setStatusFilters(prev => prev.filter(s => s !== status))
-                            })),
-                            // Type filter badges (each one individually)
-                            ...typeFilters.map(type => ({
-                                key: `type-${type}`,
-                                label: `${COMPONENT_TYPES.find(t => t.value === type)?.label || type}`,
-                                onRemove: () => setTypeFilters(prev => prev.filter(t => t !== type))
-                            })),
-                            // Department filter badge (only for admins as they can filter all)
-                            ...(departmentFilter && user?.role === 'admin' ? [{
-                                key: 'dept',
-                                label: `Dept: ${departments.find(d => d.id == departmentFilter)?.name || 'Unknown'}`,
-                                onRemove: () => { setDepartmentFilter(''); setLabFilter(''); setSetFilter(''); }
-                            }] : []),
-                            // Location Type filter badge
-                            ...(locationTypeFilter ? [{
-                                key: 'locType',
-                                label: `Type: ${locationTypeFilter.charAt(0).toUpperCase() + locationTypeFilter.slice(1)}`,
-                                onRemove: () => setLocationTypeFilter('')
-                            }] : []),
-                            // Lab filter badge
-                            ...(labFilter ? [{
-                                key: 'lab',
-                                label: `Location: ${locations.find(l => l.id == labFilter)?.name || labFilter}`,
-                                onRemove: () => { setLabFilter(''); setSetFilter(''); }
-                            }] : []),
-                            // Set filter badge
-                            ...(setFilter ? [{
-                                key: 'set',
-                                label: `Set: ${computerSets.find(s => s.id == setFilter)?.set_name || setFilter}`,
-                                onRemove: () => setSetFilter('')
-                            }] : []),
-                            // Assignment filter badge (only show if not default)
-                            ...(assignmentFilter !== 'false' ? [{
-                                key: 'assignment',
-                                label: assignmentFilter === 'true' ? 'Rogue Only' : 'All Components',
-                                onRemove: () => setAssignmentFilter('false')
-                            }] : []),
-                            // Sort badge (only show if not default)
-                            ...(sortBy !== 'created_at' || sortOrder !== 'desc' ? [{
-                                key: 'sort',
-                                label: `Sort: ${sortBy === 'brand_name' ? 'Name' : sortBy === 'serial_number' ? 'Serial' : sortBy === 'created_at' ? 'Date' : sortBy} ${sortOrder === 'asc' ? '↑' : '↓'}`,
-                                onRemove: () => { setSortBy('created_at'); setSortOrder('desc'); }
-                            }] : [])
-                        ]}
-                        onAddFilter={() => setShowFilterModal(true)}
-                        hasFilters={statusFilters.length > 0 || typeFilters.length > 0 || labFilter || setFilter || departmentFilter || locationTypeFilter || assignmentFilter !== 'false' || sortBy !== 'created_at' || sortOrder !== 'desc'}
-                    />
+                    )}
                 </div>
 
                 {/* Bulk Actions Toolbar */}
@@ -726,7 +774,7 @@ const ComponentsPage = () => {
                                                 </span>
                                                 <div className='d-flex flex-column'>
                                                     <span className='fw-semibold'>{comp.brand_name} <span className='small text-muted d-inline d-md-none text-capitalize small'>({comp.status})</span></span>
-                                                    <span className='small text-muted'>{comp.serial_number || "None"}</span>
+                                                    <span className={`small fst-italic ${comp.serial_number ? "text-muted" : "opacity-25"}`}>{comp.serial_number || "No Serial"}</span>
 
                                                     <span className='small text-muted d-inline d-md-none'>{comp?.computer_set_name ? `${comp?.location_name} > ${comp?.computer_set_name}` : 'Unassigned'}</span>
                                                 </div>
@@ -750,12 +798,19 @@ const ComponentsPage = () => {
                                                             <Link to={`/dashboard/locations/${comp.location_id}`} className="badge fw-semibold bg-claims-primary text-decoration-none me-1" title="Go to Location">
                                                                 {comp?.location_name}
                                                             </Link>
-                                                            <Link to={`/dashboard/locations/${comp.location_id}?set=${comp.computer_set_id}&components=true`} className="badge fw-semibold bg-claims-primary text-decoration-none" title="View in Computer Set">
+                                                            <Link to={`/dashboard/locations/${comp.location_id}?set=${comp.computer_set_id}&components=true`} className="badge fw-semibold bg-claims-primary text-decoration-none" title="View Computer Set">
                                                                 {comp?.computer_set_name}
                                                             </Link>
                                                         </>
                                                     ) : (
-                                                        <span className="text-muted fst-italic">Unassigned</span>
+                                                        <>
+                                                            {comp?.department_name && (
+                                                                <span className="badge fw-semibold bg-claims-primary text-decoration-none me-1 cursor-pointer" title={comp.department_description}>
+                                                                    {comp.department_name}
+                                                                </span>
+                                                            )}
+                                                            <span className="text-muted fst-italic">Unassigned</span>
+                                                        </>
                                                     )
                                                 }
                                             </div>
@@ -966,8 +1021,10 @@ const ComponentsPage = () => {
                         )}
                     </Modal.Body>
                     <Modal.Footer>
-                        <Button variant="secondary" onClick={() => setShowModal(false)}>Cancel</Button>
-                        <Button variant="primary" type="submit">Save</Button>
+                        <Button variant="secondary" onClick={() => setShowModal(false)} disabled={submitting}>Cancel</Button>
+                        <Button variant="primary" type="submit" disabled={submitting}>
+                            {submitting ? 'Saving...' : 'Save'}
+                        </Button>
                     </Modal.Footer>
                 </form>
             </Modal>
@@ -1084,14 +1141,14 @@ const ComponentsPage = () => {
                 </Modal.Footer>
             </Modal>
 
-            {/* Filter and Sort Modal */}
-            <Modal show={showFilterModal} onHide={() => setShowFilterModal(false)} size='lg' centered>
-                <Modal.Header>
-                    <div className="h4 mb-0">Sort and Filter</div>
-                </Modal.Header>
-                <Modal.Body>
-                    <div className="row g-4">
-                        <div className="col-lg-6">
+            {/* Filter and Sort Offcanvas */}
+            <Offcanvas show={showFilterModal} onHide={() => setShowFilterModal(false)} placement="end">
+                <Offcanvas.Header closeButton>
+                    <Offcanvas.Title>Sort and Filter</Offcanvas.Title>
+                </Offcanvas.Header>
+                <Offcanvas.Body>
+                    <div className="row g-4 row-cols-1">
+                        <div className="col">
                             <div className="h4 fw-semibold">Filter</div>
                             <hr />
 
@@ -1170,41 +1227,9 @@ const ComponentsPage = () => {
                                     ))}
                                 </div>
                             </div>
-
-                            {/* Computer Set Filter - only when lab is selected */}
-                            {labFilter && assignmentFilter !== 'true' && (
-                                <div className="mb-4">
-                                    <div className="small mb-2 fw-semibold text-muted">Computer Set</div>
-                                    <div className="d-flex flex-wrap gap-1">
-                                        <div
-                                            className={`badge rounded border small cursor-pointer fw-normal ${setFilter === ''
-                                                ? 'bg-claims-primary'
-                                                : 'bg-body-tertiary text-muted'
-                                                }`}
-                                            style={{ cursor: 'pointer' }}
-                                            onClick={() => setSetFilter('')}
-                                        >
-                                            All Sets
-                                        </div>
-                                        {computerSets.map(set => (
-                                            <div
-                                                key={set.id}
-                                                className={`badge rounded border small cursor-pointer fw-normal ${setFilter == set.id
-                                                    ? 'bg-claims-primary'
-                                                    : 'bg-body-tertiary text-muted'
-                                                    }`}
-                                                style={{ cursor: 'pointer' }}
-                                                onClick={() => setSetFilter(set.id)}
-                                            >
-                                                {set.set_name}
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
                         </div>
 
-                        <div className="col-lg-6">
+                        <div className="col">
                             <div className="h4 fw-semibold">Sort</div>
                             <hr />
 
@@ -1268,8 +1293,8 @@ const ComponentsPage = () => {
                         </div>
                     </div>
 
-                </Modal.Body>
-                <Modal.Footer className="d-flex justify-content-between">
+                </Offcanvas.Body>
+                <div className="p-3 border-top d-flex justify-content-between bg-body">
                     <div>
                         {(statusFilters.length > 0 || typeFilters.length > 0 || labFilter || setFilter || assignmentFilter !== 'false' || sortBy !== 'created_at' || sortOrder !== 'desc') && (
                             <Button
@@ -1280,11 +1305,11 @@ const ComponentsPage = () => {
                             </Button>
                         )}
                     </div>
-                    <Button variant="secondary" onClick={() => setShowFilterModal(false)}>
+                    <Button variant="primary" onClick={() => setShowFilterModal(false)}>
                         Done
                     </Button>
-                </Modal.Footer>
-            </Modal>
+                </div>
+            </Offcanvas>
 
             {/* Component Preview Modal */}
             <Modal show={viewPropsModal.show} onHide={() => setViewPropsModal({ show: false, component: null })} centered size="lg">
@@ -1293,70 +1318,58 @@ const ComponentsPage = () => {
                 </Modal.Header>
                 <Modal.Body>
                     {viewPropsModal.component && (
-                        <div className="row g-4 p-3">
-                            {/* Component Information Section - Left on desktop, top on mobile */}
-                            <div className="col-md-6 p-1">
-                                <h6 className="fw-semibold text-muted mb-2">Component Information</h6>
-                                <div className="d-flex flex-column gap-2">
-                                    <div className="bg-body-tertiary rounded p-3">
-                                        <small className="text-muted d-block mb-1">Type</small>
-                                        <div className="d-flex align-items-center gap-2">
-                                            <span className="fs-2">{getComponentIcon(viewPropsModal.component.component_type)}</span>
-                                            <span className="text-capitalize fw-semibold">
-                                                {COMPONENT_TYPES.find(t => t.value === viewPropsModal.component.component_type)?.label || viewPropsModal.component.component_type}
+                        <>
+                            <div className="row g-4 p-3">
+                                {/* Component Information Section - Left on desktop, top on mobile */}
+                                <div className="col-md-6 p-1">
+                                    <div className="d-flex flex-column align-items-center justify-content-center h-100">
+                                        <div className='fs-1 mb-4'>{getComponentIcon(viewPropsModal.component.component_type, '3rem')}</div>
+                                        <div className="text-center">
+                                            <div className="h4 fw-semibold mb-1">{viewPropsModal.component.brand_name}</div>
+                                            <div className={`fst-italic px-3 py-1 rounded bg-body-tertiary small mb-4 text-truncate`} title="Serial Number">
+                                                {viewPropsModal.component.serial_number || 'N/A'}
+                                            </div>
+                                            <div className="">
+                                                <div className="d-flex flex-wrap gap-1 align-items-center justify-content-center mb-1">
+                                                    {viewPropsModal.component.computer_set_name ? (
+                                                        <>
+                                                            {viewPropsModal.component.department_name && (
+                                                                <span className="badge bg-claims-primary cursor-pointer" title="Department">
+                                                                    {viewPropsModal.component.department_name}
+                                                                </span>
+                                                            )}
+                                                            <span className="badge bg-claims-primary cursor-pointer" title="Location">
+                                                                {viewPropsModal.component.location_name}
+                                                            </span>
+                                                            <span className="badge bg-claims-primary cursor-pointer" title="Computer Set">
+                                                                {viewPropsModal.component.computer_set_name}
+                                                            </span>
+                                                        </>
+                                                    ) : (
+                                                        <span className="badge bg-secondary fst-italic">Unassigned (Rogue Component)</span>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            <span className="badge bg-primary fw-semibold text-capitalize cursor-pointer">
+                                                Status: {viewPropsModal.component.status}
                                             </span>
                                         </div>
                                     </div>
-                                    <div className="bg-body-tertiary rounded p-3">
-                                        <small className="text-muted d-block mb-1">Status</small>
-                                        <span className="fw-semibold text-capitalize">
-                                            {viewPropsModal.component.status}
-                                        </span>
-                                    </div>
-                                    <div className="bg-body-tertiary rounded p-3">
-                                        <small className="text-muted d-block mb-1">Brand / Model</small>
-                                        <span className="fw-semibold">{viewPropsModal.component.brand_name}</span>
-                                    </div>
-                                    <div className="bg-body-tertiary rounded p-3">
-                                        <small className="text-muted d-block mb-1">Serial Number</small>
-                                        <span className={viewPropsModal.component.serial_number ? 'fw-semibold' : 'text-muted fst-italic'}>
-                                            {viewPropsModal.component.serial_number || 'N/A'}
-                                        </span>
-                                    </div>
-                                    <div className="bg-body-tertiary rounded p-3">
-                                        <small className="text-muted d-block mb-1">Assignment</small>
-                                        {viewPropsModal.component.computer_set_name ? (
-                                            <div className="d-flex flex-wrap gap-1">
-                                                {viewPropsModal.component.department_name && (
-                                                    <span className="badge bg-claims-primary cursor-pointer" title="Department">
-                                                        {viewPropsModal.component.department_name}
-                                                    </span>
-                                                )}
-                                                <span className="badge bg-claims-primary cursor-pointer" title="Location">
-                                                    {viewPropsModal.component.location_name}
-                                                </span>
-                                                <span className="badge bg-claims-primary cursor-pointer" title="Computer Set">
-                                                    {viewPropsModal.component.computer_set_name}
-                                                </span>
-                                            </div>
-                                        ) : (
-                                            <span className="badge bg-secondary fst-italic">Unassigned (Rogue Component)</span>
-                                        )}
-                                    </div>
                                 </div>
-                            </div>
 
-                            {/* Component Properties Section - Right on desktop, bottom on mobile */}
-                            <div className="col-md-6 p-1">
-                                <h6 className="fw-semibold text-muted mb-2">Properties</h6>
-                                <div className="bg-body-tertiary rounded p-3">
-                                    <KeyValues
-                                        data={viewPropsModal.component?.properties}
-                                        emptyMessage="No custom properties defined for this component"
-                                    />
+                                {/* Component Properties Section - Right on desktop, bottom on mobile */}
+                                <div className="col-md-6 p-1">
+                                    <h6 className="fw-semibold text-muted mb-2">Properties</h6>
+                                    <div className="bg-body-tertiary rounded p-3">
+                                        <KeyValues
+                                            data={viewPropsModal.component?.properties}
+                                            emptyMessage="No custom properties defined for this component"
+                                        />
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        </>
                     )}
                 </Modal.Body>
                 <Modal.Footer className="justify-content-between">

@@ -188,6 +188,20 @@ const LaboratoryComputersPage = () => {
         }
     };
 
+    const handleBatchMove = async (ids, locationId) => {
+        try {
+            const promises = ids.map(id =>
+                api.put(`/computer-sets/${id}`, { location_id: locationId })
+            );
+            await Promise.all(promises);
+            toast.success(`Moved ${ids.length} computer sets successfully`);
+            fetchData();
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to move some computer sets");
+        }
+    };
+
     if (!loading && !location) return <div className="container py-3">Location not found</div>;
 
     return (
@@ -303,6 +317,7 @@ const LaboratoryComputersPage = () => {
                 user={user}
                 onBatchUpdate={handleBatchUpdate}
                 onBatchDelete={handleBatchDelete}
+                onBatchMove={handleBatchMove}
             />
 
             {/* Components Manager Modal (View) */}

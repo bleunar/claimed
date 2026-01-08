@@ -30,15 +30,29 @@ export const AuthProvider = ({ children }) => {
                 const refreshResponse = await axios.post(
                     `${import.meta.env.VITE_API_URL}/auth/refresh`,
                     {},
-                    { withCredentials: true, headers }
+                    {
+                        withCredentials: true,
+                        headers,
+                        // Accept 401/422 as valid responses to suppress console errors
+                        // when no user is logged in (expected for new visitors)
+                        validateStatus: (status) => status < 500
+                    }
                 );
 
-                if (refreshResponse.data.access_token) {
+                // Check if refresh was successful
+                if (refreshResponse.status === 200 && refreshResponse.data.access_token) {
                     setAccessToken(refreshResponse.data.access_token);
+                } else {
+                    // Refresh failed - user is not logged in or session expired
+                    // This is expected for new visitors
+                    window.__initialAuthCheck = false;
+                    loadPreferencesFromUser(null);
+                    setLoading(false);
+                    return;
                 }
             } catch (refreshError) {
-                // Refresh failed - user is not logged in or session expired
-                // This is expected for new visitors
+                // Only log unexpected errors (network issues, server errors)
+                console.error('Unexpected error during token refresh:', refreshError);
                 window.__initialAuthCheck = false;
                 loadPreferencesFromUser(null);
                 setLoading(false);

@@ -15,13 +15,14 @@ ACTIVITY_ACTIONS = [
 ]
 
 
-def log_activity(account_id: str, action: str, details: dict = None) -> bool:
+def log_activity(account_id: str, action: str, details: dict = None, actor_id: str = None) -> bool:
     """Log an account activity.
     
     Args:
         account_id: The account ID to log activity for
         action: The action type (must be in ACTIVITY_ACTIONS)
         details: Optional JSON-serializable details dict
+        actor_id: The ID of the user performing the action (defaults to None)
     
     Returns:
         True if logged successfully, False otherwise
@@ -51,9 +52,9 @@ def log_activity(account_id: str, action: str, details: dict = None) -> bool:
         created_at = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
         
         cursor.execute(
-            """INSERT INTO account_activities (id, account_id, action, details, ip_address, created_at) 
-               VALUES (%s, %s, %s, %s, %s, %s)""",
-            (activity_id, account_id, action, details_json, ip_address, created_at)
+            """INSERT INTO account_activities (id, account_id, action, details, ip_address, actor_id, created_at) 
+               VALUES (%s, %s, %s, %s, %s, %s, %s)""",
+            (activity_id, account_id, action, details_json, ip_address, actor_id, created_at)
         )
         db.commit()
         cursor.close()

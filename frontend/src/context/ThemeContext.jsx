@@ -135,6 +135,12 @@ export const ThemeProvider = ({ children }) => {
 
     // Reset preferences state (called on logout)
     const resetPreferences = useCallback(() => {
+        // Clear localStorage keys for theme and notification locations
+        localStorage.removeItem('theme');
+        localStorage.removeItem('toastPosition');
+        localStorage.removeItem('seasonalEffects');
+        localStorage.removeItem('emailOptOut');
+
         setPreferencesLoaded(false);
         setPendingTheme(null);
         setPendingToastPosition(null);

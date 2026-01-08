@@ -1,16 +1,18 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Modal, Button, Form, InputGroup, ToggleButtonGroup, ToggleButton } from 'react-bootstrap';
-import { Funnel, Search, Tools, CheckCircle, CheckCircleFill, XCircle, Trash, Plus, ArrowClockwise, Backspace, PersonCircle, PersonCheck, Eye, EyeSlash, PencilSquare, PersonX, Key, ClockHistory, Grid, Filter, X, ThreeDotsVertical, ExclamationTriangleFill } from 'react-bootstrap-icons';
+import { Modal, Button, Form, InputGroup, ToggleButtonGroup, ToggleButton, Offcanvas } from 'react-bootstrap';
+import { Funnel, Search, Tools, CheckCircle, CheckCircleFill, XCircle, XCircleFill, Trash, Plus, ArrowClockwise, Backspace, PersonCircle, PersonCheck, Eye, EyeSlash, PencilSquare, PersonX, Key, ClockHistory, Grid, Filter, X, ThreeDotsVertical, ExclamationTriangleFill, ArrowRepeat } from 'react-bootstrap-icons';
 import toast from 'react-hot-toast';
 import api from '../api/axios';
 import Pagination from '../components/Pagination';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ActivityTimeline from '../components/common/ActivityTimeline';
+import FilterBadges from '../components/common/FilterBadges';
 
 import { useAuth } from '../context/AuthContext';
 import RoleBasedContent from '../components/ComponentProtector';
 import ProfileImage from '../components/common/ProfileImage';
+import { getDepartmentTypeLabel } from '../utils/departmentUtils';
 
 
 const AccountsPage = () => {
@@ -64,7 +66,10 @@ const AccountsPage = () => {
     const [filterStatuses, setFilterStatuses] = useState(
         searchParams.get('status') ? searchParams.get('status').split(',') : []
     );
-    const [includeDeleted, setIncludeDeleted] = useState(false);
+    // Default to showing all accounts including deleted ones
+    const [includeDeleted, setIncludeDeleted] = useState(
+        searchParams.has('include_deleted') ? searchParams.get('include_deleted') === 'true' : true
+    );
 
     // Sorting options
     const [sortBy, setSortBy] = useState('created_at');
@@ -97,6 +102,7 @@ const AccountsPage = () => {
     const [selectedAccounts, setSelectedAccounts] = useState([]);
     const [isBulkSubmitting, setIsBulkSubmitting] = useState(false);
     const [showSelectedModal, setShowSelectedModal] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
     const [showBulkOperationModal, setShowBulkOperationModal] = useState(false);
     const [bulkOperation, setBulkOperation] = useState(null); // 'suspend', 'activate', 'softDelete', 'hardDelete'
     const [bulkUpdateValues, setBulkUpdateValues] = useState({
@@ -146,15 +152,39 @@ const AccountsPage = () => {
 
 
 
-    // Auto-fetch with debounce
+    // Fetch when filters change (not search term - that requires button click)
     useEffect(() => {
-        const timer = setTimeout(() => {
+        setCurrentPage(1);
+        fetchAccounts();
+    }, [filterRoles, filterStatuses, includeDeleted, sortBy, sortOrder]);
+
+    // Ref to always have the current search term value (avoids stale closure)
+    const searchTermRef = useRef(searchTerm);
+    searchTermRef.current = searchTerm;
+
+    // Track previous search term to detect when it's cleared
+    const prevSearchTermRef = useRef(searchTerm);
+
+    // Handle search button click
+    const handleSearch = () => {
+        setCurrentPage(1);
+        fetchAccounts();
+    };
+
+    // Auto-fetch when search is cleared (by typing or clear button)
+    useEffect(() => {
+        // If search was cleared (had value before, now empty), fetch data
+        if (prevSearchTermRef.current !== '' && searchTerm === '') {
             setCurrentPage(1);
             fetchAccounts();
-        }, 500);
+        }
+        prevSearchTermRef.current = searchTerm;
+    }, [searchTerm]);
 
-        return () => clearTimeout(timer);
-    }, [searchTerm, filterRoles, filterStatuses, includeDeleted, sortBy, sortOrder]);
+    // Clear search (just set to empty, useEffect handles the fetch)
+    const clearSearch = () => {
+        setSearchTerm('');
+    };
 
     // Initial fetch
     // useEffect(() => { fetchAccounts() }, []) // Removed matching line effectively as it's covered by the above effect running on mount
@@ -163,7 +193,9 @@ const AccountsPage = () => {
         setLoading(true);
         try {
             const params = new URLSearchParams();
-            if (searchTerm) params.append('search', searchTerm);
+            // Use ref to get current search term value (avoids stale closure)
+            const currentSearch = searchTermRef.current;
+            if (currentSearch) params.append('search', currentSearch);
             if (filterRoles.length > 0) params.append('role', filterRoles.join(','));
             if (filterStatuses.length > 0) params.append('status', filterStatuses.join(','));
             if (includeDeleted) params.append('include_deleted', 'true');
@@ -195,9 +227,48 @@ const AccountsPage = () => {
         fetchDepartments();
     }, []);
 
+    const roleConstraints = {
+        'it_head': ['it'],
+        'it_technician': ['it'],
+        'department_head': ['education', 'office'],
+        'department_staff': ['education', 'office'],
+        'lab_head': ['education'],
+        'lab_assistant': ['education']
+    };
+
     const handleInputChange = (e) => {
         const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
-        setFormData({ ...formData, [e.target.name]: value });
+        const name = e.target.name;
+
+        setFormData(prev => {
+            const newData = { ...prev, [name]: value };
+
+            // When role changes from admin to non-admin, clear 'none' department selection
+            if (name === 'role' && value !== 'admin' && prev.department_id === 'none') {
+                newData.department_id = '';
+            }
+
+            // When department changes
+            if (name === 'department_id') {
+                // If 'No Department' is selected, auto-set role to admin
+                if (value === 'none') {
+                    newData.role = 'admin';
+                } else {
+                    // Validate current role against new department type
+                    const selectedDept = departments.find(d => d.id === value);
+                    const role = newData.role;
+
+                    if (selectedDept && role && role !== 'admin') {
+                        const allowedTypes = roleConstraints[role];
+                        if (allowedTypes && !allowedTypes.includes(selectedDept.type)) {
+                            // Role is invalid for this department, reset it
+                            newData.role = '';
+                        }
+                    }
+                }
+            }
+            return newData;
+        });
     };
 
     const handleEdit = (account) => {
@@ -322,26 +393,44 @@ const AccountsPage = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        // Validate role is selected
+        if (!formData.role) {
+            toast.error('Please select a role');
+            return;
+        }
+
+        // Validate department is required for non-admin roles (only for new accounts created by admin)
+        if (!editingId && user?.role === 'admin' && formData.role !== 'admin') {
+            if (!formData.department_id || formData.department_id === 'none') {
+                toast.error('Department is required for non-admin roles');
+                return;
+            }
+        }
+
+        if (formData.role === 'admin') {
+            if (!window.confirm("This account will have full access to the system. Continue?")) {
+                return;
+            }
+        }
+
+        setSubmitting(true);
         setError('');
         try {
             const payload = { ...formData };
             if (user?.role !== 'admin') {
                 delete payload.department_id;
+            } else {
+                // Convert 'none' to null for database (admin with no department)
+                if (payload.department_id === 'none' || payload.department_id === '') {
+                    payload.department_id = null;
+                }
             }
 
             if (editingId) {
                 await api.put(`/accounts/${editingId}`, payload);
                 toast.success("Account updated successfully");
             } else {
-                // For new accounts, backend skips password validation, so we can send empty/default if needed
-                // But wait, user might want to set initial password? 
-                // The current flow allowed setting password on create.
-                // If we remove password field, how do we set initial password?
-                // The requirements said removing password field from account UPDATE form. 
-                // Checking task: "Remove password field from account update form".
-                // Be careful. If I remove it from Create too, then newly created accounts have no password?
-                // Or I can keep it for Create, but remove for Edit.
-                // Let's keep it for Create but remove for Edit.
                 await api.post('/accounts/', payload);
                 toast.success("Account created successfully");
             }
@@ -351,6 +440,8 @@ const AccountsPage = () => {
             const msg = err.response?.data?.msg || `Failed to ${editingId ? 'update' : 'create'} user`;
             setError(msg);
             toast.error(msg);
+        } finally {
+            setSubmitting(false);
         }
     };
 
@@ -624,7 +715,7 @@ const AccountsPage = () => {
     };
 
     // Check if any filters are active
-    const hasActiveFilters = filterRoles.length > 0 || filterStatuses.length > 0 || includeDeleted;
+    const hasActiveFilters = filterRoles.length > 0 || filterStatuses.length > 0;
 
     // Helper to get display label for current sort
     const getSortLabel = () => {
@@ -673,25 +764,42 @@ const AccountsPage = () => {
         <div className="container-fluid py-3">
             <div className="mb-3 d-flex justify-content-between align-items-center">
                 <div className='h4 fw-semibold mb-0'>Account Management</div>
-                <div>
-                </div>
             </div>
 
-            <div className="bg-body-secondary border shadow rounded p-3">
-                <div className="mb-3 d-flex justify-content-between gap-2">
-                    <div className="d-flex gap-2 flex-fill align-items-center justify-content-start">
-                        <InputGroup>
-                            <span className='btn bg-claims-primary text-white' title='Hello World'>
-                                <Search size={"16px"} />
-                            </span>
-                            <Form.Control
-                                type="text"
-                                className='border-claims-primary'
-                                placeholder="Search Accounts"
-                                value={searchTerm}
-                                style={{ maxWidth: '400px' }}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
+            <div className="mb-3">
+                <div className="d-flex justify-content-between align-items-center gap-2">
+                    <div className='flex-fill'>
+                        <InputGroup className='rounded border border-claims-primary border-2 overflow-hidden' style={{ maxWidth: "400px" }}>
+                            <div className="position-relative flex-fill">
+                                <Form.Control
+                                    type="text"
+                                    className='border-0 pe-4'
+                                    placeholder="Search Accounts"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                                    autoFocus
+                                />
+                                {searchTerm && (
+                                    <button
+                                        type="button"
+                                        className="btn btn-link position-absolute top-50 end-0 translate-middle-y p-0 me-2 text-muted"
+                                        onClick={clearSearch}
+                                        title="Clear search"
+                                        style={{ zIndex: 10 }}
+                                    >
+                                        <XCircleFill size={16} />
+                                    </button>
+                                )}
+                            </div>
+                            <button
+                                className='btn bg-claims-primary text-white px-3 rounded-0'
+                                onClick={handleSearch}
+                                disabled={loading}
+                                title='Search'
+                            >
+                                {loading ? <ArrowRepeat size={16} className="spinner" /> : <Search size={16} />}
+                            </button>
                         </InputGroup>
                     </div>
 
@@ -702,6 +810,46 @@ const AccountsPage = () => {
                                 <span className='d-none d-md-inline'>Create Account</span>
                             </Button>
                         </InputGroup>
+                    </div>
+                </div>
+            </div>
+
+            <div className="bg-body-secondary border shadow rounded p-3">
+                <div className="mb-3 d-flex justify-content-between align-items-center">
+                    <div className='d-flex flex-fill gap-2 flex-fill align-items-center justify-content-start'>
+                        <FilterBadges
+                            filters={[
+                                // Role filter badges (each one individually)
+                                ...filterRoles.map(role => ({
+                                    key: `role-${role}`,
+                                    label: getRoleLabel(role),
+                                    onRemove: () => removeRoleFilter(role)
+                                })),
+                                // Status filter badges (each one individually)
+                                ...filterStatuses.map(status => ({
+                                    key: `status-${status}`,
+                                    label: getStatusLabel(status),
+                                    onRemove: () => removeStatusFilter(status)
+                                })),
+                                // Include Deleted badge
+                                ...(!includeDeleted ? [{
+                                    key: 'includeDeleted',
+                                    label: 'Managed Accounts',
+                                    onRemove: () => setIncludeDeleted(true)
+                                }] : []),
+                                // Sort badge (only show if not default)
+                                ...(isCustomSort ? [{
+                                    key: 'sort',
+                                    label: `Sort: ${getSortLabel()}`,
+                                    onRemove: () => { setSortBy('created_at'); setSortOrder('desc'); }
+                                }] : [])
+                            ]}
+                            onAddFilter={() => setFiltersCollapsed(true)}
+                            hasFilters={hasActiveFilters || isCustomSort}
+                        />
+                    </div>
+
+                    <div className="d-flex align-items-center gap-2">
                         <Button
                             variant="claims-primary"
                             title='Filter Results'
@@ -709,75 +857,6 @@ const AccountsPage = () => {
                         >
                             <Filter />
                         </Button>
-                    </div>
-                </div>
-
-
-                <div className='mb-3'>
-                    <div className='d-flex gap-2 flex-wrap'>
-                        {/* Role filter badges */}
-                        {filterRoles.map(role => (
-                            <div
-                                key={`role-${role}`}
-                                className="badge bg-body d-flex justify-content-center align-items-center rounded border text-body p-2 cursor-pointer"
-                                onClick={() => removeRoleFilter(role)}
-                                title={`Remove ${getRoleLabel(role)} filter`}
-                                style={{ cursor: 'pointer' }}
-                            >
-                                {getRoleLabel(role)}
-                                <X className='ms-1 mb-0' />
-                            </div>
-                        ))}
-                        {/* Status filter badges */}
-                        {filterStatuses.map(status => (
-                            <div
-                                key={`status-${status}`}
-                                className="badge bg-body d-flex justify-content-center align-items-center rounded border text-body p-2 cursor-pointer"
-                                onClick={() => removeStatusFilter(status)}
-                                title={`Remove ${getStatusLabel(status)} filter`}
-                                style={{ cursor: 'pointer' }}
-                            >
-                                {getStatusLabel(status)}
-                                <X className='ms-1' />
-                            </div>
-                        ))}
-                        {/* Include Deleted badge */}
-                        {includeDeleted && (
-                            <div
-                                className="badge bg-body rounded border text-body p-2 cursor-pointer"
-                                onClick={() => setIncludeDeleted(false)}
-                                title="Remove Show Deleted filter"
-                                style={{ cursor: 'pointer' }}
-                            >
-                                Show Deleted
-                                <X className='ms-1' />
-                            </div>
-                        )}
-                        {/* Sorting badge - shows current sort, clickable to reset if not default */}
-                        {
-                            isCustomSort && sortOrder != 'desc' && (
-                                <div
-                                    className={`badge bg-body d-flex justify-content-center align-items-center rounded border p-1 px-2 ${isCustomSort ? 'cursor-pointer' : ''}`}
-                                    onClick={isCustomSort ? () => { setSortBy('created_at'); setSortOrder('desc'); } : undefined}
-                                    title={isCustomSort ? 'Reset to default sorting' : 'Current sorting'}
-                                    style={{ cursor: isCustomSort ? 'pointer' : 'default' }}
-                                >
-                                    <span className="text-body">{getSortLabel()}</span>
-                                    {isCustomSort && <X className='ms-1 text-body' />}
-                                </div>
-                            )
-                        }
-                        {/* Add Filter button - only show if no filters or to add more */}
-                        <div
-                            className="badge bg-body d-flex justify-content-center align-items-center text-body border p-2 cursor-pointer"
-                            onClick={() => setFiltersCollapsed(true)}
-                            title='Add Filter'
-                            style={{ cursor: 'pointer' }}
-                        >
-                            {hasActiveFilters || isCustomSort ? 'Edit Filters' : 'Add Filter'}
-                            <Plus className='ms-1 mb-0' />
-                        </div>
-                        {/* Add Filter button - only show if no filters or to add more */}
                     </div>
                 </div>
 
@@ -1020,13 +1099,12 @@ const AccountsPage = () => {
                 />
             </div>
 
-            {/* Filter Modal */}
-            <Modal show={filtersCollapsed} onHide={() => setFiltersCollapsed(false)} centered>
-                <Modal.Header>
-                    <div className="h4 mb-0">Sort and Filter</div>
-                </Modal.Header>
-                <Modal.Body>
-
+            {/* Filter Offcanvas */}
+            <Offcanvas show={filtersCollapsed} onHide={() => setFiltersCollapsed(false)} placement="end">
+                <Offcanvas.Header closeButton>
+                    <Offcanvas.Title>Sort and Filter</Offcanvas.Title>
+                </Offcanvas.Header>
+                <Offcanvas.Body>
                     <div className="mb-4">
                         <div className="h4 fw-semibold">Filter</div>
                         <div className="mb-4">
@@ -1158,13 +1236,13 @@ const AccountsPage = () => {
                         </div>
                     </div>
 
-                </Modal.Body>
-                <Modal.Footer className="d-flex justify-content-between">
+                </Offcanvas.Body>
+                <div className="p-3 border-top d-flex justify-content-between bg-body">
                     <div>
                         {
                             !(filterRoles.length === 0 && filterStatuses.length === 0 && !includeDeleted && sortBy === 'created_at' && sortOrder === 'desc') && (
                                 <Button
-                                    variant="claims-primary"
+                                    variant="secondary"
                                     onClick={() => {
                                         setFilterRoles([]);
                                         setFilterStatuses([]);
@@ -1182,18 +1260,14 @@ const AccountsPage = () => {
                     </div>
                     <div className="d-flex align-items-center flex-nowrap gap-2">
                         <Button
-                            variant="secondary"
+                            variant="primary"
                             onClick={() => setFiltersCollapsed(false)}
                         >
-                            Close
-                        </Button>
-
-                        <Button variant="claims-primary" onClick={() => setFiltersCollapsed(false)}>
-                            Apply Filters
+                            Done
                         </Button>
                     </div>
-                </Modal.Footer>
-            </Modal>
+                </div>
+            </Offcanvas>
 
 
             {/* Modal */}
@@ -1239,12 +1313,7 @@ const AccountsPage = () => {
                                         </button>
                                     </div>
                                     {
-                                        user.role == "admin" ? (
-                                            <Form.Text className="text-muted small">
-                                                Note: Password complexity is NOT enforced for administrators
-                                            </Form.Text>
-                                        ) : (
-
+                                        user.role != "admin" && (
                                             <Form.Text className="text-muted small">
                                                 Note: Minimum of 8 Characters, At least one number and Capital Letter
                                             </Form.Text>
@@ -1265,7 +1334,7 @@ const AccountsPage = () => {
                                             onChange={handleInputChange}
                                         />
                                         <label className="form-check-label small text-muted" htmlFor="forceResetCreate">
-                                            Force user to change password on first login
+                                            Change password on login
                                         </label>
                                     </div>
                                 </div>
@@ -1275,47 +1344,12 @@ const AccountsPage = () => {
 
                             <div className="row mb-3">
                                 <div className="col-6">
-                                    <label className="form-label">Role</label>
-                                    <select className="form-select" name="role" value={formData.role} onChange={handleInputChange}>
-                                        {/* Admin Roles */}
-                                        {user?.role === 'admin' && (
-                                            <>
-                                                <option value="admin">Administrator</option>
-                                                <option value="it_head">IT Head</option>
-                                                <option value="it_technician">IT Technician</option>
-                                                <option value="department_head">Department Head</option>
-                                                <option value="department_staff">Department Staff</option>
-                                                <option value="lab_head">Laboratory Head</option>
-                                                <option value="lab_assistant">Laboratory Assistant</option>
-                                            </>
-                                        )}
-
-                                        {/* IT Head Roles */}
-                                        {user?.role === 'it_head' && (
-                                            <option value="it_technician">IT Technician</option>
-                                        )}
-
-                                        {/* Lab Head Roles */}
-                                        {user?.role === 'lab_head' && (
-                                            <option value="lab_assistant">Laboratory Assistant</option>
-                                        )}
-
-                                        {/* Department Head Roles */}
-                                        {user?.role === 'department_head' && (
-                                            <>
-                                                <option value="department_staff">Department Staff</option>
-                                                <option value="department_assistant">Department Assistant</option>
-                                                <option value="lab_head">Laboratory Head</option>
-                                                <option value="lab_assistant">Laboratory Assistant</option>
-                                            </>
-                                        )}
-                                    </select>
-                                </div>
-
-                                <div className="col-6">
-                                    <label className="form-label">Department</label>
+                                    <label className="form-label">
+                                        Department
+                                        {formData.role !== 'admin' && <span className="text-danger ms-1">*</span>}
+                                    </label>
                                     <select
-                                        className="form-select"
+                                        className={`form-select ${formData.role !== 'admin' && !formData.department_id ? 'border-danger' : ''}`}
                                         name="department_id"
                                         value={formData.department_id}
                                         onChange={handleInputChange}
@@ -1324,11 +1358,96 @@ const AccountsPage = () => {
                                         <option value="" hidden={user?.role === 'admin'}>
                                             {user?.role !== 'admin' ? (departments.find(d => d.id === user.department_id)?.name || 'Using your department') : 'Select department'}
                                         </option>
+                                        {/* Show 'No Department' option - only admin role will be available */}
+                                        {user?.role === 'admin' && (
+                                            <option value="none">No Department</option>
+                                        )}
                                         {departments.map(dept => (
-                                            <option key={dept.id} value={dept.id}>{dept.name}</option>
+                                            <option key={dept.id} value={dept.id}>
+                                                {dept.name}
+                                            </option>
                                         ))}
                                     </select>
+                                    {formData.role !== 'admin' && !formData.department_id && (
+                                        <Form.Text className="text-danger small">
+                                            Required
+                                        </Form.Text>
+                                    )}
                                 </div>
+
+                                <div className="col-6">
+                                    <label className="form-label">Role</label>
+                                    <select
+                                        className="form-select"
+                                        name="role"
+                                        value={formData.role}
+                                        onChange={handleInputChange}
+                                    >
+                                        {/* Dynamic Role Options based on department selection */}
+                                        {(() => {
+                                            // Role -> Allowed Department Types
+                                            const roleConstraints = {
+                                                'it_head': ['it'],
+                                                'it_technician': ['it'],
+                                                'department_head': ['education', 'office'],
+                                                'department_staff': ['education', 'office'],
+                                                'lab_head': ['education'],
+                                                'lab_assistant': ['education']
+                                            };
+
+                                            // If 'No Department' is selected, only admin role is available
+                                            if (formData.department_id === 'none') {
+                                                return <option value="admin">Administrator</option>;
+                                            }
+
+                                            // Determine allowed roles based on selected department
+                                            const selectedDept = departments.find(d => d.id === formData.department_id);
+                                            const selectedDeptType = selectedDept?.type;
+
+                                            const isRoleValidForDept = (role) => {
+                                                if (role === 'admin') return true; // Admin allowed anywhere
+                                                if (!selectedDeptType) return true; // No dept selected, show all
+
+                                                const allowedTypes = roleConstraints[role];
+                                                if (!allowedTypes) return true; // No specific constraints for this role
+                                                return allowedTypes.includes(selectedDeptType);
+                                            };
+
+                                            // Define User Permission Roles
+                                            let userAllowedRoles = [];
+                                            if (user?.role === 'admin') {
+                                                userAllowedRoles = [
+                                                    { value: 'it_head', label: 'IT Head' },
+                                                    { value: 'it_technician', label: 'IT Technician' },
+                                                    { value: 'department_head', label: 'Department Head' },
+                                                    { value: 'department_staff', label: 'Department Staff' },
+                                                    { value: 'lab_head', label: 'Laboratory Head' },
+                                                    { value: 'lab_assistant', label: 'Laboratory Assistant' },
+                                                    { value: 'admin', label: 'Administrator' },
+                                                ];
+                                            } else if (user?.role === 'it_head') {
+                                                userAllowedRoles = [{ value: 'it_technician', label: 'IT Technician' }];
+                                            } else if (user?.role === 'lab_head') {
+                                                userAllowedRoles = [{ value: 'lab_assistant', label: 'Laboratory Assistant' }];
+                                            } else if (user?.role === 'department_head') {
+                                                userAllowedRoles = [
+                                                    { value: 'department_staff', label: 'Department Staff' },
+                                                    { value: 'department_assistant', label: 'Department Assistant' },
+                                                    { value: 'lab_head', label: 'Laboratory Head' },
+                                                    { value: 'lab_assistant', label: 'Laboratory Assistant' }
+                                                ];
+                                            }
+
+                                            // Filter roles by department type constraints
+                                            return userAllowedRoles
+                                                .filter(r => isRoleValidForDept(r.value))
+                                                .map(r => (
+                                                    <option key={r.value} value={r.value}>{r.label}</option>
+                                                ));
+                                        })()}
+                                    </select>
+                                </div>
+
                             </div>
 
                             <div className="row mb-3">
@@ -1339,7 +1458,7 @@ const AccountsPage = () => {
                                 <div className="col-6">
                                     <label className="form-label">Gender</label>
                                     <select className="form-select" name="gender" value={formData.gender} onChange={handleInputChange}>
-                                        <option value="">Select...</option>
+                                        <option value="" hidden>Select...</option>
                                         <option value="male">Male</option>
                                         <option value="female">Female</option>
                                         <option value="others">Others</option>
@@ -1472,7 +1591,7 @@ const AccountsPage = () => {
                                     onChange={(e) => setPasswordFormData({ ...passwordFormData, newPassword: e.target.value })}
                                     required
                                 />
-                                <Button variant='outline-primary' tabIndex={-1} className='border-0' onClick={() => setShowNewPassword(!showNewPassword)}>
+                                <Button variant='outline-primary' tabIndex={-1} className='border-0 text-body' onClick={() => setShowNewPassword(!showNewPassword)}>
                                     {showNewPassword ? <EyeSlash /> : <Eye />}
                                 </Button>
                             </InputGroup>

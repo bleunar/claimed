@@ -9,6 +9,7 @@ import BarcodeScanner from '../common/BarcodeScanner';
 import toast from 'react-hot-toast';
 import api from '../../api/axios';
 import { useTheme } from '../../context/ThemeContext';
+import MoveSetModal from './MoveSetModal';
 import { COMPONENT_TYPES, getLabelByValue, getDefaultPropertiesForType } from '../../utils/componentTypes';
 import { getComponentIcon } from '../../utils/componentIcons';
 import { getComponentStatusVariant } from '../../utils/statusColors';
@@ -23,6 +24,7 @@ const canEditComponentStatus = (user) => ['admin', 'it_head', 'lab_head', 'it_te
 const canEditProperties = (user) => ['admin', 'it_head', 'lab_head', 'it_technician', 'department_head'].includes(user?.role);
 const canEditSetInfo = (user) => ['admin', 'it_head', 'lab_head', 'it_technician'].includes(user?.role);
 const canEditSetStatus = (user) => ['admin', 'it_head', 'lab_head', 'it_technician', 'department_head', 'department_staff', 'lab_assistant'].includes(user?.role); // All roles
+const canMoveSet = (user) => ['admin', 'it_head', 'department_head', 'lab_head'].includes(user?.role);
 
 const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUpdate, user, onDelete }) => {
     const [components, setComponents] = useState(JSON.parse(JSON.stringify(initialComponents)));
@@ -39,6 +41,7 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
     const [propertiesModal, setPropertiesModal] = useState({ show: false, componentId: null, mode: 'view', valid: true });
 
     const [conflictModal, setConflictModal] = useState({ show: false, data: null, actionType: null, tempComp: null });
+    const [showMoveModal, setShowMoveModal] = useState(false);
 
     const { theme } = useTheme();
 
@@ -157,6 +160,13 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                 toast.success("Component is already in this set.");
                 setShowSerialModal(false);
                 setSerialInput('');
+                return;
+            }
+
+            // Department check for department-specific roles
+            const isDeptRole = ['department_head', 'lab_head'].includes(user?.role);
+            if (isDeptRole && existing.department_id && existing.department_id !== user?.department_id) {
+                toast.error(`This component is assigned on another department (${existing.department_name || 'Unknown'}). Contact the administrator to resolve the conflict.`);
                 return;
             }
 
@@ -280,7 +290,10 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                                     const existing = check.data.component;
                                     let msg = `You are referencing the serial number of a component!\n`;
                                     msg += `Existing: ${existing.component_type} (${existing.brand_name}) \n`;
-                                    msg += `Location: ${existing.computer_set ? existing.computer_set.set_name : 'No'} \n\n`;
+                                    const locInfo = existing.computer_set_name
+                                        ? `${existing.location_name} > ${existing.computer_set_name} ${existing.department_name ? `(${existing.department_name})` : ''}`
+                                        : `Unassigned ${existing.department_name ? `(${existing.department_name})` : '(Storage/Rogue)'}`;
+                                    msg += `Location: ${locInfo} \n\n`;
                                     msg += `Do you want to MOVE that component here (replacing the current one)?`;
 
                                     if (await showConfirm("Confirm Move", msg)) {
@@ -507,6 +520,11 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                                 {canManage && (
                                     <button className="btn btn-sm border-0 bg-body-secondary" title="Delete Set" onClick={() => onDelete(set.id)}>
                                         <Trash />
+                                    </button>
+                                )}
+                                {canMoveSet(user) && (
+                                    <button className="btn btn-sm border-0 bg-body-secondary" title="Move Set" onClick={() => setShowMoveModal(true)}>
+                                        <BoxArrowRight />
                                     </button>
                                 )}
                             </div>
@@ -790,6 +808,15 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                     )}
                 </div>
             </div>
+
+            {/* Background Overlay for Serial Modal */}
+            <MoveSetModal
+                show={showMoveModal}
+                onHide={() => setShowMoveModal(false)}
+                computerSetIds={[set.id]}
+                currentLocationId={laboratoryId}
+                onMoveSuccess={() => { onUpdate(); onClose(); }}
+            />
 
             {/* Background Overlay for Serial Modal */}
             {

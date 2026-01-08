@@ -16,6 +16,7 @@ const LaboratoriesPage = () => {
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [editingId, setEditingId] = useState(null);
+    const [submitting, setSubmitting] = useState(false);
     const [formData, setFormData] = useState({
         name: '',
         description: '',
@@ -82,6 +83,7 @@ const LaboratoriesPage = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setSubmitting(true);
         try {
             if (editingId) {
                 await api.put(`/locations/${editingId}`, formData);
@@ -94,6 +96,8 @@ const LaboratoriesPage = () => {
             fetchLocations();
         } catch (err) {
             toast.error(err.response?.data?.msg || `Failed to ${editingId ? 'update' : 'create'} laboratory`);
+        } finally {
+            setSubmitting(false);
         }
     };
 
@@ -160,8 +164,8 @@ const LaboratoriesPage = () => {
                             </div>
                         </div>
                         <div className="modal-footer">
-                            <Button variant="secondary" onClick={() => setShowModal(false)}>Close</Button>
-                            <Button variant="primary" type="submit">{editingId ? 'Update' : 'Create'}</Button>
+                            <Button variant="secondary" onClick={() => setShowModal(false)} disabled={submitting}>Close</Button>
+                            <Button variant="primary" type="submit" disabled={submitting}>{submitting ? 'Saving...' : (editingId ? 'Update' : 'Create')}</Button>
                         </div>
                     </form>
                 </Modal.Body>

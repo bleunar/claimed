@@ -14,9 +14,9 @@ const DashboardLayout = () => {
 
     const NavigationOptions = [
         { path: '/dashboard', name: 'Dashboard', icon: <GridFill />, requiredRoles: ['admin', 'it_head', 'it_technician', 'lab_head', 'lab_assistant', 'department_head', 'department_staff', 'department_assistant'], end: true },
-        { path: '/dashboard/locations', name: 'Locations', icon: <DoorClosedFill />, requiredRoles: ['admin', 'it_head', 'it_technician', 'department_head', 'department_staff', 'department_assistant'] },
-        { path: '/dashboard/laboratories', name: 'Laboratories', icon: <DoorClosedFill />, requiredRoles: ['lab_head', 'lab_assistant'] },
-        { path: '/dashboard/components', name: 'PC Components', icon: <KeyboardFill />, requiredRoles: ['admin', 'it_head', 'it_technician', 'lab_head', 'lab_head',] },
+        { path: '/dashboard/locations', name: 'Locations', icon: <DoorClosedFill />, requiredRoles: ['admin', 'it_head', 'it_technician', 'department_head', 'department_staff', 'department_assistant', 'lab_head'] },
+        { path: '/dashboard/laboratories', name: 'Laboratories', icon: <DoorClosedFill />, requiredRoles: ['lab_assistant'] },
+        { path: '/dashboard/components', name: 'PC Components', icon: <KeyboardFill />, requiredRoles: ['admin', 'it_head', 'it_technician', 'lab_head', 'department_head'] },
         { path: '/dashboard/departments', name: 'Departments', icon: <PeopleFill />, requiredRoles: ['admin', 'it_head'] },
         { path: '/dashboard/accounts', name: 'Accounts', icon: <PeopleFill />, requiredRoles: ['admin', 'it_head', 'lab_head', 'department_head'] },
         { path: '/dashboard/profile', name: 'My Profile', icon: <PersonFill />, requiredRoles: ['admin', 'it_head', 'it_technician', 'lab_head', 'lab_assistant', 'department_head', 'department_staff', 'department_assistant'] },

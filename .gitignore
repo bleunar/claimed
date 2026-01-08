@@ -41,4 +41,5 @@ __pycache__
 !DATABASEv4b1.sql
 !DATABASEv4b2.sql
 !DATABASEv4b3.sql
+!MIGRATION_*.sql
 

@@ -164,7 +164,7 @@ const ProfilePage = () => {
     const hasProfileChanges = hasNameChanged || hasDateChanged || hasGenderChanged || hasSchoolIdChanged;
 
     return (
-        <div className="container p-0 py-3 overflow-hidden">
+        <div className="container py-3 overflow-hidden">
             <h2 className="h4 mb-3 fw-bold">My Profile</h2>
             <Row className="g-4 mb-4">
                 <Col lg={4}>
@@ -179,7 +179,7 @@ const ProfilePage = () => {
                                     shape='circle'
                                 />
                             </div>
-                            <h4 className="mb-0">{user?.name}</h4>
+                            <h4 className="mb-0 text-center">{user?.name}</h4>
                             <div className="text-muted mb-3 text-uppercase" style={{ fontSize: '0.75rem' }}>{user?.role.replace('_', ' ').toLowerCase()}</div>
                         </Card.Body>
                         <Card.Footer>
@@ -222,7 +222,7 @@ const ProfilePage = () => {
                                 </div>
 
                                 <div className="col-12 col-md-6">
-                                    <Form.Group className="" title='Contact the administrator for department shifts'>
+                                    <Form.Group className="mb-3" title='Contact the administrator for department shifts'>
                                         <Form.Label>Department</Form.Label>
                                         <Form.Control
                                             type="text"

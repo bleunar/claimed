@@ -1,11 +1,16 @@
-import React, { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Modal } from 'react-bootstrap';
-import { Trash, Plus, XLg, ArrowUp, ArrowDown } from 'react-bootstrap-icons';
+import api from '../../api/axios';
+import { Trash, Plus, XLg, ArrowUp, ArrowDown, BoxArrowRight } from 'react-bootstrap-icons';
+import toast from 'react-hot-toast';
 
-const BatchEditSetsModal = ({ show, onHide, computerSets, user, onBatchUpdate, onBatchDelete }) => {
+const BatchEditSetsModal = ({ show, onHide, computerSets, user, onBatchUpdate, onBatchDelete, onBatchMove }) => {
     const [selectedIds, setSelectedIds] = useState([]);
     const [targetStatus, setTargetStatus] = useState('active');
+    const [targetLocation, setTargetLocation] = useState('');
+    const [locations, setLocations] = useState([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [loadingLocations, setLoadingLocations] = useState(false);
 
     // Filter out available sets (those not selected)
     const availableSets = computerSets.filter(set => !selectedIds.includes(set.id));
@@ -17,8 +22,21 @@ const BatchEditSetsModal = ({ show, onHide, computerSets, user, onBatchUpdate, o
     const handleSelectAll = () => setSelectedIds(computerSets.map(s => s.id));
     const handleUnselectAll = () => setSelectedIds([]);
 
+    // Fetch locations when modal shows
+    useEffect(() => {
+        if (show) {
+            setTargetLocation('');
+            setLoadingLocations(true);
+            api.get('/locations/')
+                .then(res => setLocations(res.data))
+                .catch(err => console.error("Failed to load locations", err))
+                .finally(() => setLoadingLocations(false));
+        }
+    }, [show]);
+
     const canDelete = ['admin', 'it_head', 'lab_head'].includes(user?.role);
     const canUpdateStatus = ['admin', 'it_head', 'lab_head', 'it_technician'].includes(user?.role);
+    const canMove = ['admin', 'it_head', 'department_head', 'lab_head'].includes(user?.role);
 
     const executeUpdate = async () => {
         if (selectedIds.length === 0) return;
@@ -37,6 +55,17 @@ const BatchEditSetsModal = ({ show, onHide, computerSets, user, onBatchUpdate, o
 
         setIsSubmitting(true);
         await onBatchDelete(selectedIds);
+        setIsSubmitting(false);
+        onHide();
+        setSelectedIds([]);
+    };
+
+    const executeMove = async () => {
+        if (selectedIds.length === 0 || !targetLocation) return;
+        if (!confirm(`Are you sure you want to move ${selectedIds.length} sets to a new location?`)) return;
+
+        setIsSubmitting(true);
+        await onBatchMove(selectedIds, targetLocation);
         setIsSubmitting(false);
         onHide();
         setSelectedIds([]);
@@ -109,12 +138,11 @@ const BatchEditSetsModal = ({ show, onHide, computerSets, user, onBatchUpdate, o
                     </div>
                 </div>
 
-                {/* Operations */}
-                <div className="h4">Batch Operations</div>
-
                 <div className="container-fluid px-2 mb-4">
-                    <div className="row">
-                        <div className="col p-1">
+
+                    <div className="mb-4">
+                        <div className="h6">Batch Operations</div>
+                        <div style={{ maxWidth: "500px" }}>
                             <div className="input-group">
                                 <select className="form-select" value={targetStatus} onChange={(e) => setTargetStatus(e.target.value)} disabled={!canUpdateStatus || selectedIds.length === 0}>
                                     <option value="active">Active</option>
@@ -126,23 +154,53 @@ const BatchEditSetsModal = ({ show, onHide, computerSets, user, onBatchUpdate, o
                             </div>
                             {!canUpdateStatus && <small className="text-muted">You do not have permission to update status.</small>}
                         </div>
+                    </div>
 
-                        {canDelete && (
-                            <>
-                                <div className='col-12 col-md-1 d-flex justify-content-center align-items-center'>
-                                    <span>or</span>
-                                </div>
-
-                                <div className='col-12 col-md-3 p-1 d-flex justify-content-center'>
-                                    <button className="btn btn-danger text-nowrap flex-fill" onClick={executeDelete} disabled={selectedIds.length === 0 || isSubmitting}>
-                                        <Trash className="me-1" /> Delete Items
+                    {canMove && (
+                        <div className="mb-4">
+                            <div className="h6">Move to another Location</div>
+                            <div style={{maxWidth: "500px"}}>
+                                <div className="input-group">
+                                    <select
+                                        className="form-select"
+                                        value={targetLocation}
+                                        onChange={(e) => setTargetLocation(e.target.value)}
+                                        disabled={selectedIds.length === 0 || loadingLocations}
+                                    >
+                                        <option value="" disabled hidden>{loadingLocations ? "Loading..." : "Select Target Location"}</option>
+                                        {locations.map(loc => (
+                                            <option key={loc.id} value={loc.id}>
+                                                {loc.name} {loc.department_name ? `(${loc.department_name})` : ''}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <button
+                                        className="btn btn-primary"
+                                        onClick={executeMove}
+                                        disabled={selectedIds.length === 0 || !targetLocation || isSubmitting}
+                                    >
+                                        Move
                                     </button>
                                 </div>
-                            </>
-                        )}
-                    </div>
-                </div>
+                            </div>
+                        </div>
+                    )}
 
+
+
+                    {canDelete && (
+                        <div className="mb-4">
+                            <div className="h6">Danger Zone</div>
+                            <div className="bg-danger-subtle border border-danger p-3 rounded">
+                                <div className='p-1 d-flex justify-content-center'>
+                                    <button className="btn btn-danger text-nowrap" onClick={executeDelete} disabled={selectedIds.length === 0 || isSubmitting}>
+                                        <Trash className="me-1" /> Delete selected items
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
             </Modal.Body>
         </Modal>
     );

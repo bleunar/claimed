@@ -79,9 +79,9 @@ const ComponentConflictModal = ({ show, onHide, conflictData, onResolve, onCance
                                         </div>
                                     </div>
                                 ) : (
-                                    <span className="fw-medium text-danger">
+                                    <span className={`fw-medium ${existing.department_name ? 'text-primary' : 'text-danger'}`}>
                                         <HddNetwork className="me-1" size={12} />
-                                        Unassigned (In Storage/Rogue)
+                                        Unassigned {existing.department_name ? `(${existing.department_name})` : '(In Storage/Rogue)'}
                                     </span>
                                 )}
                             </div>

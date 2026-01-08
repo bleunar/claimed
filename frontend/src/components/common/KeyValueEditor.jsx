@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Trash, ExclamationCircle, Copy, Exclamation } from 'react-bootstrap-icons';
+import { Plus, Trash, ExclamationCircle, Copy, Exclamation, X } from 'react-bootstrap-icons';
 import toast from 'react-hot-toast';
 import { SUGGESTED_KEYS_BY_TYPE, DEFAULT_KEYS } from '../../utils/componentTypes';
 
@@ -271,7 +271,7 @@ const KeyValueEditor = ({ maxHeight = "300px", properties, onChange, readOnly = 
                                         onClick={() => handleRemovePair(index)}
                                         title="Remove Property"
                                     >
-                                        <Trash />
+                                        <X />
                                     </button>
                                 </div>
                             );

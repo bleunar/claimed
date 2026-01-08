@@ -145,13 +145,6 @@ const DepartmentOverviewPage = () => {
                                 <div className="text-center text-muted py-4">No members assigned</div>
                             )}
                         </Card.Body>
-                        <Card.Footer>
-                            <div className="d-flex justify-content-between">
-                                <div>
-                                    <div className="btn btn-sm btn-primary">View More</div>
-                                </div>
-                            </div>
-                        </Card.Footer>
                     </Card>
                 </Col>
 
@@ -189,13 +182,6 @@ const DepartmentOverviewPage = () => {
                                 <div className="text-center text-muted py-4">No locations assigned</div>
                             )}
                         </Card.Body>
-                        <Card.Footer>
-                            <div className="d-flex justify-content-between">
-                                <div>
-                                    <div className="btn btn-sm btn-primary">View More</div>
-                                </div>
-                            </div>
-                        </Card.Footer>
                     </Card>
                 </Col>
             </Row>

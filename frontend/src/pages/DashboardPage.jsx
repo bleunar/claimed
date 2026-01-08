@@ -95,8 +95,8 @@ const DashboardPage = () => {
                             )}
 
                             {/* 2. Standard KPIs - Visible to All */}
-                            <KPICard title="Locations" value={kpiData?.total_labs} icon={<DoorClosedFill />} link={['lab_head', 'lab_assistant'].includes(user?.role) ? "/dashboard/laboratories" : "/dashboard/locations"} />
-                            <KPICard title="Computers" value={kpiData?.total_computers} icon={<PcDisplay />} link={['lab_head', 'lab_assistant'].includes(user?.role) ? "/dashboard/laboratories" : "/dashboard/locations"} />
+                            <KPICard title="Locations" value={kpiData?.total_labs} icon={<DoorClosedFill />} link={['lab_assistant'].includes(user?.role) ? "/dashboard/laboratories" : "/dashboard/locations"} />
+                            <KPICard title="Computers" value={kpiData?.total_computers} icon={<PcDisplay />} link={['lab_assistant'].includes(user?.role) ? "/dashboard/laboratories" : "/dashboard/locations"} />
                             <KPICard title="Components" value={kpiData?.total_components} icon={<KeyboardFill />} link="/dashboard/components" />
 
                             {/* 3. Issue KPIs - Visible to All */}
@@ -138,6 +138,7 @@ const DashboardPage = () => {
                                             apiPath="/analytics/pie/computers-by-status"
                                             colorMap={computerSetColorMap}
                                             height="180px"
+                                            refreshTrigger={refreshTrigger}
                                         />
                                     </div>
 
@@ -148,6 +149,7 @@ const DashboardPage = () => {
                                             apiPath="/analytics/pie/components-by-status"
                                             colorMap={componentColorMap}
                                             height="180px"
+                                            refreshTrigger={refreshTrigger}
                                         />
                                     </div>
                                 </div>
@@ -193,7 +195,7 @@ const DashboardPage = () => {
                                     <div className="col-12 col-lg-6 col-xl-7 d-flex flex-column gap-2">
                                         <div className="card h-100 bg-transparent border-0">
                                             <div className="card-body bg-transparent">
-                                                <div className="d-flex flex-wrap gap-5 align-items-center justify-content-center p-2 cursor-pointer">
+                                                <div className="d-flex flex-wrap gap-5 align-items-center justify-content-center p-2 cursor-pointer h-100">
                                                     <MiniKPI
                                                         label="Managed"
                                                         value={kpiData?.active_accounts + kpiData?.suspended_accounts}

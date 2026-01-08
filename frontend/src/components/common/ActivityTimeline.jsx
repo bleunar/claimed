@@ -131,7 +131,12 @@ const hasExpandableDetails = (activity) => {
 const ActivityItem = ({ activity, showIpAddress = false }) => {
     const [expanded, setExpanded] = useState(false);
     const IconComponent = ACTION_ICONS[activity.action] || PersonGear;
-    const label = ACTION_LABELS[activity.action] || activity.action;
+    let label = ACTION_LABELS[activity.action] || activity.action;
+    if (activity.action === 'deleted' && activity.details?.target_name) {
+        label = `Deleted account "${activity.details.target_name}"`;
+    } else if (activity.action === 'restored' && activity.details?.target_name) {
+        label = `Restored account "${activity.details.target_name}"`;
+    }
     const color = ACTION_COLORS[activity.action] || 'secondary';
     const canExpand = (showIpAddress && activity.ip_address);
 

@@ -12,10 +12,22 @@ departments_bp = Blueprint('departments', __name__, url_prefix='/departments')
 @departments_bp.route('/', methods=['GET'])
 @jwt_required()
 def list_departments():
-    """List all departments"""
+    """List all departments, optionally filtered by search term"""
+    search = request.args.get('search', '').strip()
+    
     db = get_db()
     cursor = db.cursor(dictionary=True)
-    cursor.execute("SELECT id, name, description, created_at, updated_at FROM departments ORDER BY name")
+    
+    query = "SELECT id, name, description, type, created_at, updated_at FROM departments"
+    params = []
+    
+    if search:
+        query += " WHERE (name LIKE %s OR description LIKE %s)"
+        search_pattern = f"%{search}%"
+        params.extend([search_pattern, search_pattern])
+    
+    query += " ORDER BY name"
+    cursor.execute(query, params)
     departments = cursor.fetchall()
     cursor.close()
     return jsonify(departments), 200
@@ -26,7 +38,7 @@ def get_department(id):
     """Get a single department by ID"""
     db = get_db()
     cursor = db.cursor(dictionary=True)
-    cursor.execute("SELECT id, name, description, created_at, updated_at FROM departments WHERE id = %s", (id,))
+    cursor.execute("SELECT id, name, description, type, created_at, updated_at FROM departments WHERE id = %s", (id,))
     department = cursor.fetchone()
     cursor.close()
     
@@ -44,9 +56,16 @@ def create_department():
     data = request.json
     name = data.get('name')
     description = data.get('description')
+    dept_type = data.get('type')
 
     if not name:
         return jsonify({"msg": "Name is required"}), 400
+    if not dept_type:
+        return jsonify({"msg": "Department type is required"}), 400
+    
+    valid_types = ['it', 'education', 'office']
+    if dept_type not in valid_types:
+        return jsonify({"msg": "Invalid department type"}), 400
 
     db = get_db()
     cursor = db.cursor(dictionary=True)
@@ -60,8 +79,8 @@ def create_department():
     try:
         dept_id = uuid.uuid4().hex[:16]
         cursor.execute(
-            "INSERT INTO departments (id, name, description) VALUES (%s, %s, %s)",
-            (dept_id, name, description)
+            "INSERT INTO departments (id, name, description, type) VALUES (%s, %s, %s, %s)",
+            (dept_id, name, description, dept_type)
         )
         db.commit()
         cursor.close()
@@ -80,9 +99,17 @@ def update_department(id: str):
     data = request.json
     name = data.get('name', '')
     description = data.get('description', '')
+    dept_type = data.get('type', '')
 
     if not name:
         return jsonify({"msg": "Name is required"}), 400
+    
+    if not dept_type:
+         return jsonify({"msg": "Department type is required"}), 400
+    
+    valid_types = ['it', 'education', 'office']
+    if dept_type not in valid_types:
+        return jsonify({"msg": "Invalid department type"}), 400
 
     db = get_db()
     cursor = db.cursor(dictionary=True)
@@ -101,8 +128,8 @@ def update_department(id: str):
 
     try:
         cursor.execute(
-            "UPDATE departments SET name = %s, description = %s WHERE id = %s",
-            (name, description, id)
+            "UPDATE departments SET name = %s, description = %s, type = %s WHERE id = %s",
+            (name, description, dept_type, id)
         )
         db.commit()
         cursor.close()

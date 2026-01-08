@@ -2,6 +2,7 @@ CREATE TABLE departments (
     id CHAR(16) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY,
     name VARCHAR(255) not null,
     description VARCHAR(255),
+    type ENUM("it", "education", 'office') NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
@@ -31,6 +32,7 @@ CREATE TABLE accounts (
 CREATE TABLE account_activities (
     id CHAR(16) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY,
     account_id CHAR(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+        actor_id CHAR(16) CHARACTER SET ascii COLLATE ascii_bin NULL, 
     action ENUM('login', 'logout', 'password_reset', 'password_changed', 
                 'email_updated', 'school_id_updated', 'role_changed', 
                 'suspended', 'activated', 'deleted', 'restored', 'profile_updated') NOT NULL,
@@ -38,6 +40,7 @@ CREATE TABLE account_activities (
     ip_address VARCHAR(45) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE,
+    FOREIGN KEY (actor_id) REFERENCES accounts(id) ON DELETE SET NULL,
     INDEX idx_account_time (account_id, created_at DESC)
 );
 
@@ -65,12 +68,13 @@ CREATE TABLE computer_sets (
 CREATE TABLE computer_set_components (
     id CHAR(16) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY,
     computer_set_id CHAR(16) CHARACTER SET ascii COLLATE ascii_bin NULL,
+    department_id CHAR(16) CHARACTER SET ascii COLLATE ascii_bin NULL,
     component_type ENUM('monitor', 'system_unit', 'keyboard', 'mouse', 'avr', 'web_camera', 'printer', 'headset', 'other') NOT NULL,
     is_core BOOLEAN DEFAULT TRUE,
     brand_name VARCHAR(100) NOT NULL,
     serial_number VARCHAR(100) UNIQUE, 
     properties JSON NULL,
-    status ENUM('good', 'bad', 'maintenance', 'missing', 'condemned') DEFAULT 'good',
+    status ENUM('good', 'bad', 'maintenance', 'missing', 'disposed') DEFAULT 'good',
     
     acquisition_info JSON NULL COMMENT 'purchase_date, purchase_cost, distributor, warranty_expiry_date',
     disposal_info JSON NULL COMMENT 'disposal_date, disposal_method, disposal_notes, salvage_value',
@@ -78,5 +82,7 @@ CREATE TABLE computer_set_components (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (computer_set_id) REFERENCES computer_sets(id) ON DELETE SET NULL,
-    INDEX idx_serial (serial_number)
+    FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE SET NULL,
+    INDEX idx_serial (serial_number),
+    INDEX idx_department (department_id)
 );

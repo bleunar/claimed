@@ -40,7 +40,7 @@ function App() {
                   <Route element={<ProtectedRoute allowedRoles={['admin', 'it_head', 'lab_head', 'department_head']} />}>
                     <Route path='accounts' element={<AccountsPage />} />
                   </Route>
-                  <Route element={<ProtectedRoute allowedRoles={['admin', 'it_head', 'lab_head', 'it_technician']} />}>
+                  <Route element={<ProtectedRoute allowedRoles={['admin', 'it_head', 'lab_head', 'it_technician', 'department_head']} />}>
                     <Route path='components' element={<ComponentsPage />} />
                   </Route>
                   <Route element={<ProtectedRoute allowedRoles={['admin', 'it_head']} />}>
@@ -49,12 +49,12 @@ function App() {
                   <Route element={<ProtectedRoute allowedRoles={['admin', 'department_head']} />}>
                     <Route path='departments/:id' element={<DepartmentOverviewPage />} />
                   </Route>
-                  <Route element={<ProtectedRoute allowedRoles={['admin', 'it_head', 'it_technician', 'department_head', 'department_staff', 'department_assistant']} />}>
+                  <Route element={<ProtectedRoute allowedRoles={['admin', 'it_head', 'it_technician', 'department_head', 'department_staff', 'department_assistant', 'lab_head', 'lab_assistant']} />}>
                     <Route path='locations' element={<LocationsPage />} />
                     <Route path='locations/:id' element={<LaboratoryComputersPage />} />
                   </Route>
 
-                  <Route element={<ProtectedRoute allowedRoles={['admin', 'it_head', 'lab_head', 'it_technician', 'lab_assistant', 'department_head']} />}>
+                  <Route element={<ProtectedRoute allowedRoles={[ 'lab_assistant']} />}>
                     <Route path='laboratories' element={<LaboratoriesPage />} />
                     <Route path='laboratories/:id' element={<LaboratoryComputersPage />} />
                   </Route>

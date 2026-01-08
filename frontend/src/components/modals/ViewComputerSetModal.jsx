@@ -94,7 +94,7 @@ const ViewComputerSetModal = ({ show, onHide }) => {
                             <option value="" disabled>None</option>
                         ) : (
                             <>
-                                <option value="" hidden>Select a location</option>
+                                <option value="" hidden disabled>Select the target location</option>
                                 {[...locations].sort((a, b) => naturalSort(a, b, 'name')).map((loc) => (
                                     <option key={loc.id} value={loc.id}>
                                         {loc.name}
