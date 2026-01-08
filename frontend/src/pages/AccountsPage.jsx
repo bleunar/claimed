@@ -1505,9 +1505,11 @@ const AccountsPage = () => {
                             <p className="text-muted mb-2">{viewingAccount.email}</p>
 
                             <div className="d-flex justify-content-center gap-2 mb-2">
-                                <span className="badge bg-claims-primary text-white text-uppercase">
-                                    {viewingAccount.department_name.replace('_', ' ')}
-                                </span>
+                                {viewingAccount.department_name && (
+                                    <span className="badge bg-claims-primary text-white text-uppercase">
+                                        {viewingAccount.department_name.replace('_', ' ')}
+                                    </span>
+                                )}
                                 <span className="badge bg-claims-primary text-white text-uppercase">
                                     {viewingAccount.role.replace('_', ' ')}
                                 </span>
