@@ -115,10 +115,14 @@ def create_computer_set():
                     props = comp.get('properties')
                     import json
                     props_val = json.dumps(props) if props else None
+                    # Convert empty serial to NULL to avoid unique constraint issues
+                    serial = comp.get('serial_number')
+                    if serial == '' or serial is None:
+                        serial = None
 
                     cursor.execute(
                         "INSERT INTO computer_set_components (id, computer_set_id, department_id, component_type, is_core, brand_name, serial_number, properties, status) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
-                        (comp_id, set_id, loc_data.get('department_id'), comp.get('component_type'), comp.get('is_core', False), comp.get('brand_name'), comp.get('serial_number'), props_val, 'good')
+                        (comp_id, set_id, loc_data.get('department_id'), comp.get('component_type'), comp.get('is_core', False), comp.get('brand_name'), serial, props_val, 'good')
                     )
 
             db.commit()
@@ -155,10 +159,14 @@ def create_computer_set():
                 props = comp.get('properties')
                 import json
                 props_val = json.dumps(props) if props else None
+                # Convert empty serial to NULL to avoid unique constraint issues
+                serial = comp.get('serial_number')
+                if serial == '' or serial is None:
+                    serial = None
 
                 cursor.execute(
                     "INSERT INTO computer_set_components (id, computer_set_id, department_id, component_type, is_core, brand_name, serial_number, properties, status) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
-                    (comp_id, set_id, loc_data.get('department_id'), comp.get('component_type'), comp.get('is_core', False), comp.get('brand_name'), comp.get('serial_number'), props_val, 'good')
+                    (comp_id, set_id, loc_data.get('department_id'), comp.get('component_type'), comp.get('is_core', False), comp.get('brand_name'), serial, props_val, 'good')
                 )
                 
             db.commit()
