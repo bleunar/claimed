@@ -11,6 +11,7 @@ const ManageAccountModal = ({ show, onHide, account = null, onSuccess }) => {
     const [departments, setDepartments] = useState([]);
     const [error, setError] = useState('');
     const [showNewPassword, setShowNewPassword] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Initial State defaults
     const initialFormState = {
@@ -87,6 +88,7 @@ const ManageAccountModal = ({ show, onHide, account = null, onSuccess }) => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+        setIsSubmitting(true);
         try {
             const payload = { ...formData };
             if (user?.role !== 'admin') {
@@ -122,6 +124,8 @@ const ManageAccountModal = ({ show, onHide, account = null, onSuccess }) => {
             const msg = err.response?.data?.msg || `Failed to ${editingId ? 'update' : 'create'} user`;
             setError(msg);
             toast.error(msg);
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -267,8 +271,14 @@ const ManageAccountModal = ({ show, onHide, account = null, onSuccess }) => {
                         </div>
                     </div>
                     <div className="modal-footer">
-                        <Button variant="secondary" onClick={onHide}>Close</Button>
-                        <Button variant="claims-primary" type="submit">{editingId ? 'Update Account' : 'Create Account'}</Button>
+                        <Button variant="secondary" onClick={onHide} disabled={isSubmitting}>Close</Button>
+                        <Button variant="claims-primary" type="submit" disabled={isSubmitting}>
+                            {isSubmitting ? (
+                                <><span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>{editingId ? 'Updating...' : 'Creating...'}</>
+                            ) : (
+                                editingId ? 'Update Account' : 'Create Account'
+                            )}
+                        </Button>
                     </div>
                 </Form>
             </Modal.Body>
