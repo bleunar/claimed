@@ -14,12 +14,14 @@ services:
       timeout: 5s
       retries: 3
     networks:
-      - claimed
+      - claimed-network
 
   claimed_backend:
     build: ./backend
     container_name: claimed_backend
     restart: unless-stopped
+    ports:
+      - 9050:5000
     depends_on:
       claimed_redis:
         condition: service_healthy
@@ -56,13 +58,16 @@ services:
       retries: 3
       start_period: 10s
     networks:
-      - claimed
-      - production
+      - claimed-network
+      - main-network
+      - database-network
 
   claimed_frontend:
     build: ./frontend
     container_name: claimed_frontend
     restart: unless-stopped
+    ports:
+      - 9090:80
     env_file:
       - ./frontend/.env
     environment:
@@ -76,15 +81,17 @@ services:
       timeout: 10s
       retries: 3
     networks:
-      - claimed
-      - production
+      - claimed-network
+      - main-network
 
 
 networks:
-  claimed:
-    name: claimed
+  claimed-network:
+    name: claimed-network
     driver: bridge
-  production:
+  main-network:
+    external: true
+  database-network:
     external: true
 
 volumes:
