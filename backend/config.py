@@ -32,21 +32,21 @@ class Config:
     JWT_COOKIE_CSRF_PROTECT = os.getenv('APP_ENV', 'development') == "production"
     
     # Database
-    MYSQL_HOST = get_config('MYSQL_HOST', 'mysql_host')
-    MYSQL_USER = get_config('MYSQL_USER', 'mysql_user')
+    MYSQL_HOST = get_config('MYSQL_HOST', default='localhost')
+    MYSQL_USER = get_config('MYSQL_USER', default='claimed')
     MYSQL_PASSWORD = get_config('MYSQL_PASSWORD', 'mysql_password')
-    MYSQL_DB = get_config('MYSQL_DB', 'mysql_db', 'app_db')
+    MYSQL_DB = get_config('MYSQL_DB', default='app_db')
 
     # Email
-    MAIL_SERVER = get_config('MAIL_SERVER', 'mail_server', 'smtp.example.com')
-    MAIL_PORT = int(get_config('MAIL_PORT', 'mail_server_port',default=587))
+    MAIL_SERVER = get_config('MAIL_SERVER', default='smtp.example.com')
+    MAIL_PORT = int(get_config('MAIL_PORT', default=587))
     MAIL_USE_TLS = get_config('MAIL_USE_TLS', default='true').lower() in ['true', 'on', '1']
-    MAIL_USERNAME = get_config('MAIL_USERNAME', 'mail_username')
+    MAIL_USERNAME = get_config('MAIL_USERNAME')
     MAIL_PASSWORD = get_config('MAIL_PASSWORD', 'mail_password')
 
     # Redis (for rate limiting storage)
     REDIS_URL = get_config('REDIS_URL', default='redis://localhost:6379/0')
 
     # Default Admin Credentials (used if no admin account exists)
-    DEFAULT_ADMIN_EMAIL = get_config('DEFAULT_ADMIN_EMAIL', 'default_admin_email')
+    DEFAULT_ADMIN_EMAIL = get_config('DEFAULT_ADMIN_EMAIL')
     DEFAULT_ADMIN_PASSWORD = get_config('DEFAULT_ADMIN_PASSWORD', 'default_admin_password')

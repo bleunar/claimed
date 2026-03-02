@@ -28,20 +28,12 @@ services:
     env_file:
       - ./backend/.env
     secrets:
-      - mysql_password
       - secret_key
-      - mysql_host
-      - mysql_user
-      - mysql_db
       - jwt_secret_key
-      - mail_server
-      - mail_server_port
-      - mail_username
+      - mysql_password
       - mail_password
-      - default_admin_email
       - default_admin_password
     environment:
-      - CORS_ORIGINS=${CORS_ORIGINS}
       - REDIS_URL=redis://claimed_redis:6379/0
     volumes:
       - upload_data:/app/uploads
@@ -96,23 +88,9 @@ secrets:
     file: ./secrets/.secret_key
   jwt_secret_key:
     file: ./secrets/.jwt_secret_key
-  mysql_host:
-    file: ./secrets/.mysql_host
-  mysql_db:
-    file: ./secrets/.mysql_db
-  mysql_user:
-    file: ./secrets/.mysql_user
   mysql_password:
     file: ./secrets/.mysql_password
-  mail_server:
-    file: ./secrets/.mail_server
-  mail_server_port:
-    file: ./secrets/.mail_server_port
-  mail_username:
-    file: ./secrets/.mail_username
   mail_password:
     file: ./secrets/.mail_password
-  default_admin_email:
-    file: ./secrets/.default_admin_email
   default_admin_password:
     file: ./secrets/.default_admin_password

@@ -158,29 +158,24 @@ mysql -u <user> -p <database_name> < database/DATABASEv4b3.sql
 
 ### 4. Set Up Docker Secrets (Production Only)
 
-Create secret files in the `secrets/` directory:
+Create secret files in the `secrets/` directory (only passwords and keys):
 
 ```bash
 cd secrets
-echo "your_secret_key" > secret_key
-echo "your_jwt_secret" > jwt_secret_key
-echo "your_db_host" > mysql_host
-echo "your_db_user" > mysql_user
-echo "your_db_password" > mysql_password
-echo "your_db_name" > mysql_db
-echo "smtp.gmail.com" > mail_server
-echo "587" > mail_server_port
-echo "your_email@gmail.com" > mail_username
-echo "your_app_password" > mail_password
-echo "admin@example.com" > default_admin_email
-echo "admin_password" > default_admin_password
+echo -n "your_secret_key" > secret_key
+echo -n "your_jwt_secret" > jwt_secret_key
+echo -n "your_db_password" > mysql_password
+echo -n "your_smtp_app_password" > mail_password
+echo -n "your_admin_password" > default_admin_password
 ```
 
 Then generate the hidden copies used by Docker:
 
 ```bash
-for file in *; do [ -f "$file" ] && cp "$file" ".$file"; done
+for file in *; do [ -f "$file" ] && [ "$file" != "README.md" ] && cp "$file" ".$file"; done
 ```
+
+See [`secrets/README.md`](secrets/README.md) for full details.
 
 ### 5. Run the Application
 
