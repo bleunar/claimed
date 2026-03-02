@@ -1,4 +1,3 @@
-import React from 'react';
 import { Pc, Mouse2Fill, KeyboardFill, DisplayFill, WebcamFill, PrinterFill, Headphones, Tools } from 'react-bootstrap-icons';
 
 // Get icon component for a component type

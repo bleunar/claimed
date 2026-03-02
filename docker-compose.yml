@@ -41,11 +41,6 @@ services:
       - default_admin_email
       - default_admin_password
     environment:
-      - MYSQL_HOST_FILE=/run/secrets/mysql_host
-      - MYSQL_USER_FILE=/run/secrets/mysql_user
-      - MYSQL_PASSWORD_FILE=/run/secrets/mysql_password
-      - MYSQL_DB_FILE=/run/secrets/mysql_db
-      - SECRET_KEY_FILE=/run/secrets/secret_key
       - CORS_ORIGINS=${CORS_ORIGINS}
       - REDIS_URL=redis://claimed_redis:6379/0
     volumes:
@@ -68,10 +63,6 @@ services:
     restart: unless-stopped
     ports:
       - 9090:80
-    env_file:
-      - ./frontend/.env
-    environment:
-      - PROXY_TARGET=${PROXY_TARGET:-http://claimed_backend:5000}
     depends_on:
       claimed_backend:
         condition: service_healthy
@@ -94,9 +85,11 @@ networks:
   database-network:
     external: true
 
+
 volumes:
   upload_data:
   redis_data:
+
 
 secrets:
   secret_key:

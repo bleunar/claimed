@@ -20,21 +20,6 @@ server {
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
     add_header Permissions-Policy "camera=(self), microphone=()" always;
 
-    # API Proxy
-    location /api {
-        resolver 127.0.0.11 valid=30s;
-        set $upstream_backend ${PROXY_TARGET};
-        rewrite ^/api/(.*) /$1 break;
-        proxy_pass $upstream_backend;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    }
-
     # SPA Routing (Handle 404s by serving index.html)
     location / {
         try_files $uri $uri/ /index.html;
