@@ -3,7 +3,7 @@ import { useTheme } from '../context/ThemeContext';
 import { Form, Button, Card, Row, Col, Image, Modal, ProgressBar } from 'react-bootstrap';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
-import { Person, PersonCircle, Eye, EyeSlash, InfoCircle } from 'react-bootstrap-icons';
+import { Person, PersonCircle, Eye, EyeSlash, InfoCircle, ChevronRight } from 'react-bootstrap-icons';
 import ChangeEmailModal from '../components/modals/ChangeEmailModal';
 import ChangePasswordModal from '../components/modals/ChangePasswordModal';
 import toast from 'react-hot-toast';
