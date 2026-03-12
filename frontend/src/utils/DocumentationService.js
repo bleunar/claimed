@@ -5,6 +5,13 @@ const markdownFiles = import.meta.glob('../assets/documentation/*.md', { query: 
 
 const documentationFiles = [
     {
+        id: 'inventory-management-guide',
+        title: 'Inventory Management Guide',
+        fileName: 'inventory-management-guide.md',
+        allowedRoles: ['admin', 'it_head', 'lab_head', 'it_technician', 'department_head', 'department_staff', 'department_assistant', 'lab_assistant'],
+        category: 'Management'
+    },
+    {
         id: 'user-guide',
         title: 'General User Guide',
         fileName: 'user-guide.md',
