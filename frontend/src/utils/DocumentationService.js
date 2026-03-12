@@ -12,6 +12,20 @@ const documentationFiles = [
         category: 'Management'
     },
     {
+        id: 'system-version-information',
+        title: 'System Version Releases',
+        fileName: 'system-version.md',
+        allowedRoles: ['admin', 'it_head', 'lab_head', 'it_technician', 'department_head', 'department_staff', 'department_assistant', 'lab_assistant'],
+        category: 'General'
+    },
+    {
+        id: 'system-developers-information',
+        title: 'System Developers Information',
+        fileName: 'system-developers.md',
+        allowedRoles: ['admin', 'it_head', 'lab_head', 'it_technician', 'department_head', 'department_staff', 'department_assistant', 'lab_assistant'],
+        category: 'General'
+    },
+    {
         id: 'user-guide',
         title: 'General User Guide',
         fileName: 'user-guide.md',
