@@ -47,7 +47,6 @@ const DocumentationsPage = () => {
     return (
         <Container fluid className="py-4">
             <h2 className="mb-4 d-flex align-items-center">
-                <Book className="me-2" />
                 System Documentation
             </h2>
 
@@ -82,7 +81,7 @@ const DocumentationsPage = () => {
                         <div className="d-flex">
                             <InfoCircle className="me-2 mt-1 flex-shrink-0" />
                             <small>
-                                You see these guides based on your role as <strong>{user.role.replace('_', ' ')}</strong>.
+                                You see these guides based on your role as <strong className='capitalize'>{user.role.replace('_', ' ')}</strong>.
                             </small>
                         </div>
                     </Alert>
@@ -90,7 +89,7 @@ const DocumentationsPage = () => {
 
                 <Col md={8} lg={9}>
                     <Card className="shadow-sm border-0 min-vh-75">
-                        <Card.Body className="p-4 p-lg-5">
+                        <Card.Body className="p-4 p-lg-3">
                             {loading ? (
                                 <div className="d-flex flex-column justify-content-center align-items-center py-5">
                                     <Spinner animation="border" variant="primary" className="mb-3" />
