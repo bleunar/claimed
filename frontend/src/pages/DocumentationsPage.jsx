@@ -28,17 +28,12 @@ const DocumentationsPage = () => {
         setLoading(true);
         setError(null);
         try {
-            // In Vite, we can fetch from the source directory during dev
-            // or we might need to adjust based on how assets are served.
-            // For now, let's try importing it or fetching it.
-            // A more robust way in Vite is using import.meta.glob or dynamic imports
-            
-            const response = await fetch(`/src/assets/documentation/${doc.fileName}`);
-            if (!response.ok) {
+            const { getMarkdownContent } = await import('../utils/DocumentationService');
+            const content = getMarkdownContent(doc.fileName);
+            if (!content) {
                 throw new Error('Failed to load documentation file');
             }
-            const text = await response.text();
-            setMarkdownContent(text);
+            setMarkdownContent(content.default || content);
         } catch (err) {
             console.error('Error loading markdown:', err);
             setError('Could not load the documentation content. Please try again later.');

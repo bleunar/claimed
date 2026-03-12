@@ -1,5 +1,8 @@
 // Documentation metadata and filtering logic
 
+// Import all markdown files in the documentation directory as raw strings
+const markdownFiles = import.meta.glob('../assets/documentation/*.md', { query: '?raw', eager: true });
+
 const documentationFiles = [
     {
         id: 'user-guide',
@@ -30,6 +33,11 @@ export const getAvailableDocumentation = (userRole) => {
 
 export const getDocById = (id) => {
     return documentationFiles.find(doc => doc.id === id);
+};
+
+export const getMarkdownContent = (fileName) => {
+    const path = `../assets/documentation/${fileName}`;
+    return markdownFiles[path] || '';
 };
 
 export default documentationFiles;
