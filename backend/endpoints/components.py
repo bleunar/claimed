@@ -263,8 +263,8 @@ def update_component(id):
     # RBAC Field-Level Validation
     current_claims = get_jwt()
     role = current_claims.get("role")
-    full_ops = ['admin', 'it_head', 'it_technician', 'lab_head']
-    props_ops = full_ops + ['department_head']
+    full_ops = ['admin', 'it_head', 'it_technician', 'lab_head', 'department_head', 'department_staff']
+    props_ops = full_ops
 
     db = get_db()
     cursor = db.cursor(dictionary=True)
@@ -309,9 +309,9 @@ def update_component(id):
                  cursor.close()
                  return jsonify({"msg": "Access Denied: You are not authorized to edit properties"}), 403
 
-    # RBAC: Verifying ownership for Lab Head
+    # RBAC: Verifying ownership for Lab Head and Department Roles
     current_claims = get_jwt()
-    if current_claims.get("role") == 'lab_head':
+    if current_claims.get("role") in ['lab_head', 'department_head', 'department_staff']:
          # Fetch component's current location details
          cursor.execute("""
             SELECT l.department_id 
@@ -437,7 +437,8 @@ def batch_component_transaction():
     current_claims = get_jwt()
     role = current_claims.get("role")
     full_ops = ['admin', 'it_head', 'it_technician', 'lab_head']
-    props_ops = full_ops + ['department_head']
+    details_ops = full_ops + ['department_head', 'department_staff']
+    props_ops = details_ops
 
     # RBAC Validation for Batch
     if role not in full_ops:
@@ -451,7 +452,7 @@ def batch_component_transaction():
     
     try:
         # Pre-validate updates for restricted roles
-        if role not in full_ops and updates:
+        if role not in details_ops and updates:
              for item in updates:
                  if not item.get('id'): continue
                  cursor.execute("SELECT * FROM computer_set_components WHERE id = %s", (item.get('id'),))
@@ -553,6 +554,13 @@ def batch_component_transaction():
             cursor.execute("SELECT computer_set_id, department_id FROM computer_set_components WHERE id = %s", (item.get('id'),))
             current_comp = cursor.fetchone()
             if not current_comp: continue
+
+            # Ownership Check for scoped roles
+            if role in ['lab_head', 'department_head', 'department_staff']:
+                 cursor.execute("SELECT department_id FROM accounts WHERE id = %s", (get_jwt_identity(),))
+                 user_dept = cursor.fetchone()
+                 if not current_comp['department_id'] or not user_dept or user_dept['department_id'] != current_comp['department_id']:
+                      raise Exception("Access Denied: You can only update components in your department")
             
             new_set_id = item.get('computer_set_id')
             new_dept_id = current_comp['department_id'] # Default to keeping it

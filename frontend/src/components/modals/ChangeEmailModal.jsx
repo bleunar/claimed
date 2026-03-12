@@ -111,7 +111,7 @@ const ChangeEmailModal = ({ show, onHide, onSuccess }) => {
                             <div className="input-group bg-body rounded border">
                                 <Form.Control
                                     type={showPassword ? "text" : "password"}
-                                    placeholder="Confirm with current password"
+                                    placeholder="Confirm changes by entering your password"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     className="border-0"
