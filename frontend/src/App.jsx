@@ -14,6 +14,7 @@ import LabResourcesPage from './pages/LabResourcesPage';
 import DepartmentsPage from './pages/DepartmentsPage';
 import DepartmentOverviewPage from './pages/DepartmentOverviewPage';
 import ProfilePage from './pages/ProfilePage';
+import DocumentationsPage from './pages/DocumentationsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import ThemedToaster from './components/ThemedToaster';
 import { ReauthProvider } from './components/ReauthModal';
@@ -63,6 +64,7 @@ function App() {
                   </Route>
 
                   <Route path='profile' element={<ProfilePage />} />
+                  <Route path='documentations' element={<DocumentationsPage />} />
 
                   <Route path="*" element={<ErrorPage />} />
 

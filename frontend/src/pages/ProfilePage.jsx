@@ -347,6 +347,17 @@ const ProfilePage = () => {
                             </Form.Group>
 
                             <Form.Group className="mb-3 d-flex justify-content-between align-items-center">
+                                <Form.Label className="mb-0">System Documentation</Form.Label>
+                                <Button 
+                                    variant="link" 
+                                    className="p-0 text-decoration-none" 
+                                    onClick={() => window.location.href = '/dashboard/documentations'}
+                                >
+                                    View Guides <ChevronRight size={12} />
+                                </Button>
+                            </Form.Group>
+
+                            <Form.Group className="mb-3 d-flex justify-content-between align-items-center">
                                 <Form.Label className="mb-0">Opt-out of System Emails <InfoCircle title='You will not receive email notificatios sent from the system (Wala pa magamit)' className='text-muted small ms-1' /></Form.Label>
                                 <Form.Check
                                     type="switch"
