@@ -369,7 +369,7 @@ const ProfilePage = () => {
                                 </Form.Group>
                             )}
 
-                            <Form.Group className='d-flex justify-content-between align-items-center'>
+                            <Form.Group className='mb-3 d-flex justify-content-between align-items-center'>
                                 <Form.Label className='mb-0'>Notification Position</Form.Label>
                                 <Form.Select
                                     className='w-auto'
@@ -381,8 +381,8 @@ const ProfilePage = () => {
                                     <option value="bottom-right">Bottom Right</option>
                                 </Form.Select>
                             </Form.Group>
-                            
-                            <Form.Group className="mb-3 d-flex justify-content-between align-items-center">
+
+                            <Form.Group className="mb-0 d-flex justify-content-between align-items-center">
                                 <Form.Label className="mb-0">System Documentation</Form.Label>
                                 <Button 
                                     variant="link" 
