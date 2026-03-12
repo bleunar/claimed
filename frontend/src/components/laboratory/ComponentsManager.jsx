@@ -333,7 +333,7 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                 return;
             }
 
-            const promzises = [];
+            const promises = [];
 
             if (batchPayload.creates.length > 0 || batchPayload.updates.length > 0 || batchPayload.deletes.length > 0) {
                 promises.push(api.post('/components/batch-transaction', batchPayload));
