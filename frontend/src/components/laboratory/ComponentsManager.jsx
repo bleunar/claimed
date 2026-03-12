@@ -16,7 +16,7 @@ import { getComponentStatusVariant } from '../../utils/statusColors';
 
 // Role-based access control helpers
 // Role-based access control helpers
-const canEditComponentDetails = (user) => ['admin', 'it_head', 'lab_head', 'it_technician'].includes(user?.role);
+const canEditComponentDetails = (user) => ['admin', 'it_head', 'lab_head', 'it_technician', 'department_head', 'department_staff'].includes(user?.role);
 const canManageComponents = (user) => ['admin', 'it_head', 'lab_head', 'it_technician'].includes(user?.role);
 const canDeleteComponent = (user) => ['admin', 'it_head', 'lab_head', 'it_technician'].includes(user?.role);
 const canAddComponent = (user) => ['admin', 'it_head', 'lab_head', 'it_technician'].includes(user?.role);
