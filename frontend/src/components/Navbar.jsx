@@ -36,7 +36,7 @@ const Navbar = ({ onToggleSidebar, sideBarToggled }) => {
                                 src={user?.profile_picture ? `${import.meta.env.VITE_API_URL}/accounts/${user.id}/picture?t=${user._picTimestamp || ''}` : null}
                                 size="48px"
                                 shape="circle"
-                                className='border'
+                                // className='border'
                             />
                         </a>
                         <ul className={`dropdown-menu dropdown-menu-end dropdown-menu-${theme}`} aria-labelledby="dropdownUser1">

@@ -221,7 +221,8 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                         throw new Error("Validation Error");
                     }
 
-                    // CHECK SERIAL CONFLICT
+                    // CHECK SERIAL CONFLICT (UNUSED)
+
                     let targetId = null;
 
                     if (comp.serial_number) {
@@ -332,7 +333,7 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                 return;
             }
 
-            const promises = [];
+            const promzises = [];
 
             if (batchPayload.creates.length > 0 || batchPayload.updates.length > 0 || batchPayload.deletes.length > 0) {
                 promises.push(api.post('/components/batch-transaction', batchPayload));
@@ -523,9 +524,10 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
                                     </button>
                                 )}
                                 {canMoveSet(user) && (
-                                    <button className="btn btn-sm border-0 bg-body-secondary" title="Move Set" onClick={() => setShowMoveModal(true)}>
-                                        <BoxArrowRight />
-                                    </button>
+                                    // <button className="btn btn-sm border-0 bg-body-secondary" title="Move Set" onClick={() => setShowMoveModal(true)}>
+                                    //     <BoxArrowRight />
+                                    // </button>
+                                    <></>
                                 )}
                             </div>
                         </div>

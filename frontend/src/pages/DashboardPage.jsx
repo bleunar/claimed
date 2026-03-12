@@ -185,105 +185,107 @@ const DashboardPage = () => {
 
             <div className="container">
                 <div className="p-0">
-                    <div className="h6 mb-3 fw-semibold text-muted">Accounts Overview</div>
                     {/* Accounts Overview Section - Visible to roles that manage accounts */}
                     {canManageAccounts && (
-                        <div className="card border border-2 rounded bg-body-secondary mb-4">
-                            <div className="card-body p-3">
-                                <div className="row g-3">
-                                    {/* Left Column: KPIs and Quick Actions */}
-                                    <div className="col-12 col-lg-6 col-xl-7 d-flex flex-column gap-2">
-                                        <div className="card h-100 bg-transparent border-0">
-                                            <div className="card-body bg-transparent">
-                                                <div className="d-flex flex-wrap gap-5 align-items-center justify-content-center p-2 cursor-pointer h-100">
-                                                    <MiniKPI
-                                                        label="Managed"
-                                                        value={kpiData?.active_accounts + kpiData?.suspended_accounts}
-                                                        icon={<PeopleFill />}
-                                                        color="primary"
-                                                    />
-                                                    <MiniKPI
-                                                        label="Online"
-                                                        value={kpiData?.online_accounts}
-                                                        icon={<PersonCheck />}
-                                                        color="success"
-                                                    />
-                                                    <MiniKPI
-                                                        label="Suspended"
-                                                        value={kpiData?.suspended_accounts}
-                                                        icon={<PersonFill />}
-                                                        color="danger"
-                                                    />
+                        <>
+                            <div className="h6 mb-3 fw-semibold text-muted">Accounts Overview</div>
+                            <div className="card border border-2 rounded bg-body-secondary mb-4">
+                                <div className="card-body p-3">
+                                    <div className="row g-3">
+                                        {/* Left Column: KPIs and Quick Actions */}
+                                        <div className="col-12 col-lg-6 col-xl-7 d-flex flex-column gap-2">
+                                            <div className="card h-100 bg-transparent border-0">
+                                                <div className="card-body bg-transparent">
+                                                    <div className="d-flex flex-wrap gap-5 align-items-center justify-content-center p-2 cursor-pointer h-100">
+                                                        <MiniKPI
+                                                            label="Managed"
+                                                            value={kpiData?.active_accounts + kpiData?.suspended_accounts}
+                                                            icon={<PeopleFill />}
+                                                            color="primary"
+                                                        />
+                                                        <MiniKPI
+                                                            label="Online"
+                                                            value={kpiData?.online_accounts}
+                                                            icon={<PersonCheck />}
+                                                            color="success"
+                                                        />
+                                                        <MiniKPI
+                                                            label="Suspended"
+                                                            value={kpiData?.suspended_accounts}
+                                                            icon={<PersonFill />}
+                                                            color="danger"
+                                                        />
+                                                    </div>
                                                 </div>
-                                            </div>
-                                            <div className="card-footer bg-transparent border-0 p-0">
-                                                <div className="d-flex">
-                                                    <div className="d-flex flex-fill flex-wrap gap-2">
-                                                        <Button
-                                                            variant="primary"
-                                                            size="sm"
-                                                            className="flex-grow-1 d-flex align-items-center justify-content-center gap-2"
-                                                            onClick={() => setShowAddAccountModal(true)}
-                                                        >
-                                                            <PersonAdd /> New Account
-                                                        </Button>
-                                                        <Button
-                                                            variant="primary"
-                                                            size='sm'
-                                                            className="flex-grow-1 d-flex align-items-center justify-content-center gap-2"
-                                                            onClick={() => setShowSuspendModal(true)}
-                                                        >
-                                                            <ExclamationTriangleFill /> Suspend Account
-                                                        </Button>
+                                                <div className="card-footer bg-transparent border-0 p-0">
+                                                    <div className="d-flex">
+                                                        <div className="d-flex flex-fill flex-wrap gap-2">
+                                                            <Button
+                                                                variant="primary"
+                                                                size="sm"
+                                                                className="flex-grow-1 d-flex align-items-center justify-content-center gap-2"
+                                                                onClick={() => setShowAddAccountModal(true)}
+                                                            >
+                                                                <PersonAdd /> New Account
+                                                            </Button>
+                                                            <Button
+                                                                variant="primary"
+                                                                size='sm'
+                                                                className="flex-grow-1 d-flex align-items-center justify-content-center gap-2"
+                                                                onClick={() => setShowSuspendModal(true)}
+                                                            >
+                                                                <ExclamationTriangleFill /> Suspend Account
+                                                            </Button>
 
-                                                        <Link to="/dashboard/accounts" className="btn btn-primary btn-sm flex-grow-1 d-flex align-items-center justify-content-center gap-2">
-                                                            <PeopleFill /> Manage Accounts
-                                                        </Link>
+                                                            <Link to="/dashboard/accounts" className="btn btn-primary btn-sm flex-grow-1 d-flex align-items-center justify-content-center gap-2">
+                                                                <PeopleFill /> Manage Accounts
+                                                            </Link>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
 
-                                    {/* Right Column: Recent Activity */}
-                                    <div className="col-12 col-lg-6 col-xl-5">
-                                        <div className="bg-body rounded p-2 h-100">
-                                            <div className="small text-muted mb-2 px-2 fw-semibold">Recent Account Activity</div>
-                                            <div className="d-flex flex-column gap-2 overflow-y-auto scrollbar-hidden" style={{ height: "300px" }}>
-                                                {recentActivities.length > 0 ? (
-                                                    recentActivities.map((activity, index) => (
-                                                        <div key={index} className="d-flex align-items-start gap-2 px-2 py-1 border-bottom border-light-subtle last-border-0">
-                                                            <div className="mt-1">
-                                                                <ProfileImage
-                                                                    src={`${import.meta.env.VITE_API_URL}/accounts/${activity.account_id}/picture`}
-                                                                    name={activity?.username}
-                                                                    size="32px"
-                                                                    shape='circle'
-                                                                />
-                                                            </div>
-                                                            <div className="flex-grow-1 lh-sm">
-                                                                <div className="small fw-semibold">{ACTIVITY_LABELS[activity.action] || activity.action}</div>
-                                                                <div className="d-flex flex-column">
-                                                                    <span className="text-muted small" style={{ fontSize: '0.75rem' }}>
-                                                                        {activity.username}
-                                                                    </span>
-                                                                    <span className="text-muted small" style={{ fontSize: '0.75rem' }}>
-                                                                        {formatRole(activity.role)} {activity.department_name ? ` • ${activity.department_name}` : ''}
-                                                                    </span>
+                                        {/* Right Column: Recent Activity */}
+                                        <div className="col-12 col-lg-6 col-xl-5">
+                                            <div className="bg-body rounded p-2 h-100">
+                                                <div className="small text-muted mb-2 px-2 fw-semibold">Recent Account Activity</div>
+                                                <div className="d-flex flex-column gap-2 overflow-y-auto scrollbar-hidden" style={{ height: "300px" }}>
+                                                    {recentActivities.length > 0 ? (
+                                                        recentActivities.map((activity, index) => (
+                                                            <div key={index} className="d-flex align-items-start gap-2 px-2 py-1 border-bottom border-light-subtle last-border-0">
+                                                                <div className="mt-1">
+                                                                    <ProfileImage
+                                                                        src={`${import.meta.env.VITE_API_URL}/accounts/${activity.account_id}/picture`}
+                                                                        name={activity?.username}
+                                                                        size="32px"
+                                                                        shape='circle'
+                                                                    />
                                                                 </div>
+                                                                <div className="flex-grow-1 lh-sm">
+                                                                    <div className="small fw-semibold">{ACTIVITY_LABELS[activity.action] || activity.action}</div>
+                                                                    <div className="d-flex flex-column">
+                                                                        <span className="text-muted small" style={{ fontSize: '0.75rem' }}>
+                                                                            {activity.username}
+                                                                        </span>
+                                                                        <span className="text-muted small" style={{ fontSize: '0.75rem' }}>
+                                                                            {formatRole(activity.role)} {activity.department_name ? ` • ${activity.department_name}` : ''}
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                                <small className="text-muted" style={{ fontSize: '0.75rem' }}>{formatRelativeTime(activity.date)}</small>
                                                             </div>
-                                                            <small className="text-muted" style={{ fontSize: '0.75rem' }}>{formatRelativeTime(activity.date)}</small>
-                                                        </div>
-                                                    ))
-                                                ) : (
-                                                    <div className="text-muted text-center py-4 small">No recent activities found.</div>
-                                                )}
+                                                        ))
+                                                    ) : (
+                                                        <div className="text-muted text-center py-4 small">No recent activities found.</div>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        </>
                     )}
                 </div>
             </div>
