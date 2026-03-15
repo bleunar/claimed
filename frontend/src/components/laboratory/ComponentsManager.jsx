@@ -526,8 +526,8 @@ const ComponentsManager = ({ set, initialComponents, laboratoryId, onClose, onUp
 
                                 {(canEditComponentDetails(user) || canEditComponentStatus(user) || canEditProperties(user) || canEditSetInfo(user) || canEditSetStatus(user)) && (
                                     !isEditMode && (
-                                        <button className="btn btn-sm border-0 bg-body-secondary" onClick={() => setIsEditMode(true)} title="Enter Edit Mode">
-                                            <PencilSquare className="me-1" />
+                                        <button className="btn btn-sm border-0 bg-body-secondary d-block d-md-hidden" onClick={() => setIsEditMode(true)} title="Enter Edit Mode">
+                                            <PencilSquare />
                                         </button>
                                     )
                                 )}
