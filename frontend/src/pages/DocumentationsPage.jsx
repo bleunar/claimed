@@ -76,15 +76,6 @@ const DocumentationsPage = () => {
                             ))}
                         </ListGroup>
                     </Card>
-                    
-                    <Alert variant="info" className="mt-4 shadow-sm border-0">
-                        <div className="d-flex">
-                            <InfoCircle className="me-2 mt-1 flex-shrink-0" />
-                            <small>
-                                You see these guides based on your role as <strong className='capitalize'>{user.role.replace('_', ' ')}</strong>.
-                            </small>
-                        </div>
-                    </Alert>
                 </Col>
 
                 <Col md={8} lg={9}>
