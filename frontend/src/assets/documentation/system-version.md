@@ -13,3 +13,4 @@
 ## v1.0.1
 ##### March 15, 2026
 - Updates for the content of the Documentation
+- Added "Edit Mode" toggle button at the top of the computer set components preview
