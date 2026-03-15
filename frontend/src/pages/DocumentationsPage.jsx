@@ -108,6 +108,11 @@ const DocumentationsPage = () => {
             </Row>
 
             <style>{`
+                .markdown-content {
+                    max-height: 70vh;
+                    overflow-y: auto;
+                    padding-right: 1rem;
+                }
                 .markdown-content h1 {
                     border-bottom: 2px solid var(--bs-border-color);
                     padding-bottom: 0.5rem;
