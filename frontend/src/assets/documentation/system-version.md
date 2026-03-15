@@ -8,3 +8,8 @@
 - System Release Preparation
 - Access Control Updates
     - Users with Department Head and Department Staff roles can now update computer component informations 
+
+---
+## v1.0.1
+##### March 15, 2026
+- Updates for the content of the Documentation

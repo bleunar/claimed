@@ -52,7 +52,7 @@ const DocumentationsPage = () => {
 
             <Row>
                 <Col md={4} lg={3} className="mb-4">
-                    <Card className="shadow-sm border-0">
+                    <Card className="shadow border-0">
                         <Card.Header className="bg-body-secondary fw-bold">
                             Available Guides
                         </Card.Header>

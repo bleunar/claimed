@@ -20,4 +20,4 @@ You can manage your personal information by clicking on your name or profile ico
 
 If you encounter technical issues or cannot access certain features, please contact your **Department Head** or an **IT Technician**.
 
-> **IMPORTANT:** Your access to features is determined by your assigned role. If you believe you have the wrong permissions, contact your manager.
+> **IMPORTANT:** Your access to features is determined by your assigned role. If you believe you have the wrong permissions, contact your immidiate supervisor.

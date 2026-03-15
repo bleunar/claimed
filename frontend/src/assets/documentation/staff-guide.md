@@ -14,7 +14,7 @@ As a Department or Lab Head, you are responsible for the assets assigned to your
 
 If your role involves direct hardware management:
 
-*   **Adding Components**: Use the **New Component** button on the Components page to log new hardware. Remember to include the **Serial Number** for unique tracking!
+*   **Adding Components**: Use the **New Component** button on the Components page to log new hardware. Remember to include the **Serial Number** for unique tracking
 *   **Status Updates**: Keeping the status (Good, Broken, etc.) up to date is critical for accurate reporting.
 *   **Assignment**: Learn how to assign "Rogue" (unassigned) components to specific **Computer Sets** in your labs.
 
