@@ -1,0 +1,83 @@
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import { TitleProvider } from './context/TitleContext';
+import LoginPage from './pages/LoginPage';
+import DashboardPage from './pages/DashboardPage';
+import AccountsPage from './pages/AccountsPage';
+import DashboardLayout from './layouts/DashboardLayout';
+import LaboratoriesPage from './pages/LaboratoriesPage';
+import LocationsPage from './pages/LocationsPage';
+import ComponentsPage from './pages/ComponentsPage';
+import LaboratoryComputersPage from './pages/LaboratoryComputersPage';
+import LabResourcesPage from './pages/LabResourcesPage';
+import DepartmentsPage from './pages/DepartmentsPage';
+import DepartmentOverviewPage from './pages/DepartmentOverviewPage';
+import ProfilePage from './pages/ProfilePage';
+import DocumentationsPage from './pages/DocumentationsPage';
+import ProtectedRoute from './components/ProtectedRoute';
+import ThemedToaster from './components/ThemedToaster';
+import { ReauthProvider } from './components/ReauthModal';
+import SeasonalEffects from './components/SeasonalEffects';
+import BirthdayGreeting from './components/BirthdayGreeting';
+import { ThemeProvider } from './context/ThemeContext';
+import ErrorPage from './pages/Error';
+
+function App() {
+  return (
+    <ThemeProvider>
+      <AuthProvider>
+        <BirthdayGreeting />
+        <ReauthProvider>
+          <ThemedToaster />
+          <Router>
+            <TitleProvider>
+              <SeasonalEffects />
+              <Routes>
+                <Route path="/" element={<LoginPage />} />
+                <Route path='/dashboard' element={<DashboardLayout />}>
+                  <Route index element={<DashboardPage />} />
+                  <Route element={<ProtectedRoute allowedRoles={['admin', 'it_head', 'lab_head', 'department_head']} />}>
+                    <Route path='accounts' element={<AccountsPage />} />
+                  </Route>
+                  <Route element={<ProtectedRoute allowedRoles={['admin', 'it_head', 'lab_head', 'it_technician', 'department_head']} />}>
+                    <Route path='components' element={<ComponentsPage />} />
+                  </Route>
+                  <Route element={<ProtectedRoute allowedRoles={['admin', 'it_head']} />}>
+                    <Route path='departments' element={<DepartmentsPage />} />
+                  </Route>
+                  <Route element={<ProtectedRoute allowedRoles={['admin', 'department_head']} />}>
+                    <Route path='departments/:id' element={<DepartmentOverviewPage />} />
+                  </Route>
+                  <Route element={<ProtectedRoute allowedRoles={['admin', 'it_head', 'it_technician', 'department_head', 'department_staff', 'department_assistant', 'lab_head', 'lab_assistant']} />}>
+                    <Route path='locations' element={<LocationsPage />} />
+                    <Route path='locations/:id' element={<LaboratoryComputersPage />} />
+                  </Route>
+
+                  <Route element={<ProtectedRoute allowedRoles={[ 'lab_assistant']} />}>
+                    <Route path='laboratories' element={<LaboratoriesPage />} />
+                    <Route path='laboratories/:id' element={<LaboratoryComputersPage />} />
+                  </Route>
+
+                  <Route element={<ProtectedRoute allowedRoles={['admin', 'it_head', 'lab_head', 'it_technician', 'lab_assistant']} />}>
+                    <Route path='lab-resources' element={<LabResourcesPage />} />
+                  </Route>
+
+                  <Route path='profile' element={<ProfilePage />} />
+                  <Route path='documentations' element={<DocumentationsPage />} />
+
+                  <Route path="*" element={<ErrorPage />} />
+
+                </Route>
+
+                <Route path="*" element={<ErrorPage />} />
+              </Routes>
+            </TitleProvider>
+          </Router>
+        </ReauthProvider>
+      </AuthProvider>
+    </ThemeProvider>
+  );
+}
+
+export default App;

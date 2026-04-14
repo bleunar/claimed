@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+</head>
+
+<body
+    style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #444; line-height: 1.5; font-size: 14px; margin: 0; padding: 0;">
+    <div
+        style="width: 95%; max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 8px; overflow: hidden; background-color: #fff;">
+        <div style="background-color: #f8f9fa; padding: 15px 20px; border-bottom: 1px solid #eee;">
+            <h2 style="margin: 0; color: #333; font-size: 18px;">Computer Laboratory - Activity Report</h2>
+            <div style="color: #888; font-size: 12px; margin-top: 5px;">Generated at {{ generation_time }}</div>
+        </div>
+
+        {% for date, labs in grouped_data.items() %}
+        <div style="margin-bottom: 20px;">
+            <div style="background-color: #0d6efd; color: white; padding: 8px 20px; font-weight: 600; font-size: 14px;">
+                {{ date }}</div>
+
+            {% for lab_name, sets in labs.items() %}
+            <div style="padding: 0;">
+                <div
+                    style="background-color: #e9ecef; padding: 6px 20px; font-weight: 600; color: #495057; font-size: 13px; border-bottom: 1px solid #eee;">
+                    {{ lab_name }}</div>
+
+                {% for set_name, activities in sets.items() %}
+                <div style="padding: 10px 20px; border-bottom: 1px solid #f1f1f1;">
+                    <div
+                        style="font-weight: 600; color: #555; font-size: 13px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">
+                        {{ set_name }}</div>
+                    <ul style="list-style: none; padding: 0; margin: 0;">
+                        {% for log in activities %}
+                        <li style="margin-bottom: 8px; padding-left: 10px; border-left: 2px solid #dee2e6;">
+                            <div>
+                                <span style="font-weight: 600; color: #333;">{{ log.summary }}</span>
+                                <div>
+                                    <span
+                                        style="color: #888; font-size: 11px; min-width: 55px; display: inline-block;">{{
+                                        log.user }}</span>:
+                                    <span
+                                        style="color: #888; font-size: 11px; min-width: 55px; display: inline-block;">{{
+                                        log.time }}</span>
+                                </div>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+
+        <div
+            style="padding: 15px; text-align: center; color: #999; font-size: 11px; background-color: #f8f9fa; border-top: 1px solid #eee;">
+            <a href="https://claims.occulant.com" style="margin: 0;">Visit the website for more information</a>
+            <p style="margin: 0;">Computer Laboratory Management System</p>
+        </div>
+    </div>
+</body>
+
+</html>

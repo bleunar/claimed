@@ -1,0 +1,75 @@
+.remove-arrow-select-input {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: none;
+    padding-right: 0.75rem !important;
+
+}
+
+.cursor-pointer {
+    cursor: pointer;
+}
+
+.cursor-help {
+    cursor: help;
+}
+
+
+.bordered * {
+    border: 1px solid rgb(63, 63, 63);
+}
+
+.navbar-frosted {
+    background-color: rgba(var(--bs-claims-primary-rgb), 0.25) !important;
+    backdrop-filter: blur(10px);
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+
+    [data-bs-theme="dark"] & {
+        background-color: rgba(var(--bs-claims-primary-rgb), 0.25) !important;
+    }
+}
+
+.stacked-modal-backdrop {
+    z-index: 1250 !important;
+    background-color: rgba(0, 0, 0, 0.6);
+}
+
+.invinsible-border {
+    border: 1px solid rgba(0, 0, 0, 0);
+}
+
+.hover-raised {
+    transition: transform 200ms ease-in-out;
+}
+
+.hover-raised:hover {
+    transform: translateY(-3px);
+}
+
+.c-hover {
+    transition: transform 200ms ease-in-out;
+    transform: translateY(-5px);
+}
+
+.p-hover:hover .c-hover {
+    transform: translateY(0px);
+}
+
+.scrollbar-hidden {
+    scrollbar-width: none !important;
+}
+
+/* Loading spinner animation for search buttons */
+.spinner {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}

@@ -1,0 +1,76 @@
+$claims-primary: #006633;
+$claims-primary-light: #33996b;
+$claims-secondary: #ccba1a;
+
+// temporart override of primary/secondary bootsrap colors 
+$primary: $claims-primary;
+$secondary: $claims-secondary;
+
+@import "bootstrap/scss/functions";
+@import "bootstrap/scss/variables";
+
+$custom-theme-colors: (
+    "claims-primary": $claims-primary,
+    "claims-secondary": $claims-secondary
+);
+
+$theme-colors: map-merge($theme-colors, $custom-theme-colors);
+
+@import "bootstrap/scss/maps";
+@import "bootstrap/scss/mixins";
+
+// Generate subtle and emphasis variants manually
+$claims-primary-subtle: tint-color($claims-primary, 80%);
+$claims-secondary-subtle: tint-color($claims-secondary, 80%);
+$claims-primary-emphasis: shade-color($claims-primary, 60%);
+$claims-secondary-emphasis: shade-color($claims-secondary, 60%);
+
+$custom-theme-colors-subtle: (
+    "claims-primary": $claims-primary-subtle,
+    "claims-secondary": $claims-secondary-subtle
+);
+$theme-colors-bg-subtle: map-merge($theme-colors-bg-subtle, $custom-theme-colors-subtle);
+
+$custom-theme-colors-text: (
+    "claims-primary": $claims-primary-emphasis,
+    "claims-secondary": $claims-secondary-emphasis
+);
+$theme-colors-text: map-merge($theme-colors-text, $custom-theme-colors-text);
+
+$custom-theme-colors-border-subtle: (
+    "claims-primary": $claims-primary-subtle,
+    "claims-secondary": $claims-secondary-subtle
+);
+$theme-colors-border-subtle: map-merge($theme-colors-border-subtle, $custom-theme-colors-border-subtle);
+
+// Import all of Bootstrap's CSS
+@import "bootstrap/scss/bootstrap";
+
+// Custom gradient background class
+.bg-gradient-primary {
+    background: linear-gradient(to right bottom, #f1f1f1, #dddddd);
+}
+
+
+.bg-gradient-maintenance {
+    background: linear-gradient(to bottom right, #CEF4FD, #b1dde7);
+}
+
+.bg-gradient-primary-hovered {
+    background: linear-gradient(to bottom right, $claims-primary-light, $claims-primary);
+}
+
+// Dark mode variants
+[data-bs-theme="dark"] {
+    .bg-gradient-primary {
+        background: linear-gradient(to right bottom, #1a1a1a, #212529);
+    }
+
+    .bg-gradient-maintenance {
+        background: linear-gradient(to bottom right, #022930, #033a44);
+    }
+
+    .bg-gradient-primary-hovered {
+        background: linear-gradient(to bottom right, $claims-primary, darken($claims-primary, 10%));
+    }
+}

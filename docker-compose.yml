@@ -1,0 +1,96 @@
+name: claimed
+
+services:
+  claimed_redis:
+    image: redis:7-alpine
+    container_name: claimed_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - claimed-network
+
+  claimed_backend:
+    build: ./backend
+    container_name: claimed_backend
+    restart: unless-stopped
+    ports:
+      - 9050:5000
+    depends_on:
+      claimed_redis:
+        condition: service_healthy
+    env_file:
+      - ./backend/.env
+    secrets:
+      - secret_key
+      - jwt_secret_key
+      - mysql_password
+      - mail_password
+      - default_admin_password
+    environment:
+      - REDIS_URL=redis://claimed_redis:6379/0
+    volumes:
+      - upload_data:/app/uploads
+      - ./backend_logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - claimed-network
+      - main-network
+      - database-network
+
+  claimed_frontend:
+    build: ./frontend
+    container_name: claimed_frontend
+    restart: unless-stopped
+    ports:
+      - 9090:80
+    depends_on:
+      claimed_backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - claimed-network
+      - main-network
+
+
+networks:
+  claimed-network:
+    name: claimed-network
+    driver: bridge
+  main-network:
+    external: true
+  database-network:
+    external: true
+
+
+volumes:
+  upload_data:
+  redis_data:
+
+
+secrets:
+  secret_key:
+    file: ./secrets/.secret_key
+  jwt_secret_key:
+    file: ./secrets/.jwt_secret_key
+  mysql_password:
+    file: ./secrets/.mysql_password
+  mail_password:
+    file: ./secrets/.mail_password
+  default_admin_password:
+    file: ./secrets/.default_admin_password

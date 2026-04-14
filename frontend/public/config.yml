@@ -1,0 +1,5 @@
+effects:
+  seasonal:
+    enabled: true
+  birthday:
+    enabled: false
