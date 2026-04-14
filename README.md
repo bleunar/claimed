@@ -1,6 +1,6 @@
 # CLAIMED — IT Asset Management System
 
-A web-based IT asset management system designed for educational institutions to track and manage computer components, laboratories, departments, and personnel accounts. Built with a Flask REST API backend, React SPA frontend, and deployed via Docker Compose.
+A web-based IT asset management system designed for educational institutions to track and manage computer components, laboratories, departments, and personnel accounts. Built with aupd Flask REST API backend, React SPA frontend, and deployed via Docker Compose.
 
 ---
 
@@ -22,12 +22,12 @@ A web-based IT asset management system designed for educational institutions to 
 
 | Layer | Technology |
 |---|---|
-| **Frontend** | React 19, Vite, Bootstrap 5, Chart.js, Framer Motion |
-| **Backend** | Python 3.9, Flask, Gunicorn, Flask-JWT-Extended, Flask-Limiter |
-| **Database** | MySQL |
-| **Cache / Rate Limiting** | Redis 7 (Alpine) |
+| **Frontend** | React 19, Vite, Bootstrap 5, Chart.js |
+| **Backend** | Python 3.9, Flask, Gunicorn, Flask-JWT-Extended |
+| **Database** | MySQL (Docker Containers) |
 | **Containerization** | Docker, Docker Compose |
-| **Reverse Proxy** | Nginx (frontend), Nginx Proxy Manager (production) |
+| **Reverse Proxy** | Nginx Proxy Manager |
+| **Monitoring** | Uptime Kuma |
 
 ---
 
@@ -67,10 +67,10 @@ claimed/
 
 ### Production (Docker)
 
-- Docker Engine 20.10+
-- Docker Compose v2+
-- External MySQL database
-- External Nginx Proxy Manager (for domain routing)
+- Docker Engine
+- Docker Compose
+- MySQL Server via Docker Containers
+- Nginx Proxy Manager (for domain routing)
 - Pre-existing Docker networks: `main-network`, `database-network`
 
 ### Local Development
@@ -156,6 +156,8 @@ Import the latest schema into your MySQL server:
 mysql -u <user> -p <database_name> < database/DATABASEv4b3.sql
 ```
 
+Or manage and setup the database via a GUI (Phphmyadmin)
+
 ### 4. Set Up Docker Secrets (Production Only)
 
 Create secret files in the `secrets/` directory (only passwords and keys):
@@ -228,7 +230,7 @@ The services will be available at:
 In production, both the frontend and backend are exposed via Nginx Proxy Manager with separate domains:
 
 1. Create a proxy host for the **frontend** (e.g., `claimed.example.com` → `claimed_frontend:80`)
-2. Create a proxy host for the **backend** (e.g., `api.claimed.example.com` → `claimed_backend:5000`)
+2. Create a proxy host for the **backend** (e.g., `api-claimed.example.com` → `claimed_backend:5000`)
 3. Set `CORS_ORIGINS` in root `.env` to the frontend domain
 4. Set `JWT_COOKIE_DOMAIN` in `backend/.env` to the shared parent domain (e.g., `.example.com`)
 5. Set `VITE_API_URL` in `frontend/.env` to the backend domain and **rebuild** the frontend image
